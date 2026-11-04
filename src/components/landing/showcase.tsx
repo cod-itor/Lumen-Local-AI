@@ -10,6 +10,7 @@ import {
 } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Icon } from "@/components/icon";
+import { useMessages } from "@/i18n/provider";
 import { usePageVisible } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 import type { LandingPreview, LandingShowcase, ShowcaseScene } from "@/types/landing";
@@ -162,7 +163,7 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
       <div ref={frame} className="px-4 sm:px-8 xl:px-0">
         <TiltOnPointer max={2.5}>
           <PreviewFrame reserveHeight={RESERVE}>
-            <div className="absolute top-2.5 left-2.5 h-[748px] w-[1180px] overflow-hidden rounded-[34px] shadow-device">
+            <div className="flat-glass absolute top-2.5 left-2.5 h-[748px] w-[1180px] overflow-hidden rounded-[34px] shadow-device">
               <Camera
                 layer={layer}
                 scene={scene}
@@ -220,6 +221,7 @@ function Camera({
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const scale = useMotionValue(1);
+  const willChange = useMotionValue("auto");
   // Pointer in window px (outside the zoom, so it never grows with it).
   const cx = useMotionValue(CW * 0.78);
   const cy = useMotionValue(CH * 0.8);
@@ -251,7 +253,14 @@ function Camera({
     }
     // Slow, smooth ease-in-out "camera move".
     const t = { duration: 1.5, ease: CAMERA_EASE };
-    const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
+    const moves = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
+    const anims = [...moves];
+    // Composite the layer only while it moves (smooth zoom on the GPU), then
+    // drop the hint so the text re-rasterizes sharp at the new scale.
+    if (x.get() !== tx || y.get() !== ty || scale.get() !== s) {
+      willChange.set("transform");
+      Promise.all(moves).then(() => willChange.set("auto"));
+    }
 
     if (reduce) {
       anims.push(animate(cOpacity, 0, { duration: 0.2 }));
@@ -303,18 +312,18 @@ function Camera({
       clearTimeout(timer);
       anims.forEach((a) => a.stop());
     };
-  }, [layer, scene.id, step, reduce, switchTo, x, y, scale, cx, cy, cOpacity, cScale, labelX, labelY]);
+  }, [layer, scene.id, step, reduce, switchTo, x, y, scale, cx, cy, cOpacity, cScale, labelX, labelY, willChange]);
 
   return (
     <>
-      <motion.div ref={layer} className="absolute inset-0" style={{ x, y, scale, originX: 0, originY: 0 }}>
+      <motion.div ref={layer} className="absolute inset-0" style={{ x, y, scale, originX: 0, originY: 0, willChange }}>
         {children}
       </motion.div>
 
       {/* Demo pointer with the step caption riding along. */}
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute top-0 left-0 z-20"
+        className="pointer-events-none absolute top-0 left-0 z-20 will-change-transform"
         style={{ x: cx, y: cy, opacity: cOpacity }}
       >
         <motion.svg
@@ -455,7 +464,7 @@ function Window({
         <Glow tone="blue" blur={96} drift={20} className="top-[528px] left-[-112px] size-[272px]" />
         <Glow tone="orange" blur={88} drift={20} duration={22} className="top-[-80px] left-[960px] size-[240px]" />
 
-        <Sidebar p={p} nav={scene.nav} recent={scene.recent} model={scene.model} modelDetail={scene.modelDetail} />
+        <Sidebar p={p} tab={scene.tab} nav={scene.nav} recent={scene.recent} model={scene.model} modelDetail={scene.modelDetail} />
 
         <div className="absolute top-5 left-[246.4px] flex items-center gap-1 rounded-[9.6px] px-2 py-[4.8px] text-foreground">
           <AnimatePresence mode="wait" initial={false}>
@@ -510,19 +519,26 @@ function Window({
   );
 }
 
+type SidebarKind = "chat" | "documents" | "image";
+const SIDEBAR_KIND: SidebarKind[] = ["chat", "documents", "image"];
+
+/** Mini copy of the app sidebar; its body follows the open workspace tab, like the real app. */
 function Sidebar({
   p,
+  tab,
   nav,
   recent,
   model,
   modelDetail,
 }: {
   p: LandingPreview;
+  tab: number;
   nav: number;
   recent: string;
   model: string;
   modelDetail: string;
 }) {
+  const kind = SIDEBAR_KIND[tab] ?? "chat";
   return (
     <div
       className={cn(
@@ -540,35 +556,22 @@ function Sidebar({
         </span>
       </div>
 
-      {p.nav.map((n, i) => (
-        <div
-          key={n.label}
-          data-focus={`ui-nav-${i}`}
-          className={cn(
-            "flex h-8 items-center gap-[9.6px] rounded-[9.6px] pr-[6.4px] pl-2 text-foreground transition-colors duration-300",
-            i === nav && "bg-nav-active/60 dark:bg-foreground/30",
-          )}
-        >
-          <Icon name={n.icon} size={15.2} className="mx-[0.4px]" />
-          <span className="flex-1 truncate text-[11.6px]">{n.label}</span>
-          {n.trailing && (
-            <span className="flex size-[20.8px] items-center justify-center text-icon">
-              <Icon name="plus-sm" size={13.6} />
-            </span>
-          )}
-        </div>
-      ))}
-
-      <SectionLabel>{p.sections.pinned}</SectionLabel>
-      {p.pinned.map((t) => (
-        <HistoryItem key={t} title={t} active={t === recent} />
-      ))}
-      <SectionLabel>{p.sections.recents}</SectionLabel>
-      {p.recents.map((r) => (
-        <HistoryItem key={r.title} title={r.title} active={r.title === recent} />
-      ))}
-
-      <div className="flex-1" />
+      <div className="relative min-h-0 flex-1">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={kind}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: "easeInOut" }}
+            className="absolute inset-0 flex flex-col gap-[1.6px] overflow-hidden"
+          >
+            {kind === "chat" && <ChatSidebarBody p={p} nav={nav} recent={recent} />}
+            {kind === "documents" && <DocumentsSidebarBody p={p} recent={recent} />}
+            {kind === "image" && <ImageSidebarBody p={p} recent={recent} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       <div className={cn(miniGlass, "flex flex-col gap-[2.4px] rounded-[11.2px] px-[9.6px] py-2")}>
         <div className="flex items-center gap-[5.6px]">
@@ -595,6 +598,121 @@ function Sidebar({
   );
 }
 
+function NavRow({
+  icon,
+  label,
+  active,
+  trailing,
+  focus,
+}: {
+  icon: string;
+  label: string;
+  active?: boolean;
+  trailing?: boolean;
+  focus?: string;
+}) {
+  return (
+    <div
+      data-focus={focus}
+      className={cn(
+        "flex h-8 shrink-0 items-center gap-[9.6px] rounded-[9.6px] pr-[6.4px] pl-2 text-foreground transition-colors duration-300",
+        active && "bg-nav-active/60 dark:bg-foreground/30",
+      )}
+    >
+      <Icon name={icon} size={15.2} className="mx-[0.4px]" />
+      <span className="flex-1 truncate text-[11.6px]">{label}</span>
+      {trailing && (
+        <span className="flex size-[20.8px] items-center justify-center text-icon">
+          <Icon name="plus-sm" size={13.6} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ChatSidebarBody({ p, nav, recent }: { p: LandingPreview; nav: number; recent: string }) {
+  return (
+    <>
+      {p.nav.map((n, i) => (
+        <NavRow key={n.label} icon={n.icon} label={n.label} trailing={n.trailing} active={i === nav} focus={`ui-nav-${i}`} />
+      ))}
+      <SectionLabel>{p.sections.pinned}</SectionLabel>
+      {p.pinned.map((t) => (
+        <HistoryItem key={t} title={t} active={t === recent} />
+      ))}
+      <SectionLabel>{p.sections.recents}</SectionLabel>
+      {p.recents.map((r) => (
+        <HistoryItem key={r.title} title={r.title} active={r.title === recent} />
+      ))}
+    </>
+  );
+}
+
+const BADGE_TONE = {
+  pdf: "bg-danger/14 text-danger",
+  docx: "bg-info/14 text-info",
+  md: "bg-muted-foreground/14 text-muted-foreground",
+  txt: "bg-subtle/14 text-subtle",
+} as const;
+
+/** Figma "Left Sidebar · Documents": materials with file badges, then recent document chats. */
+function DocumentsSidebarBody({ p, recent }: { p: LandingPreview; recent: string }) {
+  const m = useMessages().app.sidebar;
+  const active = p.documents.files[0]?.name;
+  return (
+    <>
+      <NavRow icon="nav-plus" label={m.newDocumentChat} />
+      <NavRow icon="nav-search" label={m.search} />
+      <NavRow icon="doc-book" label={m.materials} active trailing />
+      <SectionLabel>{m.sharedMaterials}</SectionLabel>
+      {p.documents.files.map((f) => (
+        <div
+          key={f.name}
+          className={cn(
+            "flex h-[36.8px] shrink-0 items-center gap-2 rounded-[9.6px] px-2",
+            f.name === active && "bg-nav-active shadow-[0_1.6px_3.2px_0_rgb(0_0_0/0.08)]",
+          )}
+        >
+          <span
+            className={cn(
+              "flex size-6 shrink-0 items-center justify-center rounded-[6.4px] text-[6.8px] font-bold uppercase",
+              BADGE_TONE[f.kind],
+            )}
+          >
+            {f.kind}
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-px whitespace-nowrap">
+            <span className="truncate text-[10.4px] font-medium text-foreground">{f.name}</span>
+            <span className={cn("text-[8.8px]", f.embedding ? "text-orange-foreground" : "text-muted-foreground")}>
+              {f.meta}
+            </span>
+          </span>
+        </div>
+      ))}
+      <SectionLabel>{m.recents}</SectionLabel>
+      {p.documents.chats.map((c) => (
+        <HistoryItem key={c} title={c} active={c === recent} />
+      ))}
+    </>
+  );
+}
+
+/** Figma "Left Sidebar · Image": new image, search, gallery, then recent image chats. */
+function ImageSidebarBody({ p, recent }: { p: LandingPreview; recent: string }) {
+  const m = useMessages().app.sidebar;
+  return (
+    <>
+      <NavRow icon="nav-plus" label={m.newImage} />
+      <NavRow icon="nav-search" label={m.search} />
+      <NavRow icon="img-images" label={m.generatedImages} />
+      <SectionLabel>{m.recents}</SectionLabel>
+      {p.images.recents.map((r) => (
+        <HistoryItem key={r} title={r} active={r === recent} />
+      ))}
+    </>
+  );
+}
+
 function SectionLabel({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-[3.2px] pt-[14.4px] pb-[4.8px] pl-2 text-subtle">
@@ -608,7 +726,7 @@ function HistoryItem({ title, active }: { title: string; active?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-[27.2px] items-center rounded-lg px-2 transition-[background-color,box-shadow] duration-300",
+        "flex h-[27.2px] shrink-0 items-center rounded-lg px-2 transition-[background-color,box-shadow] duration-300",
         active && "bg-nav-active shadow-[0_1.6px_3.2px_0_rgb(0_0_0/0.08)]",
       )}
     >

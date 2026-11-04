@@ -58,6 +58,13 @@ export type LandingPreview = {
   pinned: string[];
   recents: { title: string; active?: boolean }[];
   tabs: { label: string; icon: string; active?: boolean }[];
+  /** Sidebar body when the Documents tab is open. */
+  documents: {
+    files: { name: string; kind: "pdf" | "docx" | "md" | "txt"; meta: string; embedding?: boolean }[];
+    chats: string[];
+  };
+  /** Sidebar body when the Image tab is open. */
+  images: { recents: string[] };
   message: LandingPreviewMessage;
   composerPlaceholder: string;
   /** Composer's web-search chip. */
