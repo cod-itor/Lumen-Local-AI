@@ -74,6 +74,8 @@
   /* Glass — Figma "Glass/Fill" + "Glass/Surface" + "Glass/Device" */
   --glass-from: rgb(255 255 255 / 0.85);
   --glass-to: rgb(255 255 255 / 0.4);
+  /* Mobile stand-in for the glass blur (see bottom of file) */
+  --glass-solid: color-mix(in srgb, var(--bg-to) 70%, transparent);
   --glass-blur: 12px; /* Figma background blur 24 */
   --shadow-glass-value: 0 10px 28px 0 rgb(122 95 72 / 0.14), inset 0 1.5px 1px 0 rgb(255 255 255 / 0.95);
   --shadow-soft-value: 0 2px 8px 0 rgb(122 95 72 / 0.12);
@@ -396,9 +398,17 @@
     background-image: linear-gradient(180deg, var(--bg-from), var(--bg-via) 50%, var(--bg-to));
   }
 
-  /* Low-power devices: a lighter frosted-glass blur (cost grows with the radius). */
+  /* Low-power devices: a lighter frosted-glass blur (cost grows with the radius),
+     and no blur at all on the small decorative glass inside the landing preview. */
   html[data-perf="lite"] {
     --glass-blur: 6px;
+    --mini-glass-blur: 0px;
+  }
+
+  /* Snappier taps on touch screens: no double-tap-zoom wait, no grey flash. */
+  html {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   :lang(km) {
@@ -412,5 +422,19 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/*
+  Phones & tablets: every frosted panel re-blurs what's behind it on each
+  scroll/animation frame, which is the main source of jank on mobile GPUs.
+  Swap the blur for a slightly more opaque fill — same look at a glance.
+  (Unlayered so it wins over the `glass` utility.)
+*/
+@media (pointer: coarse), (max-width: 1023px) {
+  html[data-perf="lite"] .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--glass-solid);
   }
 }
