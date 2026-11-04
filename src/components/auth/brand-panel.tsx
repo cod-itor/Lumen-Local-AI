@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from "motion/react";
 import { Icon } from "@/components/icon";
+import { LumenMark } from "@/components/logo";
 import { PreviewReply } from "@/components/chat/preview-reply";
 import { EASE } from "@/components/landing/motion";
 import { GlassChip } from "@/components/landing/primitives";
@@ -54,9 +55,7 @@ export function BrandPanel({ content, className }: { content: AuthBrandContent; 
           {content.preview.question}
         </div>
         <div className="flex gap-3">
-          <span className="glass flex size-8 shrink-0 items-center justify-center rounded-full">
-            <Icon name="spark" size={15} className="text-foreground" />
-          </span>
+          <LumenMark size={32} className="rounded-full" />
           <div className="flex min-w-0 flex-col gap-2 pt-1">
             <PreviewReply text={content.preview.answer} thinkMs={1600} />
             <span className="text-[12px] text-subtle">{content.preview.model}</span>
