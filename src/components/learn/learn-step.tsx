@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Composer } from "@/components/app/composer";
+import { useMessages } from "@/i18n/provider";
 import type { LearningPath, LearningStep } from "@/types/learn";
 import { CodeBlock } from "./code-block";
 import { PathCard } from "./path-card";
@@ -19,6 +20,8 @@ type QuizState = { questionIndex: number; selectedOptionId?: string };
  */
 export function LearnStep({ path }: { path: LearningPath }) {
   const total = path.steps.length;
+  const msgs = useMessages();
+  const m = msgs.app.learn;
   const [currentStep, setCurrentStep] = useState(path.progress.currentStepIndex);
   const [viewStep, setViewStep] = useState(Math.min(path.progress.currentStepIndex, total - 1));
   const [quiz, setQuiz] = useState<QuizState>({
@@ -52,12 +55,12 @@ export function LearnStep({ path }: { path: LearningPath }) {
   };
 
   const nextLabel = !lastQuestion
-    ? "Next question"
+    ? m.nextQuestion
     : lastStep
       ? pathDone
-        ? "Path complete"
-        : "Finish path"
-      : "Next step";
+        ? m.pathComplete
+        : m.finishPath
+      : m.nextStep;
 
   return (
     <div className="flex h-full gap-4 pl-4">
@@ -87,9 +90,9 @@ export function LearnStep({ path }: { path: LearningPath }) {
         </div>
 
         <div className="mx-auto mt-3 w-full max-w-[max(calc(var(--chat-width)+20px),1080px)] shrink-0 pr-4">
-          <Composer placeholder="Ask about this step" showSearch={false} />
+          <Composer placeholder={m.placeholder} showSearch={false} />
           <p className="mt-2 -mb-[5px] text-center text-[11.5px] text-subtle">
-            AI can make mistakes. Check sources.
+            {msgs.common.aiDisclaimer}
           </p>
         </div>
       </div>

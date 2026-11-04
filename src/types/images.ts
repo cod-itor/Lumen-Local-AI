@@ -1,3 +1,5 @@
+import type { Localized } from "@/i18n/config";
+
 /**
  * Image workspace types (Figma "06 · Image · Prompt approval", "07 · Image ·
  * Generated images", "Left Sidebar · Image"). Mocks and services conform to these.
@@ -14,7 +16,7 @@ export type GeneratedImage = {
 
 export type ImageGroup = {
   id: string;
-  label: string; // "Today", "Yesterday", "Earlier"
+  label: Localized<string>; // "Today", "Yesterday", "Earlier"
   images: GeneratedImage[];
 };
 
@@ -49,7 +51,7 @@ export type ImageThreadMessage =
   | {
       kind: "approval";
       id: string;
-      title: string; // "Improved prompt"
+      /** The model's rewritten prompt (the card title comes from the dictionary). */
       prompt: string;
       /** Where "Generate" leads once the images are ready. */
       resultHref: string;
@@ -59,8 +61,6 @@ export type ImageThread = {
   id: string;
   title: string;
   messages: ImageThreadMessage[];
-  composerPlaceholder: string;
-  disclaimer: string;
   aspectRatios: string[];
   defaultAspectRatio: string;
 };

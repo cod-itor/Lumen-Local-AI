@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { CodeSnippet, CodeTokenKind } from "@/types/learn";
 
@@ -21,6 +22,7 @@ const TOKEN_CLASS: Record<CodeTokenKind, string> = {
 /** Figma "Code Block": language label + copy button, monospace highlighted code. */
 export function CodeBlock({ code }: { code: CodeSnippet }) {
   const [copied, setCopied] = useState(false);
+  const m = useMessages();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -44,7 +46,7 @@ export function CodeBlock({ code }: { code: CodeSnippet }) {
         <button
           type="button"
           onClick={copy}
-          aria-label={copied ? "Copied" : "Copy code"}
+          aria-label={copied ? m.common.copied : m.app.learn.copyCode}
           className="-m-1 flex size-[22px] items-center justify-center rounded-[6px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <AnimatePresence mode="popLayout" initial={false}>

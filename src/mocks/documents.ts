@@ -172,8 +172,8 @@ export const mockDocumentThreads: DocumentThread[] = [
           },
         ],
         followUps: [
-          { id: "f1", label: "Upload material", icon: "upload" },
-          { id: "f2", label: "Use general knowledge" },
+          { id: "f1", label: { en: "Upload material", km: "បង្ហោះឯកសារសិក្សា" }, icon: "upload" },
+          { id: "f2", label: { en: "Use general knowledge", km: "ប្រើចំណេះដឹងទូទៅ" } },
         ],
       },
     ],

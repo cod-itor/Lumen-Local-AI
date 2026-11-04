@@ -41,9 +41,9 @@ const angkor = [
 export const mockImageGallery: ImageGallery = {
   total: 12,
   groups: [
-    { id: "today", label: "Today", images: coffee },
-    { id: "yesterday", label: "Yesterday", images: logos },
-    { id: "earlier", label: "Earlier", images: angkor },
+    { id: "today", label: { en: "Today", km: "ថ្ងៃនេះ" }, images: coffee },
+    { id: "yesterday", label: { en: "Yesterday", km: "ម្សិលមិញ" }, images: logos },
+    { id: "earlier", label: { en: "Earlier", km: "មុននេះ" }, images: angkor },
   ],
 };
 
@@ -76,14 +76,11 @@ export const mockImageThread: ImageThread = {
     {
       kind: "approval",
       id: "m5",
-      title: "Improved prompt",
       prompt:
         "Cozy coffee shop poster, warm morning light, hand-drawn illustration style, steaming cup on a wooden counter",
       resultHref: "/image/coffee-1",
     },
   ],
-  composerPlaceholder: "Describe the image you want",
-  disclaimer: "Prompts are shown for your approval before anything is generated.",
   aspectRatios: ["1:1", "4:3", "3:4", "16:9", "9:16"],
   defaultAspectRatio: "1:1",
 };

@@ -3,12 +3,10 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-
-/** Sample interim transcript for the static voice mode (Figma "04 · … + voice"). */
-const SAMPLE_TRANSCRIPT = "explain the water cycle in simple terms";
 
 /**
  * Figma "Composer": glass input with tools row (+, Search chip, mic, send).
@@ -19,17 +17,17 @@ const SAMPLE_TRANSCRIPT = "explain the water cycle in simple terms";
  * into the input. Wire real speech recognition through `onVoiceChange` later.
  */
 export function Composer({
-  placeholder = "Ask anything, in English or Khmer",
+  placeholder: placeholderProp,
   className,
   showSearch = true,
   defaultSearchOn = true,
   leading,
   onSubmit,
   defaultVoiceOn = false,
-  voiceTranscript = SAMPLE_TRANSCRIPT,
+  voiceTranscript: voiceTranscriptProp,
   onVoiceChange,
   attachIcon = "plus",
-  attachLabel = "Add attachment",
+  attachLabel: attachLabelProp,
 }: {
   placeholder?: string;
   className?: string;
@@ -40,13 +38,17 @@ export function Composer({
   onSubmit?: (text: string) => void;
   /** Start in voice (listening) mode. */
   defaultVoiceOn?: boolean;
-  /** Text revealed word by word while listening (static prototype). */
+  /** Text revealed word by word while listening (static prototype; defaults to a sample transcript). */
   voiceTranscript?: string;
   onVoiceChange?: (listening: boolean) => void;
   /** Icon name in /public/icons for the attach button (Documents: "doc-clip", Image: "img-imgplus"). */
   attachIcon?: string;
   attachLabel?: string;
 }) {
+  const m = useMessages().app.composer;
+  const placeholder = placeholderProp ?? m.placeholder;
+  const attachLabel = attachLabelProp ?? m.addAttachment;
+  const voiceTranscript = voiceTranscriptProp ?? m.sampleTranscript;
   const [value, setValue] = useState("");
   const [searchOn, setSearchOn] = useState(defaultSearchOn);
   const [listening, setListening] = useState(defaultVoiceOn);
@@ -118,7 +120,7 @@ export function Composer({
             <div role="status" aria-live="polite" className="flex items-center gap-[10px] pb-[10px]">
               <LevelBars />
               <span className="shrink-0 text-[13px] font-medium whitespace-nowrap text-muted-foreground">
-                Listening…
+                {m.listening}
               </span>
               <span className="min-w-0 truncate text-[13px] text-placeholder">{interim}</span>
             </div>
@@ -163,14 +165,14 @@ export function Composer({
             )}
           >
             <Icon name="globe" size={14} />
-            Search
+            {m.search}
           </motion.button>
         )}
         {leading}
         <div className="h-px min-w-px flex-1" />
         <motion.button
           type="button"
-          aria-label={listening ? "Stop voice input" : "Voice input"}
+          aria-label={listening ? m.stopVoice : m.voiceInput}
           aria-pressed={listening}
           whileTap={{ scale: 0.92 }}
           onClick={(e) => {
@@ -189,7 +191,7 @@ export function Composer({
         </motion.button>
         <motion.button
           type="submit"
-          aria-label="Send"
+          aria-label={m.send}
           whileTap={{ scale: 0.92 }}
           className="bg-primary-fill flex size-9 items-center justify-center rounded-[18px] transition-opacity disabled:opacity-60"
         >

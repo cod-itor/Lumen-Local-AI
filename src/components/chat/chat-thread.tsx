@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Fragment, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Composer } from "@/components/app/composer";
 import { ShellRightPanel } from "@/components/app/right-panel";
+import { useLocalized, useMessages } from "@/i18n/provider";
 import type { ChatMessage, Conversation, Source } from "@/types/chat";
 import { AssistantAnswer, riseItem } from "./assistant-answer";
 import { PreviewReply } from "./preview-reply";
@@ -25,6 +26,8 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
   const [pinnedSource, setPinnedSource] = useState<string | null>(null);
   const [hoverSource, setHoverSource] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const m = useMessages().app.chat;
+  const searchSteps = useLocalized(conversation.searchSteps);
 
   const sourcesById = useMemo(
     () => Object.fromEntries(conversation.sources.map((s) => [s.id, s])) as Record<string, Source>,
@@ -95,12 +98,13 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
       <ShellRightPanel
         open={sourcesOpen}
         width={320}
-        label="Sources"
+        label={m.sources.panel}
+        panelId="Sources"
         onClose={() => setSourcesOpen(false)}
       >
         <SourcesPanel
           sources={conversation.sources}
-          searchSteps={conversation.searchSteps}
+          searchSteps={searchSteps}
           searchQuery={conversation.searchQuery}
           activeSourceId={activeSourceId}
           onHoverSource={setHoverSource}
@@ -116,11 +120,12 @@ const readSourcesParam = () => new URLSearchParams(window.location.search).get("
 
 /** Follow-up composer (chat width + 20px) + disclaimer. */
 function FollowUpComposer({ onSubmit }: { onSubmit?: (text: string) => void }) {
+  const m = useMessages();
   return (
     <div className="mx-auto w-[min(calc(var(--chat-width)+20px),calc(100%-88px))] shrink-0 pt-3 max-sm:w-[calc(100%-16px)]">
-      <Composer placeholder="Ask a follow-up" onSubmit={onSubmit} />
+      <Composer placeholder={m.app.chat.followUpPlaceholder} onSubmit={onSubmit} />
       <p className="mt-[9px] -mb-[5px] text-center text-[11.5px] leading-[14px] text-placeholder">
-        AI can make mistakes. Check sources.
+        {m.common.aiDisclaimer}
       </p>
     </div>
   );

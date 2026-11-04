@@ -19,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LOCALE_LABEL, LOCALES, isLocale } from "@/i18n/config";
+import { setLocale, useLocale, useLocalized, useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { ModelStatus, User } from "@/types";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
@@ -42,6 +44,7 @@ export function SidebarFrame({
   user: User;
 }) {
   const { isDesktop, sidebarOpen, mobileNavOpen, setMobileNavOpen, toggleSidebar } = useShell();
+  const m = useMessages().app.sidebar;
   const rs = useResizableWidth({
     storageKey: "lumen:sidebar-width",
     defaultWidth: 272,
@@ -59,7 +62,7 @@ export function SidebarFrame({
         </Link>
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label={m.close}
           onClick={toggleSidebar}
           className="flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent"
         >
@@ -95,7 +98,7 @@ export function SidebarFrame({
             />
             <motion.aside
               key="drawer"
-              aria-label="Sidebar"
+              aria-label={m.label}
               initial={{ x: "-105%" }}
               animate={{ x: 0 }}
               exit={{ x: "-105%" }}
@@ -122,7 +125,7 @@ export function SidebarFrame({
           className="relative h-full shrink-0 overflow-hidden"
         >
           <motion.aside
-            aria-label="Sidebar"
+            aria-label={m.label}
             initial={{ x: -24 }}
             animate={{ x: 0 }}
             exit={{ x: -24 }}
@@ -132,7 +135,7 @@ export function SidebarFrame({
           >
             {panel}
           </motion.aside>
-          <ResizeHandle side="right" label="Resize sidebar" className="right-[2px]" {...rs} />
+          <ResizeHandle side="right" label={m.resize} className="right-[2px]" {...rs} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -142,6 +145,7 @@ export function SidebarFrame({
 /** Shown in place of the sidebar when it's closed (Figma "Sidebar Closed · Controls"). */
 export function SidebarClosedControls() {
   const { isDesktop, sidebarOpen, toggleSidebar } = useShell();
+  const m = useMessages().app.sidebar;
   const show = !isDesktop || !sidebarOpen;
   return (
     <AnimatePresence initial={false}>
@@ -156,7 +160,7 @@ export function SidebarClosedControls() {
         >
           <button
             type="button"
-            aria-label="Open sidebar"
+            aria-label={m.open}
             onClick={toggleSidebar}
             className="flex size-[32px] items-center justify-center rounded-[12px] text-icon transition-colors hover:bg-accent"
           >
@@ -164,7 +168,7 @@ export function SidebarClosedControls() {
           </button>
           <Link
             href="/chat"
-            aria-label="New chat"
+            aria-label={m.newChat}
             className="flex size-[32px] items-center justify-center rounded-[12px] text-icon transition-colors hover:bg-accent"
           >
             <Icon name="edit" size={17} />
@@ -304,6 +308,8 @@ export function SidebarHistoryItem({
 /* --------------------------------------------------------------- footer */
 
 function ModelStatusCard({ status }: { status: ModelStatus }) {
+  const labels = useMessages().app.sidebar.status;
+  const detail = useLocalized(status.detail);
   const dot =
     status.state === "ready" ? "bg-success" : status.state === "loading" ? "bg-yellow" : "bg-subtle";
   return (
@@ -313,9 +319,9 @@ function ModelStatusCard({ status }: { status: ModelStatus }) {
         <span className="min-w-0 flex-1 text-[12.5px] font-medium text-foreground">
           {status.name}
         </span>
-        <span className="text-[11.5px] text-success-foreground">{status.stateLabel}</span>
+        <span className="shrink-0 text-[11.5px] text-success-foreground">{labels[status.state]}</span>
       </div>
-      <span className="text-[11px] text-muted-foreground">{status.detail}</span>
+      <span className="text-[11px] text-muted-foreground">{detail}</span>
     </div>
   );
 }
@@ -324,6 +330,9 @@ function AccountRow({ user }: { user: User }) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const { setMobileNavOpen, setChatWidthOpen } = useShell();
+  const messages = useMessages();
+  const m = messages.app.sidebar.account;
+  const locale = useLocale();
   return (
     <div className="flex w-full shrink-0 items-center gap-[10px] pt-[10px] pl-[6px]">
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[17px] bg-brand-gradient text-[12px] font-semibold text-white">
@@ -335,22 +344,33 @@ function AccountRow({ user }: { user: User }) {
       </span>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label="Settings"
+          aria-label={m.settings}
           className="flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent data-[popup-open]:bg-accent"
         >
           <Icon name="sliders" size={16} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="end" className="w-52">
+        <DropdownMenuContent side="top" align="end" className="w-56">
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+            <DropdownMenuLabel>{m.appearance}</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(String(v))}>
-              <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">{m.dark}</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="light">{m.light}</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Layout</DropdownMenuLabel>
+            <DropdownMenuLabel>{messages.common.language}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={locale} onValueChange={(v) => isLocale(v) && setLocale(v)}>
+              {LOCALES.map((l) => (
+                <DropdownMenuRadioItem key={l} value={l} lang={l}>
+                  {LOCALE_LABEL[l].native}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{m.layout}</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
                 setMobileNavOpen(false);
@@ -358,19 +378,19 @@ function AccountRow({ user }: { user: User }) {
               }}
             >
               <MoveHorizontal />
-              Chat width…
+              {m.chatWidth}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings />
-            Settings & AI models
+            {m.settingsAndModels}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {/* UI only for now: clear the session here once auth is wired up. */}
           <DropdownMenuItem onClick={() => router.push("/login")}>
             <LogOut />
-            Log out
+            {m.logOut}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

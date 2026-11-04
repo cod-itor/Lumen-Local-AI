@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/app/composer";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { ImageThread as ImageThreadData, ImageThreadMessage } from "@/types/images";
 import { ApprovalCard } from "./approval-card";
@@ -16,6 +18,7 @@ import { riseItem } from "./motion";
 export function ImageThread({ thread }: { thread: ImageThreadData }) {
   const [messages, setMessages] = useState<ImageThreadMessage[]>(thread.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const m = useMessages().app.image;
   const resultHref =
     thread.messages.findLast((m) => m.kind === "approval")?.resultHref ?? "/image";
 
@@ -34,7 +37,7 @@ export function ImageThread({ thread }: { thread: ImageThreadData }) {
     setMessages((prev) => [
       ...prev,
       { kind: "user", id: `u${n}`, text },
-      { kind: "approval", id: `a${n}`, title: "Improved prompt", prompt: text, resultHref },
+      { kind: "approval", id: `a${n}`, prompt: text, resultHref },
     ]);
   };
 
@@ -47,9 +50,9 @@ export function ImageThread({ thread }: { thread: ImageThreadData }) {
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
           className="mx-auto flex w-full max-w-(--chat-width) flex-col gap-7 px-1 pt-3 pb-3"
         >
-          {messages.map((m) => (
-            <motion.div key={m.id} variants={riseItem}>
-              <Message message={m} />
+          {messages.map((msg) => (
+            <motion.div key={msg.id} variants={riseItem}>
+              <Message message={msg} />
             </motion.div>
           ))}
         </motion.div>
@@ -57,22 +60,23 @@ export function ImageThread({ thread }: { thread: ImageThreadData }) {
 
       <div className="mx-auto w-full max-w-[calc(var(--chat-width)+20px)] shrink-0">
         <Composer
-          placeholder={thread.composerPlaceholder}
+          placeholder={m.placeholder}
           showSearch={false}
           attachIcon="img-imgplus"
-          attachLabel="Add reference image"
+          attachLabel={m.addReference}
           leading={
             <AspectRatioChip options={thread.aspectRatios} defaultValue={thread.defaultAspectRatio} />
           }
           onSubmit={submit}
         />
-        <p className="pt-[3px] text-center text-[11.5px] text-subtle">{thread.disclaimer}</p>
+        <p className="pt-[3px] text-center text-[11.5px] text-subtle">{m.disclaimer}</p>
       </div>
     </div>
   );
 }
 
 function Message({ message: m }: { message: ImageThreadMessage }) {
+  const openTemplate = useMessages().app.image.openImage;
   switch (m.kind) {
     case "user":
       return (
@@ -90,7 +94,7 @@ function Message({ message: m }: { message: ImageThreadMessage }) {
               <Link
                 key={image.id}
                 href={`/image/${image.id}`}
-                aria-label={`Open ${image.alt}`}
+                aria-label={format(openTemplate, { alt: image.alt })}
                 className="group block rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <ImageTile
@@ -107,7 +111,7 @@ function Message({ message: m }: { message: ImageThreadMessage }) {
     case "clarify":
       return <Clarify question={m.question} options={m.options} defaultSelected={m.selected} />;
     case "approval":
-      return <ApprovalCard title={m.title} prompt={m.prompt} resultHref={m.resultHref} />;
+      return <ApprovalCard prompt={m.prompt} resultHref={m.resultHref} />;
   }
 }
 
@@ -150,15 +154,16 @@ function Clarify({
 }
 
 const ACTIONS = [
-  { icon: "img-copy", label: "Copy prompt" },
-  { icon: "img-tup", label: "Good result", toggle: true },
-  { icon: "img-tdown", label: "Bad result", toggle: true },
-  { icon: "img-refresh", label: "Regenerate" },
-  { icon: "img-lang", label: "Translate" },
+  { icon: "img-copy", label: "copyPrompt" },
+  { icon: "img-tup", label: "goodResult", toggle: true },
+  { icon: "img-tdown", label: "badResult", toggle: true },
+  { icon: "img-refresh", label: "regenerate" },
+  { icon: "img-lang", label: "translate" },
 ] as const;
 
 function MessageActions() {
   const [rated, setRated] = useState<string | null>(null);
+  const labels = useMessages().app.image.actions;
   return (
     <div className="flex items-center gap-[2px]">
       {ACTIONS.map((a) => {
@@ -167,8 +172,8 @@ function MessageActions() {
           <motion.button
             key={a.icon}
             type="button"
-            aria-label={a.label}
-            title={a.label}
+            aria-label={labels[a.label]}
+            title={labels[a.label]}
             aria-pressed={"toggle" in a ? on : undefined}
             whileTap={{ scale: 0.9 }}
             onClick={() => "toggle" in a && setRated(on ? null : a.icon)}

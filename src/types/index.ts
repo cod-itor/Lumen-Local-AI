@@ -3,6 +3,8 @@
  * conform to these, so swapping mocks for a real API only touches src/services.
  */
 
+import type { Localized } from "@/i18n/config";
+
 export type User = {
   id: string;
   name: string;
@@ -15,8 +17,8 @@ export type ModelState = "ready" | "loading" | "idle";
 export type ModelStatus = {
   name: string; // "Gemma 4 E2B"
   state: ModelState;
-  stateLabel: string; // "Ready"
-  detail: string; // "EmbeddingGemma loaded · Queue 0"
+  /** Status line under the name ("EmbeddingGemma loaded · Queue 0"). The state label comes from the dictionary. */
+  detail: Localized<string>;
 };
 
 export type AppSection = "chat" | "documents" | "image" | "learn";
@@ -31,5 +33,5 @@ export type ChatSummary = {
 
 export type Suggestion = {
   id: string;
-  label: string;
+  label: Localized<string>;
 };

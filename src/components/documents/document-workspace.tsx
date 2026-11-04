@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ShellRightPanel } from "@/components/app/right-panel";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useLocale, useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type {
   Citation,
@@ -36,6 +38,8 @@ export function DocumentWorkspace({
   materials: Material[];
 }) {
   const router = useRouter();
+  const msgs = useMessages();
+  const m = msgs.app.documents;
   const [viewerOpen, setViewerOpen] = useState(true);
   const [focus, setFocus] = useState<HighlightFocus | null>(null);
   // Sources for retrieval; seeded from the thread, persisted via services later.
@@ -76,18 +80,18 @@ export function DocumentWorkspace({
           </motion.li>
 
           {thread ? (
-            thread.messages.map((m) => (
-              <motion.li key={m.id} variants={item}>
-                <Message message={m} onCite={openCitation} />
+            thread.messages.map((msg) => (
+              <motion.li key={msg.id} variants={item}>
+                <Message message={msg} onCite={openCitation} />
               </motion.li>
             ))
           ) : (
             <motion.li variants={item} className="flex flex-col items-center gap-2 pt-24 text-center">
               <span className="text-[20px] font-semibold tracking-[-0.5px] text-foreground">
-                Ask about {material.name}
+                {format(m.askAbout, { name: material.name })}
               </span>
               <span className="text-[13px] text-muted-foreground">
-                Answers cite the exact passage in the file viewer.
+                {m.askHint}
               </span>
             </motion.li>
           )}
@@ -96,21 +100,22 @@ export function DocumentWorkspace({
 
       <div className="w-full max-w-[calc(var(--chat-width)+20px)] pt-3">
         <Composer
-          placeholder="Ask about your materials"
+          placeholder={m.placeholder}
           showSearch={false}
           attachIcon="doc-clip"
-          attachLabel="Attach material"
+          attachLabel={m.attach}
           leading={picker("chip")}
         />
       </div>
       <p className="mt-[6px] -mb-[5px] text-center text-[11.5px] leading-[14px] text-subtle">
-        AI can make mistakes. Check sources.
+        {msgs.common.aiDisclaimer}
       </p>
 
       <ShellRightPanel
         open={viewerOpen}
         width={540}
-        label="File viewer"
+        label={m.viewer.panel}
+        panelId="File viewer"
         className="overflow-hidden"
         onClose={() => setViewerOpen(false)}
       >
@@ -126,6 +131,8 @@ export function DocumentWorkspace({
 }
 
 function Message({ message: m, onCite }: { message: DocumentMessage; onCite: (c: Citation) => void }) {
+  const locale = useLocale();
+  const pageShort = useMessages().app.documents.pageShort;
   if (m.role === "user") {
     return (
       <div className="flex justify-end">
@@ -162,7 +169,7 @@ function Message({ message: m, onCite }: { message: DocumentMessage; onCite: (c:
             >
               <Icon name="doc-file-sm" size={13} />
               <span className="text-[12px] font-medium whitespace-nowrap">
-                {c.fileName} · p.{c.page}
+                {c.fileName} · {format(pageShort, { page: c.page })}
               </span>
             </motion.button>
           ))}
@@ -180,7 +187,7 @@ function Message({ message: m, onCite }: { message: DocumentMessage; onCite: (c:
               className="flex items-center gap-[6px] rounded-full border border-border px-3 py-[7px] text-foreground transition-colors hover:bg-accent"
             >
               {f.icon && <Icon name="doc-upload" size={14} />}
-              <span className="text-[12.5px] font-medium whitespace-nowrap">{f.label}</span>
+              <span className="text-[12.5px] font-medium whitespace-nowrap">{f.label[locale]}</span>
             </button>
           ))}
         </div>
@@ -191,12 +198,15 @@ function Message({ message: m, onCite }: { message: DocumentMessage; onCite: (c:
 
 function MessageActions({ text }: { text: string }) {
   const [rating, setRating] = useState<"up" | "down" | null>(null);
+  const msgs = useMessages();
+  const chat = msgs.app.chat.actions;
+  const doc = msgs.app.documents.actions;
   const actions = [
-    { id: "copy", icon: "doc-copy", label: "Copy", onClick: () => void navigator.clipboard?.writeText(text) },
-    { id: "up", icon: "doc-tup", label: "Good answer", onClick: () => setRating((r) => (r === "up" ? null : "up")) },
-    { id: "down", icon: "doc-tdown", label: "Bad answer", onClick: () => setRating((r) => (r === "down" ? null : "down")) },
-    { id: "refresh", icon: "doc-refresh", label: "Regenerate" },
-    { id: "lang", icon: "doc-lang", label: "Translate to Khmer" },
+    { id: "copy", icon: "doc-copy", label: msgs.common.copy, onClick: () => void navigator.clipboard?.writeText(text) },
+    { id: "up", icon: "doc-tup", label: doc.goodAnswer, onClick: () => setRating((r) => (r === "up" ? null : "up")) },
+    { id: "down", icon: "doc-tdown", label: doc.badAnswer, onClick: () => setRating((r) => (r === "down" ? null : "down")) },
+    { id: "refresh", icon: "doc-refresh", label: chat.regenerate },
+    { id: "lang", icon: "doc-lang", label: chat.translate },
   ];
   return (
     <div className="flex items-center gap-[2px]">

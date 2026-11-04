@@ -2,11 +2,13 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Fragment, useEffect, useState } from "react";
+import { useMessages } from "@/i18n/provider";
 
 /** Animated "Thinking…" indicator: three bouncing dots + shimmering label. */
 export function ThinkingIndicator() {
+  const m = useMessages().app.chat;
   return (
-    <div role="status" aria-label="Thinking" className="flex items-center gap-2.5 text-[13px] text-subtle">
+    <div role="status" aria-label={m.thinkingLabel} className="flex items-center gap-2.5 text-[13px] text-subtle">
       <span className="flex items-center gap-1" aria-hidden>
         {[0, 1, 2].map((i) => (
           <motion.span
@@ -17,7 +19,7 @@ export function ThinkingIndicator() {
           />
         ))}
       </span>
-      <span className="shimmer-text">Thinking…</span>
+      <span className="shimmer-text">{m.thinking}</span>
     </div>
   );
 }
@@ -62,12 +64,14 @@ export function StreamedText({ text, wordMs = 45 }: { text: string; wordMs?: num
  * model stream when the API is connected.
  */
 export function PreviewReply({
-  text = "Answers will stream in here once the local model is connected. This is a preview of the conversation UI.",
+  text,
   thinkMs = 1200,
 }: {
+  /** Defaults to a localized "model not connected yet" note. */
   text?: string;
   thinkMs?: number;
 }) {
+  const fallback = useMessages().app.chat.previewReply;
   const [thinking, setThinking] = useState(true);
 
   useEffect(() => {
@@ -84,7 +88,7 @@ export function PreviewReply({
           </motion.div>
         ) : (
           <motion.div key="answer" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <StreamedText text={text} />
+            <StreamedText text={text ?? fallback} />
           </motion.div>
         )}
       </AnimatePresence>

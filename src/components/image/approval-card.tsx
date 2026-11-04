@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { EASE } from "./motion";
 
@@ -14,15 +16,15 @@ const TILE_COUNT = 4;
 
 /** Figma "Approval Card": improved prompt the user must approve before generation. */
 export function ApprovalCard({
-  title,
   prompt: initialPrompt,
   resultHref,
 }: {
-  title: string;
   prompt: string;
   resultHref: string;
 }) {
   const router = useRouter();
+  const msgs = useMessages();
+  const m = msgs.app.image.approval;
   const [phase, setPhase] = useState<Phase>("idle");
   const [prompt, setPrompt] = useState(initialPrompt);
   const editRef = useRef<HTMLTextAreaElement>(null);
@@ -51,13 +53,13 @@ export function ApprovalCard({
         transition={{ duration: 0.2 }}
         className="flex items-center gap-2 text-[13px] text-muted-foreground"
       >
-        Prompt dismissed. Nothing was generated.
+        {m.dismissed}
         <button
           type="button"
           onClick={() => setPhase("idle")}
           className="rounded-full px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
         >
-          Undo
+          {m.undo}
         </button>
       </motion.div>
     );
@@ -80,7 +82,7 @@ export function ApprovalCard({
           >
             <Icon name="img-sparkles" size={14} className="text-orange-foreground" />
           </motion.span>
-          <span className="text-[13px] font-semibold text-foreground">{title}</span>
+          <span className="text-[13px] font-semibold text-foreground">{m.title}</span>
         </div>
 
         {phase === "editing" ? (
@@ -94,7 +96,7 @@ export function ApprovalCard({
                 setPhase("idle");
               }
             }}
-            aria-label="Edit prompt"
+            aria-label={m.editPrompt}
             className="field-sizing-content w-full resize-none rounded-[12px] border border-border bg-transparent px-3 py-2 text-[14.5px] leading-[22px] text-foreground-tertiary outline-none focus:shadow-[0_0_0_3px_var(--brand-blue-soft)]"
           />
         ) : (
@@ -109,11 +111,11 @@ export function ApprovalCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.22, ease: EASE }}
-              className="flex h-[37px] items-center gap-3"
+              className="flex min-h-[37px] flex-wrap items-center gap-x-3 gap-y-1"
               role="status"
             >
               <span className="text-[13.5px] font-medium text-foreground">
-                Generating {TILE_COUNT} images
+                {format(m.generating, { count: TILE_COUNT })}
               </span>
               <div className="relative h-1 w-40 overflow-hidden rounded-full bg-accent">
                 <motion.div
@@ -131,7 +133,7 @@ export function ApprovalCard({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.22, ease: EASE }}
-              className="flex items-start gap-2"
+              className="flex flex-wrap items-start gap-2"
             >
               <motion.button
                 type="button"
@@ -140,7 +142,7 @@ export function ApprovalCard({
                 disabled={!prompt.trim()}
                 className="bg-primary-fill rounded-[12px] px-4 py-[9px] text-[13.5px] font-medium transition-[filter,opacity] hover:brightness-105 disabled:opacity-50"
               >
-                Generate
+                {m.generate}
               </motion.button>
               <motion.button
                 type="button"
@@ -152,7 +154,7 @@ export function ApprovalCard({
                   phase === "editing" && "bg-accent",
                 )}
               >
-                {phase === "editing" ? "Done" : "Edit"}
+                {phase === "editing" ? msgs.common.done : m.edit}
               </motion.button>
               <button
                 type="button"
@@ -162,7 +164,7 @@ export function ApprovalCard({
                 }}
                 className="rounded-full px-3 py-[9px] text-[13.5px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                Cancel
+                {msgs.common.cancel}
               </button>
             </motion.div>
           )}

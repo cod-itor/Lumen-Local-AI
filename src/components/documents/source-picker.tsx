@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { Material } from "@/types/documents";
-import { FileBadge, materialMeta } from "./file-badge";
+import { FileBadge, useMaterialMeta } from "./file-badge";
 
 /**
  * Pick which materials the answer is grounded in (multi-file RAG). The open
@@ -28,6 +30,8 @@ export function SourcePicker({
   onChange: (ids: string[]) => void;
   variant?: "pill" | "chip";
 }) {
+  const t = useMessages().app.documents.picker;
+  const materialMeta = useMaterialMeta();
   const ready = materials.filter((m) => m.status === "ready");
   const picked = materials.filter((m) => selected.includes(m.id));
 
@@ -39,7 +43,7 @@ export function SourcePicker({
   return (
     <Popover>
       <PopoverTrigger
-        aria-label={`Answer from ${picked.length} of ${materials.length} materials`}
+        aria-label={format(t.trigger, { count: picked.length, total: materials.length })}
         className={cn(
           "group flex items-center gap-[6px] rounded-full border border-border text-foreground transition-colors hover:bg-accent data-[popup-open]:bg-accent",
           variant === "pill" ? "px-3 py-[6px]" : "h-[34px] px-2.5",
@@ -51,14 +55,10 @@ export function SourcePicker({
           <Layers className="size-[15px]" strokeWidth={1.8} aria-hidden />
         )}
         <span className="text-[12px] font-medium whitespace-nowrap">
-          {variant === "pill" ? (
-            <>
-              Using <NumberSwap value={picked.length} /> of {materials.length} materials
-            </>
-          ) : (
-            <>
-              <NumberSwap value={picked.length} /> {picked.length === 1 ? "file" : "files"}
-            </>
+          {withCount(
+            variant === "pill" ? t.using : picked.length === 1 ? t.chipOne : t.chipMany,
+            <NumberSwap value={picked.length} />,
+            { total: materials.length },
           )}
         </span>
         <Icon
@@ -76,10 +76,10 @@ export function SourcePicker({
         <PopoverHeader className="px-2.5 pt-2 pb-1.5">
           <PopoverTitle className="flex items-center gap-2 text-[14px]">
             <Layers className="size-4" strokeWidth={1.8} />
-            Answer from
+            {t.title}
           </PopoverTitle>
           <PopoverDescription className="text-[12.5px] leading-[18px]">
-            Lumen searches every selected file and cites the exact passage it used.
+            {t.description}
           </PopoverDescription>
         </PopoverHeader>
 
@@ -109,8 +109,8 @@ export function SourcePicker({
                     <span className="text-[11.5px] text-muted-foreground">{materialMeta(m)}</span>
                   </span>
                   {m.id === currentId && (
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
-                      Open
+                    <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-medium whitespace-nowrap text-muted-foreground">
+                      {t.openBadge}
                     </span>
                   )}
                 </label>
@@ -121,7 +121,7 @@ export function SourcePicker({
 
         <div className="flex items-center justify-between gap-2 border-t border-border px-1 pt-1.5">
           <Button variant="ghost" size="sm" className="rounded-full" onClick={() => onChange([currentId])}>
-            Only this file
+            {t.onlyThis}
           </Button>
           <Button
             variant="ghost"
@@ -130,11 +130,23 @@ export function SourcePicker({
             disabled={ready.every((m) => selected.includes(m.id))}
             onClick={() => onChange(ready.map((m) => m.id))}
           >
-            Select all ready
+            {t.selectAllReady}
           </Button>
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Fills a "{count} …" template, putting `count` (a node) where `{count}` sits. */
+function withCount(template: string, count: React.ReactNode, vars: Record<string, number>) {
+  const [before, after = ""] = format(template, vars).split("{count}");
+  return (
+    <>
+      {before}
+      {count}
+      {after}
+    </>
   );
 }
 

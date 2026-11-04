@@ -1,3 +1,5 @@
+import type { Localized } from "@/i18n/config";
+
 /**
  * Documents section domain types (Figma "05 · Documents · Material open").
  * Mocks in src/mocks/documents.ts and services in src/services/documents.ts
@@ -47,7 +49,8 @@ export type Citation = {
   highlightId: string;
 };
 
-export type FollowUp = { id: string; label: string; icon?: "upload" };
+/** Suggested next action chip under an answer (app chrome, so localized). */
+export type FollowUp = { id: string; label: Localized<string>; icon?: "upload" };
 
 export type DocumentMessage =
   | { id: string; role: "user"; text: string }

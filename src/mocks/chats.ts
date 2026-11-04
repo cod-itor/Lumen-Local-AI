@@ -14,8 +14,8 @@ export const mockChatHistory: ChatSummary[] = [
 
 /** Starter chips under the composer on the empty chat screen. */
 export const mockChatSuggestions: Suggestion[] = [
-  { id: "s1", label: "Explain photosynthesis" },
-  { id: "s2", label: "Quiz me on Python" },
-  { id: "s3", label: "Summarize my notes" },
-  { id: "s4", label: "Translate to Khmer" },
+  { id: "s1", label: { en: "Explain photosynthesis", km: "ពន្យល់ពីរស្មីសំយោគ" } },
+  { id: "s2", label: { en: "Quiz me on Python", km: "សួរខ្ញុំអំពី Python" } },
+  { id: "s3", label: { en: "Summarize my notes", km: "សង្ខេបកំណត់ត្រារបស់ខ្ញុំ" } },
+  { id: "s4", label: { en: "Translate to Khmer", km: "បកប្រែជាភាសាខ្មែរ" } },
 ];

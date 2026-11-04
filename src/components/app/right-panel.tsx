@@ -3,6 +3,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useMessages } from "@/i18n/provider";
+import { format } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { useShell } from "./shell-context";
@@ -28,6 +30,7 @@ export function ShellRightPanel({
   className,
   children,
   label,
+  panelId,
   onClose,
 }: {
   open: boolean;
@@ -35,14 +38,18 @@ export function ShellRightPanel({
   width: number;
   className?: string;
   children: React.ReactNode;
+  /** Accessible name (localized). */
   label: string;
+  /** Stable id for the remembered width; defaults to `label` (pass one when the label is translated). */
+  panelId?: string;
   /** Closes the panel (backdrop click / Escape / mobile first render). */
   onClose?: () => void;
 }) {
   const { rightPanelHost, isDesktop } = useShell();
+  const resizeTemplate = useMessages().app.rightPanel.resize;
   const closedInitialMobile = useRef(false);
   const rs = useResizableWidth({
-    storageKey: `lumen:panel-width:${label}`,
+    storageKey: `lumen:panel-width:${panelId ?? label}`,
     defaultWidth: width,
     min: 280,
     max: panelMax,
@@ -116,7 +123,7 @@ export function ShellRightPanel({
           transition={rs.dragging ? { duration: 0 } : { duration: 0.32, ease: EASE }}
           className="relative flex h-full shrink-0 justify-end overflow-hidden"
         >
-          <ResizeHandle side="left" label={`Resize ${label.toLowerCase()}`} className="left-0" {...rs} />
+          <ResizeHandle side="left" label={format(resizeTemplate, { panel: label.toLowerCase() })} className="left-0" {...rs} />
           <motion.aside
             aria-label={label}
             initial={{ x: 24 }}

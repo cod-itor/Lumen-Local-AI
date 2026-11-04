@@ -3,6 +3,8 @@
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion } from "@/types/learn";
 
@@ -27,6 +29,7 @@ export function QuizCard({
   onSelect: (optionId: string) => void;
   onNext: () => void;
 }) {
+  const m = useMessages().app.learn;
   const answered = selectedOptionId !== undefined;
   const wrong = answered && selectedOptionId !== question.correctOptionId;
 
@@ -34,16 +37,16 @@ export function QuizCard({
     <motion.section
       layout
       transition={{ layout: { duration: 0.28, ease: EASE } }}
-      aria-label="Quiz"
+      aria-label={m.quiz}
       className="glass flex w-full flex-col gap-[10px] overflow-hidden rounded-[20px] p-[18px]"
     >
       <motion.div layout="position" className="flex items-start">
         <span className="text-[13px] leading-[normal] font-semibold whitespace-nowrap text-orange-foreground">
-          Quiz
+          {m.quiz}
         </span>
         <div className="flex-1" />
         <span className="text-[12px] leading-[normal] whitespace-nowrap text-muted-foreground tabular-nums">
-          {index + 1} of {total}
+          {format(m.questionOf, { index: index + 1, total })}
         </span>
       </motion.div>
 
@@ -126,7 +129,7 @@ export function QuizCard({
               >
                 {(wrong || question.explanation) && (
                   <p aria-live="polite" className="text-[13px] leading-[normal] text-muted-foreground">
-                    {wrong && "Not quite. The correct answer is highlighted. "}
+                    {wrong && m.notQuite}
                     {question.explanation}
                   </p>
                 )}

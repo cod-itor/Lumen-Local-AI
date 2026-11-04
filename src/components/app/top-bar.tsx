@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { AppSection } from "@/types";
 import { useShell } from "./shell-context";
@@ -12,9 +13,9 @@ import { SidebarClosedControls } from "./sidebar";
 const MotionLink = motion.create(Link);
 
 const TABS = [
-  { key: "chat", label: "Chat", icon: "msg", match: ["chat", "learn"] },
-  { key: "documents", label: "Documents", icon: "file", match: ["documents"] },
-  { key: "image", label: "Image", icon: "image", match: ["image"] },
+  { key: "chat", icon: "msg", match: ["chat", "learn"] },
+  { key: "documents", icon: "file", match: ["documents"] },
+  { key: "image", icon: "image", match: ["image"] },
 ] as const;
 
 /**
@@ -31,6 +32,8 @@ export function TopBar({
   tabHomes: { chat: string; documents: string; image: string };
 }) {
   const { lastPaths } = useShell();
+  const msgs = useMessages();
+  const m = msgs.app.topBar;
 
   return (
     <header className="relative flex h-14 shrink-0 items-start sm:h-16">
@@ -43,7 +46,7 @@ export function TopBar({
               <MotionLink
                 key={model}
                 href="/settings#models"
-                title="Runs on your computer — choose models in Settings"
+                title={m.modelHint}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
@@ -61,18 +64,19 @@ export function TopBar({
       </div>
 
       <nav
-        aria-label="Workspace"
+        aria-label={m.workspace}
         className="glass absolute top-[2px] right-0 flex items-start gap-[2px] rounded-[16px] p-1 sm:right-auto sm:left-1/2 sm:-translate-x-1/2"
       >
         {TABS.map((tab) => {
           const active = (tab.match as readonly string[]).includes(section);
           const href = lastPaths[tab.key] ?? tabHomes[tab.key];
+          const label = m[tab.key];
           return (
             <Link
               key={tab.key}
               href={href}
               aria-current={active ? "page" : undefined}
-              aria-label={tab.label}
+              aria-label={label}
               className={cn(
                 "relative flex items-center gap-[7px] rounded-[12px] px-3 py-[9px] transition-colors sm:px-4",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -87,7 +91,7 @@ export function TopBar({
               )}
               <Icon name={tab.icon} size={15} className="relative" />
               <span className="relative hidden text-[13.5px] font-medium whitespace-nowrap sm:inline">
-                {tab.label}
+                {label}
               </span>
             </Link>
           );
@@ -97,7 +101,7 @@ export function TopBar({
       {/* Top-right: planned features. Icon-only on phones, beside the tabs. */}
       <Link
         href="/coming-soon"
-        aria-label="Coming soon: planned features"
+        aria-label={msgs.common.comingSoonAria}
         className="glass group absolute top-[2px] right-[140px] flex h-[44px] items-center gap-2 rounded-[16px] px-3 text-foreground transition-transform hover:-translate-y-px sm:right-0 sm:px-3.5"
       >
         <span className="relative flex size-2" aria-hidden>
@@ -105,7 +109,7 @@ export function TopBar({
           <span className="relative size-2 rounded-full bg-brand-orange" />
         </span>
         <Sparkles className="size-4 sm:hidden" strokeWidth={1.8} />
-        <span className="hidden text-[13px] font-medium whitespace-nowrap sm:inline">Coming soon</span>
+        <span className="hidden text-[13px] font-medium whitespace-nowrap sm:inline">{msgs.common.comingSoon}</span>
       </Link>
     </header>
   );

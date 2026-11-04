@@ -1,3 +1,5 @@
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { FileKind } from "@/types/documents";
 
@@ -24,7 +26,11 @@ export function FileBadge({ kind, size = "sm" }: { kind: FileKind; size?: "sm" |
   );
 }
 
-export function materialMeta(m: { pages?: number; status: string; progress?: number }) {
-  if (m.status === "embedding") return `Embedding… ${m.progress ?? 0}%`;
-  return m.pages ? `${m.pages} pages · Ready` : "Ready";
+/** Sidebar / picker status line ("18 pages · Ready", "Embedding… 64%"). */
+export function useMaterialMeta() {
+  const meta = useMessages().app.documents.meta;
+  return (m: { pages?: number; status: string; progress?: number }) => {
+    if (m.status === "embedding") return format(meta.embedding, { progress: m.progress ?? 0 });
+    return m.pages ? format(meta.pagesReady, { pages: m.pages }) : meta.ready;
+  };
 }

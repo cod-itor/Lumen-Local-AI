@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SidebarNavItem, SidebarSection } from "@/components/app/sidebar";
 import { Icon } from "@/components/icon";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { DocumentChatSummary, Material } from "@/types/documents";
-import { FileBadge, materialMeta } from "./file-badge";
+import { FileBadge, useMaterialMeta } from "./file-badge";
 
 const SPRING = { type: "spring", stiffness: 500, damping: 40 } as const;
 
@@ -20,14 +21,15 @@ export function DocumentsSidebarList({
 }) {
   const pathname = usePathname();
   const currentId = pathname.startsWith("/documents/") ? pathname.split("/")[2] : null;
+  const m = useMessages().app.sidebar;
 
   return (
     <>
-      <SidebarNavItem href="/documents" icon="nav-plus" label="New document chat" />
-      <SidebarNavItem icon="nav-search" label="Search" />
+      <SidebarNavItem href="/documents" icon="nav-plus" label={m.newDocumentChat} />
+      <SidebarNavItem icon="nav-search" label={m.search} />
       <SidebarNavItem
         icon="doc-book"
-        label="Materials"
+        label={m.materials}
         active
         trailing={
           <span
@@ -39,12 +41,12 @@ export function DocumentsSidebarList({
         }
       />
 
-      <SidebarSection title="Shared materials">
-        {materials.map((m) => (
-          <MaterialRow key={m.id} material={m} active={m.id === currentId} />
+      <SidebarSection title={m.sharedMaterials}>
+        {materials.map((mat) => (
+          <MaterialRow key={mat.id} material={mat} active={mat.id === currentId} />
         ))}
       </SidebarSection>
-      <SidebarSection title="Recents">
+      <SidebarSection title={m.recents}>
         {chats.map((c) => {
           const active = c.materialId === currentId;
           return (
@@ -77,6 +79,7 @@ export function DocumentsSidebarList({
 
 /** Figma "Material Item": 46px row with file badge, name and status line. */
 function MaterialRow({ material: m, active }: { material: Material; active: boolean }) {
+  const materialMeta = useMaterialMeta();
   return (
     <Link
       href={`/documents/${m.id}`}

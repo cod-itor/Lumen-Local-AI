@@ -96,13 +96,16 @@ export const mockPhotosynthesisConversation: Conversation = {
     {
       id: "m2",
       role: "assistant",
-      searchTrace: "Searched 4 sites",
+      searchTrace: { en: "Searched 4 sites", km: "បានស្វែងរក 4 គេហទំព័រ" },
       blocks: mockPhotosynthesisAnswer,
       sourceIds: mockPhotosynthesisSources.map((s) => s.id),
     },
   ],
   sources: mockPhotosynthesisSources,
-  searchSteps: ["Searched the web", "Read 4 pages", "Wrote the answer with citations"],
+  searchSteps: {
+    en: ["Searched the web", "Read 4 pages", "Wrote the answer with citations"],
+    km: ["បានស្វែងរកលើអ៊ីនធឺណិត", "បានអាន 4 ទំព័រ", "បានសរសេរចម្លើយ ព្រមទាំងយោងប្រភព"],
+  },
   searchQuery: "how photosynthesis works simply",
 };
 

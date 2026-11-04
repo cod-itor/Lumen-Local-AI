@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { ShellRightPanel } from "@/components/app/right-panel";
 import { Icon } from "@/components/icon";
+import { L, useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { GeneratedImage, ImageGallery as ImageGalleryData } from "@/types/images";
 import { ImageTile } from "./image-tile";
@@ -19,6 +20,7 @@ export function ImageGallery({
 }) {
   const [selectedId, setSelectedId] = useState(initialId);
   const [panelOpen, setPanelOpen] = useState(true);
+  const m = useMessages().app.image.gallery;
   const selected =
     gallery.groups.flatMap((g) => g.images).find((i) => i.id === selectedId) ??
     gallery.groups[0]?.images[0];
@@ -35,7 +37,7 @@ export function ImageGallery({
       <div className="h-full overflow-y-auto px-5 pt-2 pb-6 [scrollbar-width:none]">
         <div className="flex items-center gap-[10px] whitespace-nowrap">
           <h1 className="text-[22px] font-semibold tracking-[-0.33px] text-foreground">
-            Generated images
+            {m.title}
           </h1>
           <span className="text-[14px] text-subtle">{gallery.total}</span>
         </div>
@@ -49,7 +51,7 @@ export function ImageGallery({
           {gallery.groups.map((group) => (
             <section key={group.id} className="flex flex-col gap-[10px]">
               <motion.h2 variants={riseItem} className="text-[13px] font-medium text-muted-foreground">
-                {group.label}
+                <L bundle={group.label} />
               </motion.h2>
               <div className="grid grid-cols-4 gap-[10px]">
                 {group.images.map((image) => (
@@ -69,7 +71,8 @@ export function ImageGallery({
       <ShellRightPanel
         open={panelOpen && !!selected}
         width={300}
-        label="Selected image"
+        label={m.selected}
+        panelId="Selected image"
         onClose={() => setPanelOpen(false)}
       >
         {selected && <SelectedImagePanel image={selected} onClose={() => setPanelOpen(false)} />}
@@ -119,23 +122,24 @@ function GalleryItem({
 }
 
 const PANEL_ACTIONS = [
-  { icon: "img-eraser", label: "Remove BG" },
-  { icon: "img-layers", label: "Variations" },
-  { icon: "img-imgplus", label: "Reference" },
-  { icon: "img-download", label: "Download" },
+  { id: "removeBg", icon: "img-eraser" },
+  { id: "variations", icon: "img-layers" },
+  { id: "reference", icon: "img-imgplus" },
+  { id: "download", icon: "img-download" },
 ] as const;
 
 /** Figma "Right Panel · Selected image". */
 function SelectedImagePanel({ image, onClose }: { image: GeneratedImage; onClose: () => void }) {
+  const m = useMessages().app.image.gallery;
   return (
     <div className="flex h-full flex-col gap-[14px] p-[18px]">
       <div className="flex items-center gap-2">
         <h2 className="flex-1 text-[16px] font-semibold tracking-[-0.08px] text-foreground">
-          Selected image
+          {m.selected}
         </h2>
         <button
           type="button"
-          aria-label="Close panel"
+          aria-label={m.closePanel}
           onClick={onClose}
           className="flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent hover:text-foreground"
         >
@@ -159,20 +163,20 @@ function SelectedImagePanel({ image, onClose }: { image: GeneratedImage; onClose
 
       <div className="grid grid-cols-2 gap-2">
         {PANEL_ACTIONS.map((a) =>
-          a.label === "Download" ? (
+          a.id === "download" ? (
             <a
-              key={a.label}
+              key={a.id}
               href={image.src}
               download
               className={actionClass}
             >
               <Icon name={a.icon} size={15} />
-              {a.label}
+              {m[a.id]}
             </a>
           ) : (
-            <motion.button key={a.label} type="button" whileTap={{ scale: 0.97 }} className={actionClass}>
+            <motion.button key={a.id} type="button" whileTap={{ scale: 0.97 }} className={actionClass}>
               <Icon name={a.icon} size={15} />
-              {a.label}
+              {m[a.id]}
             </motion.button>
           ),
         )}
@@ -183,5 +187,5 @@ function SelectedImagePanel({ image, onClose }: { image: GeneratedImage; onClose
 
 const actionClass = cn(
   "flex min-w-0 items-center justify-center gap-[6px] rounded-[14px] border border-border px-3 py-[10px]",
-  "text-[12.5px] font-medium whitespace-nowrap text-foreground transition-colors hover:bg-accent",
+  "text-center text-[12.5px] leading-[16px] font-medium text-foreground transition-colors hover:bg-accent",
 );

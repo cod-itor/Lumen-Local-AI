@@ -3,7 +3,10 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
+import { useLocalized, useMessages, useTranslate } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
+import type { Localized } from "@/i18n/config";
+import { format } from "@/i18n/messages";
 import type { AnswerBlock, AssistantMessage, InlineSegment, Source } from "@/types/chat";
 import { SourceFavicon } from "./source-favicon";
 
@@ -36,18 +39,14 @@ export function AssistantAnswer({
   onToggleSources: () => void;
 } & CiteHandlers) {
   const cited = message.sourceIds.map((id) => cite.sourcesById[id]).filter(Boolean);
+  const t = useTranslate();
 
   return (
     <motion.div
       variants={{ show: { transition: { staggerChildren: 0.05 } } }}
       className="flex w-full flex-col items-start gap-[14px]"
     >
-      {message.searchTrace && (
-        <motion.div variants={riseItem} className="flex items-center gap-[6px] text-subtle">
-          <Icon name="globe" size={14} />
-          <span className="text-[13px] whitespace-nowrap">{message.searchTrace}</span>
-        </motion.div>
-      )}
+      {message.searchTrace && <SearchTrace trace={message.searchTrace} />}
 
       {message.blocks.map((block, i) => (
         <motion.div key={i} variants={riseItem} className="w-full">
@@ -62,7 +61,7 @@ export function AssistantAnswer({
             whileTap={{ scale: 0.97 }}
             onClick={onToggleSources}
             aria-expanded={sourcesOpen}
-            aria-label={`${cited.length} sources`}
+            aria-label={t("app.chat.sourcesCount", { count: cited.length })}
             className={cn(
               "glass flex items-center gap-2 rounded-full py-[6px] pr-3 pl-2 transition-[border-color,background-color] duration-200 hover:bg-accent",
               sourcesOpen && "border-[1.5px]! border-orange-foreground!",
@@ -74,7 +73,7 @@ export function AssistantAnswer({
               ))}
             </span>
             <span className="text-[12.5px] font-medium whitespace-nowrap text-foreground">
-              {cited.length} sources
+              {t("app.chat.sourcesCount", { count: cited.length })}
             </span>
           </motion.button>
         </motion.div>
@@ -83,6 +82,15 @@ export function AssistantAnswer({
       <motion.div variants={riseItem}>
         <MessageActions text={plainText(message.blocks, cite.sourcesById)} />
       </motion.div>
+    </motion.div>
+  );
+}
+
+function SearchTrace({ trace }: { trace: Localized<string> }) {
+  return (
+    <motion.div variants={riseItem} className="flex items-center gap-[6px] text-subtle">
+      <Icon name="globe" size={14} />
+      <span className="text-[13px] whitespace-nowrap">{useLocalized(trace)}</span>
     </motion.div>
   );
 }
@@ -113,6 +121,7 @@ function Block({ block, ...cite }: { block: AnswerBlock } & CiteHandlers) {
 }
 
 function Inline({ segments, ...cite }: { segments: InlineSegment[] } & CiteHandlers) {
+  const t = useTranslate();
   return segments.map((seg, i) => {
     if (seg.type === "text") return <span key={i}>{seg.text}</span>;
     if (seg.type === "strong")
@@ -133,7 +142,7 @@ function Inline({ segments, ...cite }: { segments: InlineSegment[] } & CiteHandl
         onMouseLeave={() => cite.onCiteHover(null)}
         onFocus={() => cite.onCiteHover(source.id)}
         onBlur={() => cite.onCiteHover(null)}
-        aria-label={`Source ${source.index}: ${source.title}`}
+        aria-label={t("app.chat.sourceCite", { index: source.index, title: source.title })}
         className={cn(
           "inline rounded-[4px] align-baseline text-[12px] leading-none font-medium transition-colors duration-150",
           active ? "text-orange-foreground" : "text-subtle hover:text-orange-foreground",
@@ -148,6 +157,7 @@ function Inline({ segments, ...cite }: { segments: InlineSegment[] } & CiteHandl
 /** Figma "Code Block": label header with copy, mono body. */
 function CodeBlock({ label, code }: { label: string; code: string }) {
   const [copied, copy] = useCopy();
+  const m = useMessages();
   return (
     <div className="w-full overflow-hidden rounded-[14px] border border-foreground/8 bg-foreground/7">
       <div className="flex items-center px-3 py-[7px]">
@@ -156,7 +166,7 @@ function CodeBlock({ label, code }: { label: string; code: string }) {
         <button
           type="button"
           onClick={() => copy(code)}
-          aria-label={copied ? "Copied" : `Copy ${label}`}
+          aria-label={copied ? m.common.copied : format(m.app.chat.copyLabel, { label })}
           className="-m-1 flex size-[22px] items-center justify-center rounded-[6px] text-icon transition-colors hover:bg-accent hover:text-foreground"
         >
           <Icon name={copied ? "chat-check" : "chat-copy14"} size={copied ? 10 : 14} />
@@ -174,17 +184,19 @@ function CodeBlock({ label, code }: { label: string; code: string }) {
 function MessageActions({ text }: { text: string }) {
   const [copied, copy] = useCopy();
   const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const m = useMessages();
+  const a = m.app.chat.actions;
   const btn =
     "flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent hover:text-foreground aria-pressed:text-foreground";
 
   return (
     <div className="flex items-center gap-[2px]">
-      <button type="button" onClick={() => copy(text)} aria-label={copied ? "Copied" : "Copy"} className={btn}>
+      <button type="button" onClick={() => copy(text)} aria-label={copied ? m.common.copied : m.common.copy} className={btn}>
         <Icon name={copied ? "chat-check" : "chat-copy"} size={copied ? 12 : 15} />
       </button>
       <button
         type="button"
-        aria-label="Good response"
+        aria-label={a.goodResponse}
         aria-pressed={vote === "up"}
         onClick={() => setVote((v) => (v === "up" ? null : "up"))}
         className={btn}
@@ -193,17 +205,17 @@ function MessageActions({ text }: { text: string }) {
       </button>
       <button
         type="button"
-        aria-label="Bad response"
+        aria-label={a.badResponse}
         aria-pressed={vote === "down"}
         onClick={() => setVote((v) => (v === "down" ? null : "down"))}
         className={btn}
       >
         <Icon name="chat-tdown" size={15} />
       </button>
-      <motion.button type="button" aria-label="Regenerate" whileTap={{ rotate: -90 }} className={btn}>
+      <motion.button type="button" aria-label={a.regenerate} whileTap={{ rotate: -90 }} className={btn}>
         <Icon name="chat-refresh" size={15} />
       </motion.button>
-      <button type="button" aria-label="Translate to Khmer" className={btn}>
+      <button type="button" aria-label={a.translate} className={btn}>
         <Icon name="chat-lang" size={15} />
       </button>
     </div>

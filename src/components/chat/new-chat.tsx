@@ -3,18 +3,21 @@
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { Composer } from "@/components/app/composer";
+import { useLocale, useMessages } from "@/i18n/provider";
 import type { Suggestion } from "@/types";
 
 /** Figma "01 · Chat · New": centered title, composer, suggestion chips. */
 export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
   const router = useRouter();
+  const m = useMessages().app.chat;
+  const locale = useLocale();
   // Static prototype: any prompt opens the sample answer (02 · Chat · Answer).
   const open = () => router.push("/chat/photosynthesis");
 
   return (
     <div className="flex h-full flex-col items-center pt-[238px] max-[860px]:pt-[18vh]">
-      <h1 className="text-[30px] font-semibold tracking-[-0.9px] whitespace-nowrap text-foreground">
-        What should we learn today?
+      <h1 className="px-4 text-center text-[30px] font-semibold tracking-[-0.9px] text-balance text-foreground">
+        {m.heading}
       </h1>
       <div className="mt-[22px] w-full max-w-[calc(var(--chat-width)+20px)]">
         <Composer onSubmit={open} />
@@ -35,7 +38,7 @@ export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
               onClick={open}
               className="rounded-full border border-border px-[14px] py-2 text-[13px] font-medium whitespace-nowrap text-foreground transition-colors hover:bg-accent"
             >
-              {s.label}
+              {s.label[locale]}
             </button>
           </motion.li>
         ))}

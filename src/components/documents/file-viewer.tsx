@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import type { Material, MaterialPage, PageBlock } from "@/types/documents";
 import { FileBadge } from "./file-badge";
 
@@ -22,9 +24,10 @@ export function FileViewer({
   focus: HighlightFocus | null;
   onClose: () => void;
 }) {
+  const msgs = useMessages().app.documents;
   const meta = [
-    material.pages ? `${material.pages} pages` : null,
-    material.sharedBy ? `Shared by ${material.sharedBy}` : null,
+    material.pages ? format(msgs.meta.pages, { pages: material.pages }) : null,
+    material.sharedBy ? format(msgs.meta.sharedBy, { name: material.sharedBy }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -35,7 +38,7 @@ export function FileViewer({
         <FileBadge kind={material.kind} size="md" />
         <div className="flex min-w-0 flex-1 flex-col gap-[2px] whitespace-nowrap">
           <span className="truncate text-[15px] font-semibold text-foreground">{material.name}</span>
-          {meta && <span className="text-[11.5px] text-muted-foreground">{meta}</span>}
+          {meta && <span className="truncate text-[11.5px] text-muted-foreground">{meta}</span>}
         </div>
         <div className="flex items-center gap-1 self-start pt-px">
           {page && material.pages && (
@@ -43,8 +46,8 @@ export function FileViewer({
               {page.page} / {material.pages}
             </span>
           )}
-          <ToolButton label="Download" icon="doc-download" />
-          <ToolButton label="Close file" icon="doc-x" onClick={onClose} />
+          <ToolButton label={msgs.viewer.download} icon="doc-download" />
+          <ToolButton label={msgs.viewer.close} icon="doc-x" onClick={onClose} />
         </div>
       </header>
 
@@ -62,7 +65,7 @@ export function FileViewer({
             ))}
           </motion.article>
         ) : (
-          <p className="p-10 text-center text-[13px] text-muted-foreground">No preview available.</p>
+          <p className="p-10 text-center text-[13px] text-muted-foreground">{msgs.viewer.noPreview}</p>
         )}
       </div>
     </>

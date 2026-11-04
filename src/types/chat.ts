@@ -1,3 +1,5 @@
+import type { Localized } from "@/i18n/config";
+
 /**
  * Chat conversation types (Figma "02 · Chat · Answer", "03 · Chat · Sources open").
  * Mock data in src/mocks/conversations.ts and src/services/chat.ts conform to these.
@@ -39,8 +41,8 @@ export type UserMessage = { id: string; role: "user"; text: string };
 export type AssistantMessage = {
   id: string;
   role: "assistant";
-  /** "Searched 4 sites". Omit when the answer didn't use web search. */
-  searchTrace?: string;
+  /** "Searched 4 sites" (app chrome, so localized). Omit when the answer didn't use web search. */
+  searchTrace?: Localized<string>;
   blocks: AnswerBlock[];
   /** Sources cited by this answer (ids into Conversation.sources). */
   sourceIds: string[];
@@ -53,8 +55,8 @@ export type Conversation = {
   title: string;
   messages: ChatMessage[];
   sources: Source[];
-  /** "Search steps" card in the sources panel. */
-  searchSteps: string[];
+  /** "Search steps" card in the sources panel (app chrome, so localized). */
+  searchSteps: Localized<string[]>;
   /** The only text that left the device, shown under the search steps. */
   searchQuery: string;
 };

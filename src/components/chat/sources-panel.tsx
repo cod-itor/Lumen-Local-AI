@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { Source } from "@/types/chat";
 import { riseItem } from "./assistant-answer";
@@ -22,6 +24,7 @@ export function SourcesPanel({
   onHoverSource: (id: string | null) => void;
   onClose: () => void;
 }) {
+  const m = useMessages().app.chat.sources;
   return (
     <motion.div
       initial="hidden"
@@ -32,7 +35,7 @@ export function SourcesPanel({
       {/* Panel Header */}
       <div className="flex w-full shrink-0 items-center gap-2">
         <h2 className="text-[16px] font-semibold tracking-[-0.08px] whitespace-nowrap text-foreground">
-          Sources
+          {m.title}
         </h2>
         <span className="bg-primary-fill rounded-full px-[7px] py-[2px] text-[11px] font-medium">
           {sources.length}
@@ -41,7 +44,7 @@ export function SourcesPanel({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close sources"
+          aria-label={m.close}
           className="-mr-1 flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent hover:text-foreground"
         >
           <Icon name="chat-x" size={16} />
@@ -54,7 +57,7 @@ export function SourcesPanel({
         className="glass flex w-full shrink-0 flex-col gap-[10px] rounded-[18px] px-[14px] pt-3 pb-[14px]"
       >
         <span className="text-[11px] font-medium tracking-[0.66px] whitespace-nowrap text-placeholder">
-          SEARCH STEPS
+          {m.searchSteps}
         </span>
         <ul className="flex flex-col gap-[10px]">
           {searchSteps.map((step) => (
@@ -72,7 +75,7 @@ export function SourcesPanel({
       <motion.div variants={riseItem} className="flex w-full shrink-0 items-start gap-2 px-1">
         <Icon name="chat-lock" size={14} className="mt-px text-muted-foreground" />
         <p className="min-w-0 flex-1 text-[11.5px] leading-4 text-muted-foreground">
-          Only this search query left your computer: “{searchQuery}”
+          {format(m.privacy, { query: searchQuery })}
         </p>
       </motion.div>
 

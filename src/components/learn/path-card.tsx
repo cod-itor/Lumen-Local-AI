@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "@/components/icon";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { LearningPath } from "@/types/learn";
 
@@ -26,10 +28,11 @@ export function PathCard({
 }) {
   const total = path.steps.length;
   const complete = currentStepIndex >= total;
+  const m = useMessages().app.learn;
 
   return (
     <section
-      aria-label={`${path.title} learning path`}
+      aria-label={format(m.pathLabel, { title: path.title })}
       className={cn("glass flex w-[260px] flex-col gap-3 rounded-[24px] p-[18px]", className)}
     >
       <div className="flex flex-col gap-[3px] whitespace-nowrap">
@@ -37,7 +40,7 @@ export function PathCard({
           {path.title}
         </h2>
         <p className="text-[12.5px] leading-[normal] text-muted-foreground">
-          {complete ? "Path complete" : `Step ${currentStepIndex + 1} of ${total}`}
+          {complete ? m.pathComplete : format(m.stepOf, { current: currentStepIndex + 1, total })}
         </p>
       </div>
 
@@ -46,7 +49,7 @@ export function PathCard({
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={Math.min(currentStepIndex, total)}
-        aria-label="Path progress"
+        aria-label={m.progress}
         className="relative h-[6px] w-full overflow-hidden rounded-[3px] bg-foreground/8"
       >
         <motion.div
