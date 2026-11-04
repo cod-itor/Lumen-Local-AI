@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowLeftRight, ArrowUp, ArrowUpDown } from "lucide-react";
 import { motion } from "motion/react";
 import { EASE } from "@/components/landing/motion";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { Actor, ArchLink, ArchNode } from "@/types/roadmap";
 import { ACTOR_TONE, RoadmapIcon } from "./icons";
@@ -24,11 +25,12 @@ export function ArchitectureDiagram({
   /** Highlight one actor (driven by the message journey). */
   active?: Actor | null;
 }) {
+  const m = useMessages();
   const node = (id: Actor) => nodes.find((n) => n.id === id)!;
   const link = (from: Actor) => links.find((l) => l.from === from)!;
 
   return (
-    <figure aria-label="Architecture: website, cloud backend and desktop app" className="flex flex-col gap-5">
+    <figure aria-label={m.roadmap.diagram.label} className="flex flex-col gap-5">
       <div className="grid items-stretch gap-0 lg:grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)_150px_minmax(0,1fr)]">
         <NodeCard node={node("website")} active={active} index={0} />
         <Connector link={link("website")} direction="both" />
@@ -86,7 +88,7 @@ function NodeCard({ node, active, index }: { node: ArchNode; active?: Actor | nu
       </div>
       <ul className="flex flex-col gap-2">
         {node.items.map((it) => (
-          <li key={it} className="flex items-start gap-2 text-[13.5px] leading-[19px] text-foreground-secondary">
+          <li key={it} className="flex items-start gap-2 text-[13.5px] leading-[19px] text-foreground-secondary [:lang(km)_&]:leading-[23px]">
             <span className={cn("mt-[7px] size-1.5 shrink-0 rounded-full", tone.bg)} />
             {it}
           </li>
@@ -129,7 +131,7 @@ function Connector({ link, direction }: { link: ArchLink; direction: "both" | "l
         </span>
       </div>
       <div className="relative z-10 flex flex-col items-center gap-0.5 rounded-xl bg-background/80 px-2.5 py-1.5 text-center">
-        <span className="flex items-center gap-1 text-[11.5px] font-semibold text-foreground">
+        <span className="flex max-w-[140px] items-center justify-center gap-1 text-[11.5px] font-semibold text-foreground">
           {/* Up/down while stacked on phones, left/right side by side on desktop */}
           {direction === "both" ? (
             <>
@@ -142,9 +144,9 @@ function Connector({ link, direction }: { link: ArchLink; direction: "both" | "l
               <ArrowLeft className="hidden size-3 lg:block" strokeWidth={2.2} />
             </>
           )}
-          {link.label}
+          <span className="min-w-0">{link.label}</span>
         </span>
-        <span className="max-w-[140px] text-[10.5px] leading-[14px] text-muted-foreground">{link.detail}</span>
+        <span className="max-w-[140px] text-[10.5px] leading-[14px] text-muted-foreground [:lang(km)_&]:leading-[18px]">{link.detail}</span>
       </div>
     </div>
   );

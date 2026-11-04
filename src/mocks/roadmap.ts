@@ -1,6 +1,11 @@
+import type { Localized } from "@/i18n/config";
 import type { RoadmapContent } from "@/types/roadmap";
 
-export const mockRoadmap: RoadmapContent = {
+/* English and Khmer copies of the same roadmap. Technical names (Tauri,
+   Ollama, Postgres…), the devices table columns and the protocol JSON stay
+   identical in both; only prose and code comments are translated. */
+
+const en: RoadmapContent = {
   title: "Coming soon",
   intro:
     "Bigger ideas planned for Lumen. Each one is written down in full — how it works, what changes, the trade-offs and the build order — so nothing gets lost before we build it.",
@@ -240,3 +245,256 @@ export const mockRoadmap: RoadmapContent = {
     },
   ],
 };
+
+const km: RoadmapContent = {
+  title: "នឹងមកដល់ឆាប់ៗ",
+  intro:
+    "គំនិតធំៗដែលបានគ្រោងទុកសម្រាប់ Lumen។ គំនិតនីមួយៗត្រូវបានសរសេរយ៉ាងលម្អិត — របៀបដំណើរការ អ្វីដែលនឹងផ្លាស់ប្តូរ គុណ និងវិបត្តិ ព្រមទាំងលំដាប់នៃការបង្កើត — ដើម្បីកុំឲ្យបាត់អ្វីមួយ មុនពេលយើងចាប់ផ្តើមបង្កើត។",
+  updated: "ថ្ងៃទី៤ ខែវិច្ឆិកា ឆ្នាំ២០២៦",
+  features: [
+    {
+      id: "desktop-remote",
+      status: "planned",
+      badge: "ក្នុងគម្រោង · បន្ទាប់ពី v1",
+      title: "Lumen Desktop និងការប្រើពីចម្ងាយ",
+      tagline: "កុំព្យូទ័ររបស់អ្នកដំណើរការ AI។ ឧបករណ៍ណាក៏អាចប្រើវាបាន។",
+      summary:
+        "ដូចគ្នានឹងកម្មវិធី desktop របស់ ChatGPT ឬការប្រើ Ollama ពីចម្ងាយ៖ កម្មវិធីតូចមួយនៅលើកុំព្យូទ័រយួរដៃរបស់អ្នកប្រើ ដំណើរការម៉ូដែល AI ហើយគេហទំព័រក្លាយជាឧបករណ៍បញ្ជាវាពីចម្ងាយ — ពីទូរស័ព្ទ ពីកុំព្យូទ័រនៅសាលា ឬពីគ្រប់ទីកន្លែង។",
+      facts: [
+        { label: "ស្ថានភាព", value: "ក្នុងគម្រោង" },
+        { label: "ភាពស្មុគស្មាញ", value: "ខ្ពស់" },
+        { label: "ផ្នែកថ្មី", value: "កម្មវិធី Desktop + device relay" },
+        { label: "ចាប់ផ្តើមជាមួយ", value: "តែការជជែកសិន" },
+      ],
+      architecture: {
+        nodes: [
+          {
+            id: "website",
+            title: "គេហទំព័រ",
+            subtitle: "ឧបករណ៍ណាក៏បាន — កុំព្យូទ័រ ទូរស័ព្ទ",
+            icon: "globe",
+            items: [
+              "UI Next.js នេះ",
+              "ចូលគណនី ការជជែក និងប្រវត្តិ",
+              "បង្ហាញ “អនឡាញ / អហ្វឡាញ”",
+              "បង្ហាញចម្លើយភ្លាមៗ ពេលកំពុងសរសេរ",
+            ],
+          },
+          {
+            id: "backend",
+            title: "Backend Spring Boot",
+            subtitle: "Cloud · VPS តម្លៃថោក មិនដំណើរការ AI",
+            icon: "server",
+            items: [
+              "ការផ្ទៀងផ្ទាត់គណនី និង session",
+              "ការជជែក ប្រវត្តិ ការកំណត់ (Postgres)",
+              "តារាង devices + device relay",
+              "រក្សាទុករូបភាពដែលបានផ្ទុកឡើង",
+            ],
+          },
+          {
+            id: "desktop",
+            title: "កម្មវិធី Desktop",
+            subtitle: "កុំព្យូទ័រយួរដៃរបស់អ្នកប្រើ · Tauri",
+            icon: "laptop",
+            items: [
+              "Ollama + ម៉ូដែល",
+              "សេវា AI (កូដ Python របស់អ្នក)",
+              "ឯកសារ និង embeddings នៅក្នុងម៉ាស៊ីន",
+              "ការបង្កើតរូបភាព",
+              "ជម្រើស៖ UI ដដែលក្នុងផ្ទាំងវីនដូ",
+            ],
+          },
+        ],
+        links: [
+          {
+            from: "website",
+            to: "backend",
+            label: "HTTPS + WebSocket",
+            detail: "សំណើចូលទៅ ចម្លើយហូរត្រឡប់មក",
+          },
+          {
+            from: "desktop",
+            to: "backend",
+            label: "WebSocket ចេញក្រៅ",
+            detail: "កុំព្យូទ័រភ្ជាប់ចេញទៅ — មិនបាច់ port forwarding",
+          },
+        ],
+        notes: ["មិនបើក port លើកុំព្យូទ័រទេ", "ឯកសារមិនចាកចេញពីកុំព្យូទ័រឡើយ", "Backend គ្រាន់តែបញ្ជូនបន្ត និងធ្វើសមកាលកម្ម"],
+      },
+      howItWorks: [
+        {
+          title: "ដំឡើងកម្មវិធី Desktop",
+          detail:
+            "ពេលបើកលើកដំបូង វានឹងចូលគណនី ដំឡើង Ollama បើមិនទាន់មាន ទាញយកម៉ូដែលដោយមានរបារបង្ហាញវឌ្ឍនភាព ហើយចាប់ផ្តើមសេវា AI នៅផ្ទៃខាងក្រោយ។",
+        },
+        {
+          title: "កម្មវិធីភ្ជាប់ចេញទៅក្រៅ",
+          detail:
+            "វាបើក WebSocket ទៅកាន់ backend — មិនចាំបាច់ port forwarding ឬកំណត់ router ទេ — ហើយចុះឈ្មោះខ្លួនជា “MacBook របស់សុខា – អនឡាញ”។",
+        },
+        {
+          title: "គេហទំព័របញ្ជូនការងារ AI",
+          detail:
+            "ពេលអ្នកប្រើផ្ញើសារនៅលើគេហទំព័រ backend នឹងបញ្ជូនសារនោះតាមការតភ្ជាប់នេះ។ កុំព្យូទ័របង្កើតចម្លើយ ហើយផ្ញើវាត្រឡប់មកវិញតាមផ្លូវដដែល។",
+        },
+        {
+          title: "ធ្វើសមកាលកម្មតាម backend",
+          detail:
+            "ការជជែក ប្រវត្តិ និងការកំណត់ ត្រូវរក្សាទុកក្នុង Postgres ដូច្នេះគេហទំព័រ និងកម្មវិធី Desktop តែងតែបង្ហាញការសន្ទនាដូចគ្នា។ កម្មវិធីក៏អាចបង្ហាញ UI Next.js ដដែលក្នុងផ្ទាំងវីនដូរបស់វាផងដែរ។",
+        },
+      ],
+      journey: [
+        { actor: "website", title: "ផ្ញើ", detail: "អ្នកវាយសារមួយនៅលើទូរស័ព្ទរបស់អ្នក។" },
+        { actor: "backend", title: "ផ្ទៀងផ្ទាត់ និងរក្សាទុក", detail: "Backend ពិនិត្យ session ហើយរក្សាទុកសារក្នុង Postgres។" },
+        { actor: "backend", title: "ស្វែងរកកុំព្យូទ័ររបស់អ្នក", detail: "Device relay ពិនិត្យមើលថាឧបករណ៍មួយណារបស់អ្នកកំពុងអនឡាញ។" },
+        { actor: "desktop", title: "បញ្ជូនការងារ", detail: "ការងារត្រូវផ្ញើតាម WebSocket ដែលកុំព្យូទ័របានបើករួចជាស្រេច។" },
+        { actor: "desktop", title: "បង្កើតចម្លើយ", detail: "Ollama ដំណើរការម៉ូដែល ហើយ token ហូរត្រឡប់មកវិញតាម socket ដដែល។" },
+        { actor: "website", title: "បង្ហាញ និងធ្វើសមកាលកម្ម", detail: "Backend បញ្ជូន token ទៅគេហទំព័រភ្លាមៗ ហើយរក្សាទុកចម្លើយចុងក្រោយ។" },
+      ],
+      firstRun: [
+        "ចូលគណនី",
+        "ដំឡើង Ollama បើមិនទាន់មាន",
+        "ទាញយកម៉ូដែល (របារវឌ្ឍនភាព)",
+        "ចាប់ផ្តើមសេវា AI នៅផ្ទៃខាងក្រោយ",
+        "ចុះឈ្មោះឧបករណ៍ · អនឡាញ",
+      ],
+      changes: [
+        {
+          area: "Backend",
+          now: "ដំណើរការនៅជាប់សេវា AI",
+          planned: "ផ្លាស់ទៅម៉ាស៊ីនមេ cloud — VPS តម្លៃថោកក៏គ្រប់គ្រាន់ ព្រោះវាមិនដំណើរការ AI",
+        },
+        { area: "សេវា AI", now: "ជាផ្នែកមួយនៃម៉ាស៊ីនមេ", planned: "ភ្ជាប់មកជាមួយកម្មវិធីដំឡើង Desktop" },
+        {
+          area: "ទិសដៅនៃការហៅ",
+          now: "Spring Boot ហៅទៅសេវា AI",
+          planned: "សេវា AI ភ្ជាប់ទៅ Spring Boot ហើយរង់ចាំការងារ",
+        },
+        {
+          area: "ផ្នែកថ្មី",
+          now: "—",
+          planned: "តារាង devices និង “device relay” ដែលដឹងថាកុំព្យូទ័ររបស់អ្នកប្រើណាខ្លះកំពុងអនឡាញ",
+        },
+        {
+          area: "ឯកសារ និង embeddings",
+          now: "រក្សាទុកលើម៉ាស៊ីនមេ",
+          planned: "នៅលើកុំព្យូទ័រក្នុង SQLite + sqlite-vec — មានតែចម្លើយ និងប្រភពយោងប៉ុណ្ណោះដែលទៅដល់ backend",
+        },
+        {
+          area: "រូបភាពដែលបានបង្កើត",
+          now: "បង្កើត និងរក្សាទុកលើម៉ាស៊ីនមេ",
+          planned: "បង្កើតនៅក្នុងកុំព្យូទ័រ រួចផ្ទុកឡើងទៅ backend ដើម្បីឲ្យគេហទំព័រអាចបង្ហាញបាន",
+        },
+      ],
+      tech: [
+        {
+          name: "Tauri",
+          role: "កម្មវិធី Desktop",
+          detail: "តូចជាង Electron ច្រើន ហើយអាចរុំ UI Next.js ដែលមានស្រាប់បាន។",
+          icon: "app",
+        },
+        {
+          name: "PyInstaller sidecar",
+          role: "សេវា AI",
+          detail: "វេចខ្ចប់សេវា AI ដែលសរសេរដោយ Python ជា binary sidecar របស់ Tauri។",
+          icon: "package",
+        },
+        {
+          name: "Ollama",
+          role: "កម្មវិធីដំណើរការម៉ូដែល",
+          detail: "ឲ្យអ្នកប្រើដំឡើងវាដោយខ្លួនឯង ឬដំណើរការកម្មវិធីដំឡើងរបស់វាពីក្នុងការរៀបចំរបស់យើង។",
+          icon: "cpu",
+        },
+        {
+          name: "SQLite + sqlite-vec",
+          role: "ឃ្លាំងវ៉ិចទ័រក្នុងម៉ាស៊ីន",
+          detail: "ឯកសារ និង embeddings នៅតែលើកុំព្យូទ័រ — ជាចំណុចល្អផ្នែកឯកជនភាព។",
+          icon: "database",
+        },
+        {
+          name: "Spring Boot + WebSocket",
+          role: "បញ្ជូនបន្ត និងសមកាលកម្ម",
+          detail: "រក្សា socket មួយសម្រាប់ឧបករណ៍អនឡាញនីមួយៗ ហើយបញ្ជូនការងាររបស់អ្នកប្រើម្នាក់ៗទៅកាន់វា។",
+          icon: "server",
+        },
+        { name: "Postgres", role: "ប្រភពទិន្នន័យចម្បង", detail: "ការជជែក ប្រវត្តិ ការកំណត់ និងឧបករណ៍។", icon: "database" },
+      ],
+      pairing: [
+        { title: "ចូលគណនីក្នុងកម្មវិធី", detail: "គណនីដូចគ្នានឹងគេហទំព័រ។" },
+        { title: "Backend ចេញ device token", detail: "ភ្ជាប់នឹងអ្នកប្រើនេះ និងកុំព្យូទ័រនេះ។" },
+        { title: "កម្មវិធីភ្ជាប់ឡើងវិញដោយប្រើ token", detail: "មិនរក្សាទុកពាក្យសម្ងាត់លើឧបករណ៍ទេ។" },
+        { title: "Heartbeat", detail: "ការ ping ជាប្រចាំ ធ្វើឲ្យគេហទំព័របង្ហាញបានថា អនឡាញ ឬអហ្វឡាញ។" },
+      ],
+      tradeOffs: [
+        {
+          title: "កុំព្យូទ័រត្រូវតែបើក",
+          detail: "ត្រូវភ្ញាក់ (មិន sleep) ហើយបើកកម្មវិធី — បើមិនដូច្នោះទេ គេហទំព័រនឹងបង្ហាញ “កុំព្យូទ័ររបស់អ្នកកំពុងអហ្វឡាញ”។",
+          icon: "power",
+        },
+        {
+          title: "សុវត្ថិភាពសំខាន់ណាស់",
+          detail: "ទទួលការងារតែពី backend របស់យើង សម្រាប់អ្នកប្រើដែលបានចូលគណនីប៉ុណ្ណោះ ហើយមិនត្រូវបើក port ចំហឡើយ។",
+          icon: "shield",
+        },
+        {
+          title: "ការវេចខ្ចប់ជាផ្នែកពិបាកបំផុត",
+          detail: "ការចុះហត្ថលេខាកូដលើ macOS កម្មវិធីដំឡើងលើ Windows និងការទាញយកម៉ូដែលទំហំច្រើន GB សុទ្ធតែចំណាយពេលច្រើន។",
+          icon: "package",
+        },
+        {
+          title: "ផ្នែកថ្មីទាំងស្រុង",
+          detail: "វាបន្ថែមកម្មវិធី Desktop មួយទៀតទៅក្នុងគម្រោងដែលធំស្រាប់ — ត្រូវគ្រោងពេលវេលាសម្រាប់វា។",
+          icon: "layers",
+        },
+      ],
+      phases: [
+        { title: "កំណែបច្ចុប្បន្ន ឲ្យដំណើរការពេញលេញ", detail: "ធ្វើឲ្យកម្មវិធីវេបបច្ចុប្បន្នដំណើរការពេញលេញជាមួយ backend ពិតប្រាកដ។", status: "in-progress" },
+        { title: "កម្មវិធី Desktop ក្នុងម៉ាស៊ីន", detail: "វេចខ្ចប់សេវា AI ទៅក្នុងកម្មវិធី Tauri ដែលអាចដំណើរការដោយខ្លួនឯង។", status: "planned" },
+        { title: "Relay — តែការជជែកសិន", detail: "បន្ថែម device relay ដើម្បីឲ្យគេហទំព័រអាចប្រើកុំព្យូទ័រនោះសម្រាប់ការជជែក។", status: "planned" },
+        { title: "ឯកសារ និងរូបភាព", detail: "បញ្ជូនការសួរឆ្លើយលើឯកសារ និងការបង្កើតរូបភាពតាមរយៈ relay។", status: "planned" },
+      ],
+      extras: {
+        devicesTable: [
+          { name: "id", type: "uuid", note: "កូនសោចម្បង (primary key)" },
+          { name: "user_id", type: "uuid → users", note: "ម្ចាស់ — ការងារនីមួយៗត្រូវកំណត់ត្រឹមអ្នកប្រើនេះ" },
+          { name: "name", type: "text", note: "“MacBook របស់សុខា”" },
+          { name: "platform", type: "text", note: "macos · windows · linux" },
+          { name: "token_hash", type: "text", note: "Hash របស់ device token — មិនមែន token ផ្ទាល់ទេ" },
+          { name: "app_version", type: "text", note: "សម្រាប់ជូនដំណឹងឲ្យអាប់ដេត និងភាពត្រូវគ្នា" },
+          { name: "models", type: "jsonb", note: "ម៉ូដែលដែលបានដំឡើង និងស្ថានភាពរបស់វា" },
+          { name: "last_seen_at", type: "timestamptz", note: "ធ្វើបច្ចុប្បន្នភាពដោយ heartbeat → អនឡាញ / អហ្វឡាញ" },
+          { name: "revoked_at", type: "timestamptz?", note: "ចាកចេញពីឧបករណ៍ពីចម្ងាយ" },
+        ],
+        protocol: `// Backend → desktop (តាម WebSocket របស់ឧបករណ៍)
+{ "type": "job.chat", "jobId": "j_81f", "chatId": "c_42",
+  "model": "gemma-4-e2b", "messages": [ … ] }
+
+// Desktop → backend, ច្រើនដងពេលកំពុងបង្កើតចម្លើយ
+{ "type": "job.delta", "jobId": "j_81f", "text": "Plants catch " }
+
+// Desktop → backend, ម្តងនៅចុងបញ្ចប់
+{ "type": "job.done", "jobId": "j_81f", "citations": [ … ] }
+
+// Desktop → backend, រៀងរាល់ ~15 វិនាទី
+{ "type": "heartbeat", "models": ["gemma-4-e2b"], "busy": false }`,
+        security: [
+          "Device token រក្សាទុកតែជា hash ហើយអាចដកសិទ្ធិបានពី ការកំណត់ → ឧបករណ៍",
+          "ប្រើតែ TLS (wss://) ប៉ុណ្ណោះ; កម្មវិធី pin host របស់ backend ហើយមិនបើកចាំស្តាប់ port ណាមួយឡើយ",
+          "ការងារនីមួយៗមាន id អ្នកប្រើ + ឧបករណ៍; កម្មវិធីបដិសេធអ្វីផ្សេងពីនេះ",
+          "កំណត់ចំនួនការងារក្នុងអ្នកប្រើម្នាក់ (rate-limit); បោះបង់ការងារពេលគេហទំព័រផ្តាច់",
+          "ប្តូរ device token ជាទៀងទាត់ និងពេលចាកចេញពីគណនី",
+        ],
+        openQuestions: [
+          "អ្នកប្រើមានកុំព្យូទ័រពីរកំពុងអនឡាញ — តើមួយណាទទួលការងារ?",
+          "កុំព្យូទ័រ sleep ពេលកំពុងឆ្លើយ — បន្ត ព្យាយាមម្តងទៀត ឬបញ្ចប់ដោយមានសារច្បាស់លាស់?",
+          "ការទាញយកម៉ូដែលដែលអាចបន្តពីកន្លែងដាច់ និងការពិនិត្យទំហំថាសមុនពេលទាញយក",
+          "ការអាប់ដេតស្វ័យប្រវត្តិសម្រាប់កម្មវិធី Desktop (Tauri updater) និងភាពត្រូវគ្នានៃកំណែ",
+          "តើកម្មវិធី Desktop គួរនៅតែដំណើរការក្រៅបណ្តាញ ពេលមិនអាចភ្ជាប់ទៅ backend បានដែរឬទេ?",
+        ],
+      },
+    },
+  ],
+};
+
+export const mockRoadmap: Localized<RoadmapContent> = { en, km };

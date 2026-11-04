@@ -4,6 +4,8 @@ import { motion, useInView, useReducedMotion } from "motion/react";
 import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { usePageVisible } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 import type { ArchLink, ArchNode, JourneyStep } from "@/types/roadmap";
@@ -11,7 +13,6 @@ import { ArchitectureDiagram } from "./architecture-diagram";
 import { ACTOR_TONE } from "./icons";
 
 const STEP_MS = 2600;
-const ACTOR_LABEL = { website: "Website", backend: "Backend", desktop: "Desktop app" } as const;
 
 /**
  * Diagram + "how a message travels" walkthrough. Steps auto-play while on
@@ -29,6 +30,7 @@ export function ArchitectureWithJourney({
   notes: string[];
   steps: JourneyStep[];
 }) {
+  const t = useMessages().roadmap.journey;
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.3 });
   const visible = usePageVisible();
@@ -52,8 +54,8 @@ export function ArchitectureWithJourney({
       <div className="glass flex flex-col gap-5 rounded-3xl p-5 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-[18px] font-semibold text-foreground">How one message travels</h3>
-            <p className="text-[13.5px] text-muted-foreground">From your phone to your laptop and back, in six steps.</p>
+            <h3 className="text-[18px] font-semibold text-foreground">{t.title}</h3>
+            <p className="text-[13.5px] text-muted-foreground">{t.subtitle}</p>
           </div>
           <Button
             variant="outline"
@@ -63,7 +65,7 @@ export function ArchitectureWithJourney({
             onClick={() => setPlaying((p) => !p)}
           >
             {playing ? <Pause /> : <Play />}
-            {playing ? "Pause" : "Play"}
+            {playing ? t.pause : t.play}
           </Button>
         </div>
 
@@ -109,10 +111,10 @@ export function ArchitectureWithJourney({
                   </span>
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className={cn("text-[11px] font-semibold tracking-wide uppercase", tone.text)}>
-                      {ACTOR_LABEL[s.actor]}
+                      {t.actors[s.actor]}
                     </span>
                     <span className="text-[14px] font-semibold text-foreground">{s.title}</span>
-                    <span className="text-[13px] leading-[18px] text-muted-foreground">{s.detail}</span>
+                    <span className="text-[13px] leading-[18px] text-muted-foreground [:lang(km)_&]:leading-[22px]">{s.detail}</span>
                   </span>
                 </button>
               </li>
@@ -120,7 +122,7 @@ export function ArchitectureWithJourney({
           })}
         </ol>
 
-        <p className="sr-only" aria-live="polite">{`Step ${index + 1}: ${step.title}. ${step.detail}`}</p>
+        <p className="sr-only" aria-live="polite">{format(t.announce, { n: index + 1, title: step.title, detail: step.detail })}</p>
       </div>
     </div>
   );
