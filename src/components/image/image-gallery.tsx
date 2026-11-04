@@ -152,7 +152,7 @@ function SelectedImagePanel({ image, onClose }: { image: GeneratedImage; onClose
           transition={{ duration: 0.18, ease: EASE }}
           className="flex flex-col gap-[14px]"
         >
-          <ImageTile image={image} sizes="264px" priority className="w-[264px] rounded-[18px]" />
+          <ImageTile image={image} sizes="(min-width: 1024px) 40vw, 100vw" priority className="w-full rounded-[18px]" />
           <p className="text-[12.5px] leading-[18px] text-muted-foreground">{image.prompt}</p>
         </motion.div>
       </AnimatePresence>

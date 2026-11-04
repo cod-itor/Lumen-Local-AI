@@ -54,7 +54,7 @@ export function DocumentWorkspace({
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-          className="mx-auto flex w-full max-w-[450px] flex-col gap-7 pt-3 pb-6"
+          className="mx-auto flex w-full max-w-[720px] flex-col gap-7 pt-3 pb-6"
         >
           <motion.li variants={item} className="flex justify-center">
             <button
@@ -88,7 +88,7 @@ export function DocumentWorkspace({
         </motion.ol>
       </div>
 
-      <div className="w-full max-w-[460px] pt-3">
+      <div className="w-full max-w-[740px] pt-3">
         <Composer
           placeholder="Ask about your materials"
           showSearch={false}
@@ -102,7 +102,7 @@ export function DocumentWorkspace({
 
       <ShellRightPanel
         open={viewerOpen}
-        width={620}
+        width={540}
         label="File viewer"
         className="overflow-hidden"
         onClose={() => setViewerOpen(false)}
