@@ -1,6 +1,13 @@
 "use client";
 
-import { animate, AnimatePresence, motion, useInView, useMotionValue, useReducedMotion } from "motion/react";
+import {
+  animate,
+  AnimatePresence,
+  motion,
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+} from "motion/react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Icon } from "@/components/icon";
 import { usePageVisible } from "@/lib/performance";
@@ -18,7 +25,7 @@ const CH = 748;
 const HOLD_MS = 2400;
 const REDUCED_SCENE_MS = 4200;
 /** Px kept free for nav + tabs + caption so the window fits the screen. */
-const RESERVE = 360;
+const RESERVE = 300;
 
 type Shot = [target: string | null, zoom: number];
 /** Camera per step: zoom onto the element being typed/clicked/answered. */
@@ -33,26 +40,35 @@ const FOCUS: Record<ShowcaseScene["id"], Shot[]> = {
   image: [...OPENING, ["i-prompt", 1.6], ["i-approve", 2], ["i-grid", 1.45], [null, 1]],
   docs: [...OPENING, ["d-files", 1.7], ["d-answer", 1.6], ["d-viewer", 1.35], ["d-highlight", 1.65], [null, 1]],
 };
-/** Fake pointer per step: [target, click?]. Missing = hidden. */
-const CURSOR: Record<ShowcaseScene["id"], Record<number, [string, boolean]>> = {
-  chat: { 0: ["send", false], 1: ["send", true] },
-  learn: { 0: ["send", false], 1: ["send", true], 4: ["l-option", false], 5: ["l-option", true] },
-  image: { 0: ["send", false], 1: ["send", true], 3: ["i-approve", false], 4: ["i-approve", true] },
-  docs: { 0: ["send", false], 1: ["send", true] },
+type Aim = [target: string, mode: "click" | "hover" | "block"];
+/** Demo pointer per step (it carries the caption). Missing = stays put. */
+const OPEN_AIM: Record<number, Aim> = { 0: ["send", "hover"], 1: ["send", "click"], 2: ["thread", "block"] };
+const CURSOR: Record<ShowcaseScene["id"], Record<number, Aim>> = {
+  chat: { ...OPEN_AIM, 3: ["c-intro", "block"], 4: ["c-bullets", "block"], 5: ["c-code", "block"] },
+  learn: { ...OPEN_AIM, 3: ["l-path", "block"], 4: ["l-option", "hover"], 5: ["l-option", "click"] },
+  image: { ...OPEN_AIM, 3: ["i-approve", "hover"], 4: ["i-approve", "click"], 5: ["i-grid", "block"] },
+  docs: { ...OPEN_AIM, 3: ["d-files", "block"], 4: ["d-answer", "block"], 5: ["d-viewer", "block"], 6: ["d-highlight", "block"] },
 };
 
 const CAMERA_EASE = [0.65, 0, 0.35, 1] as const;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** Centre of `[data-focus=name]` in the camera layer's own (unzoomed) px. */
-function locate(layer: HTMLElement, scene: string, name: string) {
+/** Box of `[data-focus=name]` in the camera layer's own (unzoomed) px. */
+function measure(layer: HTMLElement, scene: string, name: string) {
   const el = layer.querySelector(`[data-scene="${scene}"] [data-focus="${name}"]`);
   if (!el) return null;
   const L = layer.getBoundingClientRect();
   const k = L.width / CW;
   const r = el.getBoundingClientRect();
-  return { x: (r.left + r.width / 2 - L.left) / k, y: (r.top + r.height / 2 - L.top) / k };
+  const left = (r.left - L.left) / k;
+  const top = (r.top - L.top) / k;
+  return { left, top, width: r.width / k, height: r.height / k };
+}
+
+function locate(layer: HTMLElement, scene: string, name: string) {
+  const b = measure(layer, scene, name);
+  return b && { x: b.left + b.width / 2, y: b.top + b.height / 2 };
 }
 
 /**
@@ -72,6 +88,8 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
   const pageVisible = usePageVisible();
   const running = onScreen && pageVisible;
   const shown = reduce ? durations.length : step;
+  const captionText =
+    shown < 3 ? showcase.opening[shown] : (scene.beats[shown - 3] ?? scene.beats[scene.beats.length - 1]);
 
   // Timeline: step through the scene, hold, then the next scene.
   useEffect(() => {
@@ -119,7 +137,13 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
         <TiltOnPointer max={2.5}>
           <PreviewFrame reserveHeight={RESERVE}>
             <div className="absolute top-2.5 left-2.5 h-[748px] w-[1180px] overflow-hidden rounded-[34px] shadow-device">
-              <Camera layer={layer} scene={scene} step={shown} reduce={reduce}>
+              <Camera
+                layer={layer}
+                scene={scene}
+                step={shown}
+                reduce={reduce}
+                caption={{ text: captionText, index: shown, total: durations.length + 1 }}
+              >
                 <Window preview={preview} showcase={showcase} active={active} step={shown} />
               </Camera>
             </div>
@@ -142,7 +166,7 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
           </PreviewFrame>
         </TiltOnPointer>
         <StepCaption
-          text={shown < 3 ? showcase.opening[shown] : (scene.beats[shown - 3] ?? scene.beats[scene.beats.length - 1])}
+          text={captionText}
           index={shown}
           total={durations.length + 1}
         />
@@ -157,21 +181,28 @@ function Camera({
   scene,
   step,
   reduce,
+  caption,
   children,
 }: {
   layer: RefObject<HTMLDivElement | null>;
   scene: ShowcaseScene;
   step: number;
   reduce: boolean;
+  caption: { text: string; index: number; total: number };
   children: React.ReactNode;
 }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const scale = useMotionValue(1);
-  const cx = useMotionValue(CW * 0.8);
-  const cy = useMotionValue(CH * 0.95);
+  // Pointer in window px (outside the zoom, so it never grows with it).
+  const cx = useMotionValue(CW * 0.78);
+  const cy = useMotionValue(CH * 0.8);
   const cOpacity = useMotionValue(0);
   const cScale = useMotionValue(1);
+  const labelX = useMotionValue("0%");
+  const labelY = useMotionValue("0%");
+  // Where the pointer rests on the page content (unzoomed px) between moves.
+  const rest = useRef({ x: CW * 0.78, y: CH * 0.8 });
 
   useEffect(() => {
     const el = layer.current;
@@ -186,72 +217,137 @@ function Camera({
     const t = { duration: 1.25, ease: CAMERA_EASE };
     const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
 
-    const pointer = reduce ? undefined : CURSOR[scene.id][step];
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    if (pointer) {
-      // Measure once the target has finished rising into place.
-      const aim = () => {
-        const spot = locate(el, scene.id, pointer[0]);
-        if (!spot) return;
-        anims.push(
-          animate(cOpacity, 1, { duration: 0.2 }),
-          animate(cx, spot.x, { duration: 0.8, ease: CAMERA_EASE }),
-          animate(cy, spot.y, { duration: 0.8, ease: CAMERA_EASE }),
-        );
-        if (pointer[1]) anims.push(animate(cScale, [1, 0.72, 1], { duration: 0.28, delay: 0.05 }));
-      };
-      if (pointer[1]) aim();
-      else timer = setTimeout(aim, 450);
-    } else {
+    if (reduce) {
       anims.push(animate(cOpacity, 0, { duration: 0.2 }));
+      return () => anims.forEach((a) => a.stop());
+    }
+
+    const glide = (px: number, py: number, duration: number) => {
+      rest.current = { x: px, y: py };
+      const sx = clamp(px * s + tx, 16, CW - 16);
+      const sy = clamp(py * s + ty, 16, CH - 16);
+      // Caption flips to whichever side has room.
+      anims.push(
+        animate(cOpacity, 1, { duration: 0.25 }),
+        animate(cx, sx, { duration, ease: CAMERA_EASE }),
+        animate(cy, sy, { duration, ease: CAMERA_EASE }),
+        animate(labelX, sx > CW * 0.6 ? "-100%" : "0%", { duration: 0.5, ease: CAMERA_EASE }),
+        animate(labelY, sy > CH * 0.72 ? "-100%" : "0%", { duration: 0.5, ease: CAMERA_EASE }),
+      );
+    };
+
+    const aimAt = CURSOR[scene.id][step];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (aimAt) {
+      const [name, mode] = aimAt;
+      const go = () => {
+        const b = measure(el, scene.id, name);
+        if (!b) return;
+        // Buttons: point at the centre. Blocks: rest just under the new
+        // content's left edge, where the next part hasn't appeared yet.
+        const px = mode === "block" ? b.left + Math.min(56, b.width / 3) : b.left + b.width / 2;
+        const py = mode === "block" ? b.top + b.height + 6 : b.top + b.height / 2;
+        glide(px, py, mode === "click" ? 0.35 : 1.1);
+        if (mode === "click") anims.push(animate(cScale, [1, 0.72, 1], { duration: 0.3, delay: 0.1 }));
+      };
+      if (mode === "click") go();
+      else timer = setTimeout(go, 350);
+    } else {
+      // No new target: stay on the same spot while the camera moves.
+      glide(rest.current.x, rest.current.y, 1.25);
     }
     return () => {
       clearTimeout(timer);
       anims.forEach((a) => a.stop());
     };
-  }, [layer, scene.id, step, reduce, x, y, scale, cx, cy, cOpacity, cScale]);
+  }, [layer, scene.id, step, reduce, x, y, scale, cx, cy, cOpacity, cScale, labelX, labelY]);
 
   return (
-    <motion.div ref={layer} className="absolute inset-0" style={{ x, y, scale, originX: 0, originY: 0 }}>
-      {children}
-      <motion.svg
+    <>
+      <motion.div ref={layer} className="absolute inset-0" style={{ x, y, scale, originX: 0, originY: 0 }}>
+        {children}
+      </motion.div>
+
+      {/* Demo pointer with the step caption riding along. */}
+      <motion.div
         aria-hidden
-        width="22"
-        height="22"
-        viewBox="0 0 24 24"
-        className="pointer-events-none absolute top-0 left-0 z-10 drop-shadow-[0_2px_4px_rgb(0_0_0/0.45)]"
-        style={{ x: cx, y: cy, opacity: cOpacity, scale: cScale, translateX: "-6px", translateY: "-3px" }}
+        className="pointer-events-none absolute top-0 left-0 z-20"
+        style={{ x: cx, y: cy, opacity: cOpacity }}
       >
-        <path d="M5 3l14 8-6 1.6L10 19z" fill="white" stroke="black" strokeWidth="1.3" strokeLinejoin="round" />
-      </motion.svg>
-    </motion.div>
+        <motion.svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          className="absolute top-[-4px] left-[-7px] drop-shadow-[0_3px_6px_rgb(0_0_0/0.45)]"
+          style={{ scale: cScale }}
+        >
+          <path d="M5 3l14 8-6 1.6L10 19z" fill="white" stroke="black" strokeWidth="1.3" strokeLinejoin="round" />
+        </motion.svg>
+        <motion.div className="absolute top-0 left-0 hidden p-[24px] sm:block" style={{ x: labelX, y: labelY }}>
+          <AnimatePresence mode="wait" initial={false}>
+            <CaptionPill key={caption.text} {...caption} large />
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
+    </>
   );
 }
 
-/** Small "what's happening" caption under the window, one line per step. */
+/** On phones the window is too small for the pointer caption, so it sits below. */
 function StepCaption({ text, index, total }: { text: string; index: number; total: number }) {
   return (
-    <div className="mt-4 flex h-[44px] justify-center sm:mt-5" aria-live="polite">
+    <div className="mt-4 flex h-[44px] justify-center sm:hidden" aria-live="polite">
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={text}
-          initial={{ opacity: 0, y: 10, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.98 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="glass flex max-w-[calc(100vw-32px)] items-center gap-2.5 rounded-full py-2 pr-4 pl-2"
-        >
-          <span className="bg-brand-gradient flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white tabular-nums">
-            {Math.min(index + 1, total)}
-          </span>
-          <span className="truncate text-[13.5px] leading-[normal] font-medium text-foreground sm:text-[14.5px]">{text}</span>
-          <span className="relative flex size-2 shrink-0" aria-hidden>
-            <span className="absolute inset-0 animate-ping rounded-full bg-brand-orange/60 [animation-duration:1.6s]" />
-            <span className="relative size-2 rounded-full bg-brand-orange" />
-          </span>
-        </motion.div>
+        <CaptionPill key={text} text={text} index={index} total={total} />
       </AnimatePresence>
     </div>
+  );
+}
+
+function CaptionPill({
+  text,
+  index,
+  total,
+  large,
+}: {
+  text: string;
+  index: number;
+  total: number;
+  /** Inside the scaled preview canvas: bigger type so it reads at ~0.7×. */
+  large?: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+      transition={{ duration: 0.3, ease: EASE }}
+      className={cn(
+        "glass flex w-max items-center rounded-full shadow-device",
+        large ? "gap-3 py-[9px] pr-5 pl-[9px]" : "max-w-[calc(100vw-32px)] gap-2.5 py-2 pr-4 pl-2",
+      )}
+    >
+      <span
+        className={cn(
+          "bg-brand-gradient flex items-center justify-center rounded-full font-semibold text-white tabular-nums",
+          large ? "h-8 min-w-8 px-2 text-[14px]" : "h-6 min-w-6 px-1.5 text-[11px]",
+        )}
+      >
+        {Math.min(index + 1, total)}
+      </span>
+      <span
+        className={cn(
+          "leading-[normal] font-medium whitespace-nowrap text-foreground",
+          large ? "text-[19px]" : "truncate text-[13.5px]",
+        )}
+      >
+        {text}
+      </span>
+      <span className="relative flex size-2 shrink-0" aria-hidden>
+        <span className="absolute inset-0 animate-ping rounded-full bg-brand-orange/60 [animation-duration:1.6s]" />
+        <span className="relative size-2 rounded-full bg-brand-orange" />
+      </span>
+    </motion.div>
   );
 }
 
