@@ -79,7 +79,7 @@ const en: LandingContent = {
   showcase: {
     railLabel: "See each workspace",
     thinking: "Thinking on your laptop…",
-    opening: ["Typing a question", "Sending it to the model on your laptop", "Thinking, right on your computer"],
+    opening: "Asking the model on your laptop",
     scenes: [
       {
         id: "chat",
@@ -93,7 +93,7 @@ const en: LandingContent = {
         recent: "Photosynthesis explained simply",
         model: "Gemma 4 E2B",
         modelDetail: "EmbeddingGemma loaded · Queue 0",
-        beats: ["Checking the web for sources", "Explaining it step by step", "Adding the key equation", "Done: a clear answer with sources"],
+        beats: ["Answering with sources", "A clear, cited answer"],
         chip: { label: "Answer cites 4 web sources", icon: "landing-check" },
       },
       {
@@ -108,7 +108,7 @@ const en: LandingContent = {
         recent: "Learn Python · Step 3",
         model: "Gemma 4 E2B",
         modelDetail: "Tutor mode · Quiz every step",
-        beats: ["Building a learning path for you", "A quick quiz for this step", "Choosing an answer", "Correct, so the next step unlocks"],
+        beats: ["Building your learning path", "Pass the quiz, unlock the next step"],
         chip: { label: "Next step unlocks at 70%", icon: "landing-tick" },
       },
       {
@@ -123,7 +123,7 @@ const en: LandingContent = {
         recent: "Coffee shop poster ideas",
         model: "FLUX.2 klein",
         modelDetail: "Image model loaded · GPU",
-        beats: ["Improving your prompt first", "You approve before anything runs", "Drawing on your own GPU", "4 images ready to use"],
+        beats: ["Improving your prompt, then drawing", "Images made on your computer"],
         chip: { label: "Drawn on your own GPU", icon: "landing-cpu" },
       },
       {
@@ -138,7 +138,7 @@ const en: LandingContent = {
         recent: "Exam prep · Biology",
         model: "Gemma 4 E2B",
         modelDetail: "EmbeddingGemma · 3 files indexed",
-        beats: ["Searching only the files you picked", "Answering from your materials", "Opening the source page", "Highlighting the exact passage", "Every answer points to its source"],
+        beats: ["Searching the files you picked", "Quoted from your own notes"],
         chip: { label: "Quotes the exact page", icon: "landing-check" },
       },
     ],
@@ -371,7 +371,7 @@ const km: LandingContent = {
   showcase: {
     railLabel: "មើលកន្លែងធ្វើការនីមួយៗ",
     thinking: "កំពុងគិតលើកុំព្យូទ័ររបស់អ្នក…",
-    opening: ["កំពុងវាយសំណួរ", "ផ្ញើទៅម៉ូដែលលើកុំព្យូទ័ររបស់អ្នក", "កំពុងគិត នៅលើកុំព្យូទ័ររបស់អ្នកផ្ទាល់"],
+    opening: "កំពុងសួរម៉ូដែលលើកុំព្យូទ័ររបស់អ្នក",
     scenes: [
       {
         id: "chat",
@@ -385,7 +385,7 @@ const km: LandingContent = {
         recent: "ពន្យល់រស្មីសំយោគឱ្យងាយយល់",
         model: "Gemma 4 E2B",
         modelDetail: "EmbeddingGemma បានដំណើរការ · ជួរ 0",
-        beats: ["ស្វែងរកប្រភពលើវេប", "ពន្យល់ម្ដងមួយជំហាន", "បន្ថែមសមីការសំខាន់", "រួចរាល់៖ ចម្លើយច្បាស់ជាមួយប្រភព"],
+        beats: ["ឆ្លើយជាមួយប្រភព", "ចម្លើយច្បាស់ មានប្រភព"],
         chip: { label: "ចម្លើយយោងលើ 4 ប្រភពពីវេប", icon: "landing-check" },
       },
       {
@@ -400,7 +400,7 @@ const km: LandingContent = {
         recent: "រៀន Python · ជំហានទី 3",
         model: "Gemma 4 E2B",
         modelDetail: "របៀបគ្រូ · តេស្តគ្រប់ជំហាន",
-        beats: ["រៀបចំផ្លូវសិក្សាសម្រាប់អ្នក", "តេស្តខ្លីសម្រាប់ជំហាននេះ", "ជ្រើសរើសចម្លើយ", "ត្រឹមត្រូវ ដូច្នេះជំហានបន្ទាប់បានបើក"],
+        beats: ["រៀបចំផ្លូវសិក្សារបស់អ្នក", "ជាប់តេស្ត ដើម្បីបើកជំហានបន្ទាប់"],
         chip: { label: "ជំហានបន្ទាប់បើកនៅ 70%", icon: "landing-tick" },
       },
       {
@@ -415,7 +415,7 @@ const km: LandingContent = {
         recent: "គំនិតផ្ទាំងរូបភាពហាងកាហ្វេ",
         model: "FLUX.2 klein",
         modelDetail: "ម៉ូដែលរូបភាពបានដំណើរការ · GPU",
-        beats: ["កែលម្អ prompt របស់អ្នកជាមុន", "អ្នកយល់ព្រមមុនពេលដំណើរការ", "គូរលើ GPU ផ្ទាល់ខ្លួនរបស់អ្នក", "រូបភាព 4 រួចរាល់សម្រាប់ប្រើ"],
+        beats: ["កែលម្អ prompt រួចគូររូប", "រូបភាពបង្កើតលើកុំព្យូទ័ររបស់អ្នក"],
         chip: { label: "គូរលើ GPU ផ្ទាល់ខ្លួនរបស់អ្នក", icon: "landing-cpu" },
       },
       {
@@ -430,7 +430,7 @@ const km: LandingContent = {
         recent: "ត្រៀមប្រឡង · ជីវវិទ្យា",
         model: "Gemma 4 E2B",
         modelDetail: "EmbeddingGemma · បានរៀបចំ 3 ឯកសារ",
-        beats: ["ស្វែងរកតែឯកសារដែលអ្នកបានជ្រើស", "ឆ្លើយពីឯកសាររបស់អ្នក", "បើកទំព័រប្រភព", "បន្លិចឃ្លាជាក់លាក់", "ចម្លើយនីមួយៗចង្អុលទៅប្រភពរបស់វា"],
+        beats: ["ស្វែងរកក្នុងឯកសារដែលអ្នកជ្រើស", "ដកស្រង់ពីកំណត់ត្រារបស់អ្នក"],
         chip: { label: "ដកស្រង់ទំព័រជាក់លាក់", icon: "landing-check" },
       },
     ],

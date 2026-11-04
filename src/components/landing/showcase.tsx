@@ -22,7 +22,7 @@ import { SceneView, miniGlass, sceneDurations } from "./showcase-scenes";
 const CW = 1180;
 const CH = 748;
 /** How long a finished scene stays on screen before the next one plays. */
-const HOLD_MS = 2400;
+const HOLD_MS = 3200;
 const REDUCED_SCENE_MS = 4200;
 /** Px kept free for nav + tabs + caption so the window fits the screen. */
 const RESERVE = 300;
@@ -50,7 +50,8 @@ const CURSOR: Record<ShowcaseScene["id"], Record<number, Aim>> = {
   docs: { ...OPEN_AIM, 3: ["d-files", "block"], 4: ["d-answer", "block"], 5: ["d-viewer", "block"], 6: ["d-highlight", "block"] },
 };
 
-const CAMERA_EASE = [0.65, 0, 0.35, 1] as const;
+/** Gentle ease-in-out for every camera and pointer move. */
+const CAMERA_EASE = [0.45, 0, 0.2, 1] as const;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -88,8 +89,8 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
   const pageVisible = usePageVisible();
   const running = onScreen && pageVisible;
   const shown = reduce ? durations.length : step;
-  const captionText =
-    shown < 3 ? showcase.opening[shown] : (scene.beats[shown - 3] ?? scene.beats[scene.beats.length - 1]);
+  // Only three captions per scene: asking → answering → finished.
+  const captionText = shown < 3 ? showcase.opening : shown < durations.length ? scene.beats[0] : scene.beats[1];
 
   // Timeline: step through the scene, hold, then the next scene.
   useEffect(() => {
@@ -142,7 +143,7 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
                 scene={scene}
                 step={shown}
                 reduce={reduce}
-                caption={{ text: captionText, index: shown, total: durations.length + 1 }}
+                caption={captionText}
               >
                 <Window preview={preview} showcase={showcase} active={active} step={shown} />
               </Camera>
@@ -165,11 +166,7 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
             </AnimatePresence>
           </PreviewFrame>
         </TiltOnPointer>
-        <StepCaption
-          text={captionText}
-          index={shown}
-          total={durations.length + 1}
-        />
+        <StepCaption text={captionText} />
       </div>
     </section>
   );
@@ -188,7 +185,7 @@ function Camera({
   scene: ShowcaseScene;
   step: number;
   reduce: boolean;
-  caption: { text: string; index: number; total: number };
+  caption: string;
   children: React.ReactNode;
 }) {
   const x = useMotionValue(0);
@@ -214,7 +211,7 @@ function Camera({
     const tx = at ? clamp(CW / 2 - at.x * s, CW - CW * s, 0) : 0;
     const ty = at ? clamp(CH / 2 - at.y * s, CH - CH * s, 0) : 0;
     // Slow, smooth ease-in-out "camera move".
-    const t = { duration: 1.25, ease: CAMERA_EASE };
+    const t = { duration: 1.9, ease: CAMERA_EASE };
     const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
 
     if (reduce) {
@@ -228,11 +225,11 @@ function Camera({
       const sy = clamp(py * s + ty, 16, CH - 16);
       // Caption flips to whichever side has room.
       anims.push(
-        animate(cOpacity, 1, { duration: 0.25 }),
+        animate(cOpacity, 1, { duration: 0.6 }),
         animate(cx, sx, { duration, ease: CAMERA_EASE }),
         animate(cy, sy, { duration, ease: CAMERA_EASE }),
-        animate(labelX, sx > CW * 0.6 ? "-100%" : "0%", { duration: 0.5, ease: CAMERA_EASE }),
-        animate(labelY, sy > CH * 0.72 ? "-100%" : "0%", { duration: 0.5, ease: CAMERA_EASE }),
+        animate(labelX, sx > CW * 0.6 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
+        animate(labelY, sy > CH * 0.72 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
       );
     };
 
@@ -247,14 +244,14 @@ function Camera({
         // content's left edge, where the next part hasn't appeared yet.
         const px = mode === "block" ? b.left + Math.min(56, b.width / 3) : b.left + b.width / 2;
         const py = mode === "block" ? b.top + b.height + 6 : b.top + b.height / 2;
-        glide(px, py, mode === "click" ? 0.35 : 1.1);
-        if (mode === "click") anims.push(animate(cScale, [1, 0.72, 1], { duration: 0.3, delay: 0.1 }));
+        glide(px, py, mode === "click" ? 0.9 : 1.8);
+        if (mode === "click") anims.push(animate(cScale, [1, 0.8, 1], { duration: 0.5, delay: 0.25, ease: "easeInOut" }));
       };
       if (mode === "click") go();
-      else timer = setTimeout(go, 350);
+      else timer = setTimeout(go, 400);
     } else {
       // No new target: stay on the same spot while the camera moves.
-      glide(rest.current.x, rest.current.y, 1.25);
+      glide(rest.current.x, rest.current.y, 1.9);
     }
     return () => {
       clearTimeout(timer);
@@ -285,7 +282,7 @@ function Camera({
         </motion.svg>
         <motion.div className="absolute top-0 left-0 hidden p-[24px] sm:block" style={{ x: labelX, y: labelY }}>
           <AnimatePresence mode="wait" initial={false}>
-            <CaptionPill key={caption.text} {...caption} large />
+            <CaptionPill key={caption} text={caption} large />
           </AnimatePresence>
         </motion.div>
       </motion.div>
@@ -294,11 +291,11 @@ function Camera({
 }
 
 /** On phones the window is too small for the pointer caption, so it sits below. */
-function StepCaption({ text, index, total }: { text: string; index: number; total: number }) {
+function StepCaption({ text }: { text: string }) {
   return (
     <div className="mt-4 flex h-[44px] justify-center sm:hidden" aria-live="polite">
       <AnimatePresence mode="wait" initial={false}>
-        <CaptionPill key={text} text={text} index={index} total={total} />
+        <CaptionPill key={text} text={text} />
       </AnimatePresence>
     </div>
   );
@@ -306,35 +303,24 @@ function StepCaption({ text, index, total }: { text: string; index: number; tota
 
 function CaptionPill({
   text,
-  index,
-  total,
   large,
 }: {
   text: string;
-  index: number;
-  total: number;
   /** Inside the scaled preview canvas: bigger type so it reads at ~0.7×. */
   large?: boolean;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -6, scale: 0.98 }}
-      transition={{ duration: 0.3, ease: EASE }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
       className={cn(
         "glass flex w-max items-center rounded-full shadow-device",
-        large ? "gap-3 py-[9px] pr-5 pl-[9px]" : "max-w-[calc(100vw-32px)] gap-2.5 py-2 pr-4 pl-2",
+        large ? "gap-3 py-[11px] pr-5 pl-4" : "max-w-[calc(100vw-32px)] gap-2.5 py-2 pr-4 pl-3",
       )}
     >
-      <span
-        className={cn(
-          "bg-brand-gradient flex items-center justify-center rounded-full font-semibold text-white tabular-nums",
-          large ? "h-8 min-w-8 px-2 text-[14px]" : "h-6 min-w-6 px-1.5 text-[11px]",
-        )}
-      >
-        {Math.min(index + 1, total)}
-      </span>
+      <span className={cn("rounded-full bg-brand-orange", large ? "size-[9px]" : "size-2")} />
       <span
         className={cn(
           "leading-[normal] font-medium whitespace-nowrap text-foreground",
@@ -342,10 +328,6 @@ function CaptionPill({
         )}
       >
         {text}
-      </span>
-      <span className="relative flex size-2 shrink-0" aria-hidden>
-        <span className="absolute inset-0 animate-ping rounded-full bg-brand-orange/60 [animation-duration:1.6s]" />
-        <span className="relative size-2 rounded-full bg-brand-orange" />
       </span>
     </motion.div>
   );
@@ -369,7 +351,7 @@ function Rail({
   const target = Math.min(1, (step + 1) / total);
   const ms = durations[step] ?? HOLD_MS;
   return (
-    <div className="flex justify-center px-4">
+    <div className="sticky top-[78px] z-30 flex justify-center px-4 sm:top-[98px]">
       <div
         role="tablist"
         aria-label={showcase.railLabel}

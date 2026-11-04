@@ -84,8 +84,8 @@ export type ShowcaseScene = {
   recent: string;
   model: string;
   modelDetail: string;
-  /** Caption per answer step (after the shared opening), last = finished. */
-  beats: string[];
+  /** Two captions: while the answer arrives, then once it's finished. */
+  beats: [string, string];
   /** Floating callout beside the window. */
   chip: { label: string; icon: string };
 };
@@ -94,8 +94,8 @@ export type ShowcaseScene = {
 export type LandingShowcase = {
   railLabel: string;
   thinking: string;
-  /** Captions for the shared opening: typing, sending, thinking. */
-  opening: string[];
+  /** Caption while the prompt is typed, sent and thought about. */
+  opening: string;
   scenes: ShowcaseScene[];
   learn: {
     path: string;

@@ -19,16 +19,16 @@ const faviconTone = {
   yellow: "bg-yellow",
 } as const;
 
-const MS_PER_CHAR = 32;
+const MS_PER_CHAR = 42;
 /** Shared opening of every scene: type → click send → user bubble + thinking. */
-const SEND_MS = 1000;
-const THINK_MS = 1200;
+const SEND_MS = 1500;
+const THINK_MS = 1700;
 /** Then each scene reveals its answer in a few quick beats (ms per beat). */
 const BEATS: Record<ShowcaseScene["id"], number[]> = {
-  chat: [1500, 1500, 1400],
-  learn: [1500, 1500, 1300],
-  image: [1600, 1200, 1800],
-  docs: [1500, 1500, 1400, 1600],
+  chat: [2200, 2200, 2000],
+  learn: [2200, 2300, 2000],
+  image: [2300, 2000, 2400],
+  docs: [2200, 2200, 2100, 2200],
 };
 
 /**
@@ -36,7 +36,7 @@ const BEATS: Record<ShowcaseScene["id"], number[]> = {
  * 3… answer beats; reaching `length` means the scene has finished.
  */
 export function sceneDurations(scene: ShowcaseScene): number[] {
-  return [graphemes(scene.prompt).length * MS_PER_CHAR + 700, SEND_MS, THINK_MS, ...BEATS[scene.id]];
+  return [graphemes(scene.prompt).length * MS_PER_CHAR + 1100, SEND_MS, THINK_MS, ...BEATS[scene.id]];
 }
 
 /** Text typed in with a motion value (no React re-render per character). */
