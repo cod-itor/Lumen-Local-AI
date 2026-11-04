@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ModelStatus, User } from "@/types";
+import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { useShell } from "./shell-context";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -36,6 +37,12 @@ export function SidebarFrame({
   user: User;
 }) {
   const { isDesktop, sidebarOpen, mobileNavOpen, setMobileNavOpen, toggleSidebar } = useShell();
+  const rs = useResizableWidth({
+    storageKey: "lumen:sidebar-width",
+    defaultWidth: 272,
+    min: 232,
+    max: 400,
+  });
 
   const panel = (
     <>
@@ -104,10 +111,10 @@ export function SidebarFrame({
         <motion.div
           key="sidebar"
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 272 + 16, opacity: 1 }}
+          animate={{ width: rs.width + 16, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.32, ease: EASE }}
-          className="h-full shrink-0 overflow-hidden"
+          transition={rs.dragging ? { duration: 0 } : { duration: 0.32, ease: EASE }}
+          className="relative h-full shrink-0 overflow-hidden"
         >
           <motion.aside
             aria-label="Sidebar"
@@ -115,10 +122,12 @@ export function SidebarFrame({
             animate={{ x: 0 }}
             exit={{ x: -24 }}
             transition={{ duration: 0.32, ease: EASE }}
-            className="glass flex h-full w-[272px] flex-col gap-[2px] rounded-[28px] px-3 pt-4 pb-[14px]"
+            style={{ width: rs.width }}
+            className="glass flex h-full flex-col gap-[2px] rounded-[28px] px-3 pt-4 pb-[14px]"
           >
             {panel}
           </motion.aside>
+          <ResizeHandle side="right" label="Resize sidebar" className="right-[2px]" {...rs} />
         </motion.div>
       )}
     </AnimatePresence>

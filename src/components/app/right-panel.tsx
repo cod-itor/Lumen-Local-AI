@@ -4,7 +4,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { ResizeHandle, useResizableWidth } from "./resize-handle";
 import { useShell } from "./shell-context";
+
+/** Panels may take up to ~55% of the window (never more than 900px). */
+const panelMax = () =>
+  typeof window === "undefined" ? 900 : Math.min(900, Math.round(window.innerWidth * 0.55));
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -26,7 +31,7 @@ export function ShellRightPanel({
   onClose,
 }: {
   open: boolean;
-  /** Figma width in px: 320 (sources), 620 (file viewer), 300 (selected image). */
+  /** Default width in px (user can drag the left edge to resize; it's remembered). */
   width: number;
   className?: string;
   children: React.ReactNode;
@@ -36,6 +41,12 @@ export function ShellRightPanel({
 }) {
   const { rightPanelHost, isDesktop } = useShell();
   const closedInitialMobile = useRef(false);
+  const rs = useResizableWidth({
+    storageKey: `lumen:panel-width:${label}`,
+    defaultWidth: width,
+    min: 280,
+    max: panelMax,
+  });
 
   useEffect(() => {
     if (!isDesktop && open && onClose && !closedInitialMobile.current) {
@@ -100,18 +111,19 @@ export function ShellRightPanel({
         <motion.div
           key="right-panel"
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: width + 12, opacity: 1 }}
+          animate={{ width: rs.width + 12, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.32, ease: EASE }}
-          className="flex h-full shrink-0 justify-end overflow-hidden"
+          transition={rs.dragging ? { duration: 0 } : { duration: 0.32, ease: EASE }}
+          className="relative flex h-full shrink-0 justify-end overflow-hidden"
         >
+          <ResizeHandle side="left" label={`Resize ${label.toLowerCase()}`} className="left-0" {...rs} />
           <motion.aside
             aria-label={label}
             initial={{ x: 24 }}
             animate={{ x: 0 }}
             exit={{ x: 24 }}
             transition={{ duration: 0.32, ease: EASE }}
-            style={{ width }}
+            style={{ width: rs.width }}
             className={cn("glass flex h-full flex-col rounded-[28px]", className)}
           >
             {children}
