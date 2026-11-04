@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { LOCALE_LABEL, LOCALES } from "./config";
 import { setLocale, useLocale, useMessages } from "./provider";
 
-/** English / ខ្មែរ segmented switch. Changes every page instantly. */
+/** En / Kh segmented switch. Changes every page instantly. */
 export function LanguageSwitcher({ className, size = "md" }: { className?: string; size?: "sm" | "md" }) {
   const locale = useLocale();
   const m = useMessages();
@@ -26,6 +26,8 @@ export function LanguageSwitcher({ className, size = "md" }: { className?: strin
             role="radio"
             aria-checked={on}
             lang={l}
+            aria-label={LOCALE_LABEL[l].native}
+            title={LOCALE_LABEL[l].native}
             onClick={() => setLocale(l)}
             className={cn(
               "relative rounded-full font-medium transition-colors",
@@ -40,7 +42,7 @@ export function LanguageSwitcher({ className, size = "md" }: { className?: strin
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
-            <span className="relative">{LOCALE_LABEL[l].native}</span>
+            <span className="relative">{LOCALE_LABEL[l].short}</span>
           </button>
         );
       })}

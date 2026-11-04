@@ -8,9 +8,9 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_KEY = "lumen:locale";
 
-export const LOCALE_LABEL: Record<Locale, { native: string; english: string }> = {
-  en: { native: "English", english: "English" },
-  km: { native: "ខ្មែរ", english: "Khmer" },
+export const LOCALE_LABEL: Record<Locale, { native: string; english: string; short: string }> = {
+  en: { native: "English", english: "English", short: "En" },
+  km: { native: "ខ្មែរ", english: "Khmer", short: "Kh" },
 };
 
 /** Content that exists in every language; pick with useLocalized(). */
