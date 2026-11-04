@@ -15,10 +15,10 @@ import { SceneView, miniGlass, sceneDurations } from "./showcase-scenes";
 const CW = 1180;
 const CH = 748;
 /** How long a finished scene stays on screen before the next one plays. */
-const HOLD_MS = 1500;
+const HOLD_MS = 2400;
 const REDUCED_SCENE_MS = 4200;
 /** Px kept free for nav + tabs + caption so the window fits the screen. */
-const RESERVE = 300;
+const RESERVE = 360;
 
 type Shot = [target: string | null, zoom: number];
 /** Camera per step: zoom onto the element being typed/clicked/answered. */
@@ -40,6 +40,8 @@ const CURSOR: Record<ShowcaseScene["id"], Record<number, [string, boolean]>> = {
   image: { 0: ["send", false], 1: ["send", true], 3: ["i-approve", false], 4: ["i-approve", true] },
   docs: { 0: ["send", false], 1: ["send", true] },
 };
+
+const CAMERA_EASE = [0.65, 0, 0.35, 1] as const;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -139,6 +141,11 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
             </AnimatePresence>
           </PreviewFrame>
         </TiltOnPointer>
+        <StepCaption
+          text={shown < 3 ? showcase.opening[shown] : (scene.beats[shown - 3] ?? scene.beats[scene.beats.length - 1])}
+          index={shown}
+          total={durations.length + 1}
+        />
       </div>
     </section>
   );
@@ -175,7 +182,8 @@ function Camera({
     const s = at ? zoom : 1;
     const tx = at ? clamp(CW / 2 - at.x * s, CW - CW * s, 0) : 0;
     const ty = at ? clamp(CH / 2 - at.y * s, CH - CH * s, 0) : 0;
-    const t = { duration: 0.65, ease: EASE };
+    // Slow, smooth ease-in-out "camera move".
+    const t = { duration: 1.25, ease: CAMERA_EASE };
     const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
 
     const pointer = reduce ? undefined : CURSOR[scene.id][step];
@@ -187,13 +195,13 @@ function Camera({
         if (!spot) return;
         anims.push(
           animate(cOpacity, 1, { duration: 0.2 }),
-          animate(cx, spot.x, { duration: 0.4, ease: EASE }),
-          animate(cy, spot.y, { duration: 0.4, ease: EASE }),
+          animate(cx, spot.x, { duration: 0.8, ease: CAMERA_EASE }),
+          animate(cy, spot.y, { duration: 0.8, ease: CAMERA_EASE }),
         );
         if (pointer[1]) anims.push(animate(cScale, [1, 0.72, 1], { duration: 0.28, delay: 0.05 }));
       };
       if (pointer[1]) aim();
-      else timer = setTimeout(aim, 340);
+      else timer = setTimeout(aim, 450);
     } else {
       anims.push(animate(cOpacity, 0, { duration: 0.2 }));
     }
@@ -217,6 +225,33 @@ function Camera({
         <path d="M5 3l14 8-6 1.6L10 19z" fill="white" stroke="black" strokeWidth="1.3" strokeLinejoin="round" />
       </motion.svg>
     </motion.div>
+  );
+}
+
+/** Small "what's happening" caption under the window, one line per step. */
+function StepCaption({ text, index, total }: { text: string; index: number; total: number }) {
+  return (
+    <div className="mt-4 flex h-[44px] justify-center sm:mt-5" aria-live="polite">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={text}
+          initial={{ opacity: 0, y: 10, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.98 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="glass flex max-w-[calc(100vw-32px)] items-center gap-2.5 rounded-full py-2 pr-4 pl-2"
+        >
+          <span className="bg-brand-gradient flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold text-white tabular-nums">
+            {Math.min(index + 1, total)}
+          </span>
+          <span className="truncate text-[13.5px] leading-[normal] font-medium text-foreground sm:text-[14.5px]">{text}</span>
+          <span className="relative flex size-2 shrink-0" aria-hidden>
+            <span className="absolute inset-0 animate-ping rounded-full bg-brand-orange/60 [animation-duration:1.6s]" />
+            <span className="relative size-2 rounded-full bg-brand-orange" />
+          </span>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
 
