@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { EASE } from "./motion";
 
@@ -14,6 +14,11 @@ const H = 780;
 export function PreviewFrame({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const reduce = useReducedMotion();
+  // Starts tilted back and flattens as it scrolls into view.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 25%"] });
+  const rotateX = useTransform(scrollYProgress, [0, 1], [16, 0]);
+  const lift = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -34,12 +39,17 @@ export function PreviewFrame({ children }: { children: ReactNode }) {
       className="relative mx-auto w-full max-w-[1200px]"
       style={{ height: H * scale }}
     >
-      <div
-        className="absolute top-0 left-0 origin-top-left"
-        style={{ width: W, height: H, transform: `scale(${scale})` }}
+      <motion.div
+        className="h-full w-full origin-top [transform-style:preserve-3d]"
+        style={reduce ? undefined : { rotateX, scale: lift, transformPerspective: 1400 }}
       >
-        {children}
-      </div>
+        <div
+          className="absolute top-0 left-0 origin-top-left"
+          style={{ width: W, height: H, transform: `scale(${scale})` }}
+        >
+          {children}
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

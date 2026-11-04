@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/icon";
 import type { LandingContent } from "@/types/landing";
+import { SpotlightCard } from "./effects";
 import { LiftCard, Reveal } from "./motion";
 import { Container, Eyebrow, GlassChip, SectionTitle } from "./primitives";
 
@@ -20,6 +21,7 @@ export function Features({ features }: { features: LandingContent["features"] })
           {features.items.map((f, i) => (
             <Reveal key={f.id} delay={i * 0.06}>
               <LiftCard className="h-full">
+                <SpotlightCard className="rounded-2xl">
                 <Link
                   href={f.href}
                   className="glass flex h-full flex-col items-start gap-[14px] rounded-2xl px-[26px] py-7 transition-shadow hover:shadow-device lg:h-[308.8px]"
@@ -34,6 +36,7 @@ export function Features({ features }: { features: LandingContent["features"] })
                   <p className="text-[15px] leading-[22px] text-muted-foreground">{f.description}</p>
                   <GlassChip className="px-3 py-[5px] text-[11.5px] leading-[normal] font-medium">{f.chip}</GlassChip>
                 </Link>
+                </SpotlightCard>
               </LiftCard>
             </Reveal>
           ))}

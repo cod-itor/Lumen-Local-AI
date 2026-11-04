@@ -1,3 +1,4 @@
+import { CountUp } from "./effects";
 import { Fragment } from "react";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
@@ -36,9 +37,10 @@ export function RunsLocally({ privacy }: { privacy: LandingContent["privacy"] })
             <div className="flex flex-wrap gap-3 pt-2.5">
               {privacy.stats.map((s) => (
                 <div key={s.label} className="glass flex flex-col gap-0.5 rounded-[18px] px-[18px] py-[14px]">
-                  <span className="text-[26px] leading-[normal] font-semibold tracking-[-0.39px] text-foreground">
-                    {s.value}
-                  </span>
+                  <CountUp
+                    value={s.value}
+                    className="text-[26px] leading-[normal] font-semibold tracking-[-0.39px] text-foreground"
+                  />
                   <span className="text-[12.5px] leading-[normal] text-muted-foreground">{s.label}</span>
                 </div>
               ))}
