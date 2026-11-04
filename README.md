@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lumen — Local AI study partner
 
-## Getting Started
+Static UI for **Lumen**, a private AI study partner that runs locally and speaks
+Khmer and English. Built from the LocalAIChatBot Figma file (desktop screens,
+light + dark). Data is mocked for now; the API comes later.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router, Turbopack, Cache Components) · React 19 · TypeScript
+- Tailwind CSS v4 with Figma design tokens (`src/app/globals.css`)
+- shadcn/ui on Base UI · lucide-react · motion · next-themes (dark by default)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm run build   # production build
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Figma screen | Route |
+| --- | --- |
+| Landing (light/dark) | `/` |
+| 01 Chat · New | `/chat` |
+| 02–04 Chat · Answer / Sources open / Sidebar closed + voice | `/chat/[id]` (`?sources=open`) |
+| 05 Documents · Material open | `/documents/[id]` |
+| 06 Image · Prompt approval | `/image` |
+| 07 Image · Generated images | `/image/[id]` |
+| 08 Learn · Step + quiz | `/learn` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+```
+src/
+  app/                 routes ((app)/ = app shell with sidebar + tab bar)
+  components/
+    app/               shell: sidebar, top bar, composer, right panel
+    chat/ documents/ image/ learn/ landing/   screen components
+    ui/                shadcn primitives
+  mocks/               mock data (replace with API)
+  services/            async data access — the only place pages get data from
+  types/               shared types for mocks + API
+public/icons           Figma-exported SVG icons (rendered as CSS masks)
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Connecting the API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Pages and components never import mocks directly — they call functions in
+`src/services/*`. To go live, change a service function body to call
+`apiFetch()` from `src/services/api.ts` and keep its signature. See
+`src/services/README.md`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Theming
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All colors, radii, shadows and type sizes come from Figma and live in
+`src/app/globals.css` (`:root` = light, `.dark` = dark). Use token classes
+(`text-foreground`, `bg-surface`, `glass`, `bg-primary-fill`, …) instead of hex
+values so both themes stay in sync.
