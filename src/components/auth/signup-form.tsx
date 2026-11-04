@@ -7,12 +7,13 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { signupAction } from "@/app/(auth)/actions";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { useMessages } from "@/i18n/provider";
 import { signupSchema, type SignupInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
-import { IconInput, PasswordInput, PasswordStrength, SubmitButton } from "./fields";
-import { applyFieldErrors, fieldErrorClass } from "./form-utils";
+import { AuthFieldError, IconInput, PasswordInput, PasswordStrength, SubmitButton } from "./fields";
+import { applyFieldErrors } from "./form-utils";
 
 export function SignupForm() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function SignupForm() {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { controls, shake } = useShake();
+  const m = useMessages();
 
   const form = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -56,16 +58,16 @@ export function SignupForm() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="signup-name">Name</FieldLabel>
+                <FieldLabel htmlFor="signup-name">{m.auth.fields.name}</FieldLabel>
                 <IconInput
                   {...field}
                   icon={UserRound}
                   id="signup-name"
                   autoComplete="name"
-                  placeholder="Sokha Kim"
+                  placeholder={m.auth.fields.namePlaceholder}
                   aria-invalid={fieldState.invalid}
                 />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -75,7 +77,7 @@ export function SignupForm() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="signup-email">Email</FieldLabel>
+                <FieldLabel htmlFor="signup-email">{m.auth.fields.email}</FieldLabel>
                 <IconInput
                   {...field}
                   icon={Mail}
@@ -83,10 +85,10 @@ export function SignupForm() {
                   type="email"
                   inputMode="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={m.auth.fields.emailPlaceholder}
                   aria-invalid={fieldState.invalid}
                 />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -97,17 +99,17 @@ export function SignupForm() {
             rules={{ deps: ["confirmPassword"] }}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+                <FieldLabel htmlFor="signup-password">{m.auth.fields.password}</FieldLabel>
                 <PasswordInput
                   {...field}
                   id="signup-password"
                   autoComplete="new-password"
-                  placeholder="Create a password"
+                  placeholder={m.auth.signup.passwordPlaceholder}
                   aria-invalid={fieldState.invalid}
                   aria-describedby="signup-password-strength"
                 />
                 <PasswordStrength id="signup-password-strength" value={password} />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -117,22 +119,21 @@ export function SignupForm() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="signup-confirm">Confirm password</FieldLabel>
+                <FieldLabel htmlFor="signup-confirm">{m.auth.signup.confirm}</FieldLabel>
                 <PasswordInput
                   {...field}
                   id="signup-confirm"
                   autoComplete="new-password"
-                  placeholder="Repeat your password"
+                  placeholder={m.auth.signup.confirmPlaceholder}
                   aria-invalid={fieldState.invalid}
                 />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
 
-
-          <SubmitButton pending={pending} done={done} pendingLabel="Creating account…">
-            Create account
+          <SubmitButton pending={pending} done={done} pendingLabel={m.auth.signup.pending}>
+            {m.auth.signup.submit}
           </SubmitButton>
         </FieldGroup>
       </motion.form>

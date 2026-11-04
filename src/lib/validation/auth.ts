@@ -1,16 +1,25 @@
 import { z } from "zod";
+import type { AuthMessages } from "@/i18n/messages/en/auth";
 
 /**
  * Auth form schemas — shared by the client forms (instant feedback) and the
  * server actions (never trust the client), so the rules live in one place.
+ * Messages and rule labels are i18n keys (src/i18n/messages/<lang>/auth.ts);
+ * the UI translates them with useTranslate() before rendering.
  */
 
-export const PASSWORD_RULES = [
-  { id: "length", label: "8+ characters", test: (v: string) => v.length >= 8 },
-  { id: "case", label: "Upper & lowercase", test: (v: string) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
-  { id: "number", label: "A number", test: (v: string) => /\d/.test(v) },
-  { id: "symbol", label: "A symbol", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
-] as const;
+/** An auth error key, e.g. "auth.errors.emailRequired" (typo-checked). */
+type ErrorKey = `auth.errors.${keyof AuthMessages["errors"]}`;
+const e = (key: ErrorKey) => key;
+
+type RuleKey = `auth.password.rules.${keyof AuthMessages["password"]["rules"]}`;
+
+export const PASSWORD_RULES: readonly { id: string; label: RuleKey; test: (v: string) => boolean }[] = [
+  { id: "length", label: "auth.password.rules.length", test: (v: string) => v.length >= 8 },
+  { id: "case", label: "auth.password.rules.case", test: (v: string) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
+  { id: "number", label: "auth.password.rules.number", test: (v: string) => /\d/.test(v) },
+  { id: "symbol", label: "auth.password.rules.symbol", test: (v: string) => /[^A-Za-z0-9]/.test(v) },
+];
 
 /** 0–4: how many password rules pass. */
 export function passwordScore(value: string) {
@@ -20,49 +29,49 @@ export function passwordScore(value: string) {
 const email = z
   .string()
   .trim()
-  .min(1, "Enter your email")
-  .max(254, "That email is too long")
-  .pipe(z.email("Enter a valid email address"));
+  .min(1, e("auth.errors.emailRequired"))
+  .max(254, e("auth.errors.emailTooLong"))
+  .pipe(z.email(e("auth.errors.emailInvalid")));
 
 /** The first three rules are required; a symbol only makes it stronger. */
 const newPassword = z
   .string()
-  .min(1, "Create a password")
-  .max(128, "Use 128 characters or fewer")
+  .min(1, e("auth.errors.passwordCreate"))
+  .max(128, e("auth.errors.passwordTooLong"))
   .refine(
     (v) => PASSWORD_RULES.slice(0, 3).every((r) => r.test(v)),
-    "Use 8+ characters with upper & lowercase letters and a number",
+    e("auth.errors.passwordWeak"),
   );
 
 const matchPasswords = <T extends { password: string; confirmPassword: string }>(d: T) =>
   d.password === d.confirmPassword;
-const mismatch = { message: "Passwords don’t match", path: ["confirmPassword"] };
+const mismatch = { message: e("auth.errors.passwordMismatch"), path: ["confirmPassword"] };
 
 export const loginSchema = z.object({
   email,
-  password: z.string().min(1, "Enter your password").max(128),
+  password: z.string().min(1, e("auth.errors.passwordRequired")).max(128, e("auth.errors.passwordTooLong")),
   remember: z.boolean(),
 });
 
 export const signupSchema = z
   .object({
-    name: z.string().trim().min(2, "Enter your name").max(60, "Use 60 characters or fewer"),
+    name: z.string().trim().min(2, e("auth.errors.nameRequired")).max(60, e("auth.errors.nameTooLong")),
     email,
     password: newPassword,
-    confirmPassword: z.string().min(1, "Confirm your password"),
+    confirmPassword: z.string().min(1, e("auth.errors.confirmRequired")),
   })
   .refine(matchPasswords, mismatch);
 
 export const forgotPasswordSchema = z.object({ email });
 
 export const verifyOtpSchema = z.object({
-  code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  code: z.string().regex(/^\d{6}$/, e("auth.errors.codeInvalidFormat")),
 });
 
 export const resetPasswordSchema = z
   .object({
     password: newPassword,
-    confirmPassword: z.string().min(1, "Confirm your password"),
+    confirmPassword: z.string().min(1, e("auth.errors.confirmRequired")),
   })
   .refine(matchPasswords, mismatch);
 

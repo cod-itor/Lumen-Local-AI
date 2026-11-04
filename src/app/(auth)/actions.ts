@@ -36,7 +36,7 @@ export async function forgotPasswordAction(input: unknown) {
   return parsed.success ? auth.requestPasswordReset(parsed.data) : invalid(parsed.error);
 }
 
-const purposeSchema = z.enum(["signup", "reset"]);
+const purposeSchema = z.enum(["signup", "reset"], "auth.errors.invalidRequest");
 
 export async function verifyOtpAction(input: unknown, purpose: OtpPurpose) {
   const parsed = verifyOtpSchema.safeParse(input);

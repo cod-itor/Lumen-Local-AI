@@ -8,13 +8,14 @@ import { useState, useTransition } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { resetPasswordAction } from "@/app/(auth)/actions";
 import { buttonVariants } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { useMessages } from "@/i18n/provider";
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validation/auth";
 import { cn } from "@/lib/utils";
 import { AuthCard, FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
-import { PasswordInput, PasswordStrength, SubmitButton } from "./fields";
-import { applyFieldErrors, fieldErrorClass } from "./form-utils";
+import { AuthFieldError, PasswordInput, PasswordStrength, SubmitButton } from "./fields";
+import { applyFieldErrors } from "./form-utils";
 import { StepSwap } from "./step-swap";
 import { SuccessCard, SuccessState } from "./success-state";
 
@@ -24,6 +25,7 @@ export function ResetPasswordStep() {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { controls, shake } = useShake();
+  const m = useMessages();
 
   const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
@@ -52,8 +54,8 @@ export function ResetPasswordStep() {
       <StepSwap stepKey="done">
         <SuccessCard>
           <SuccessState
-            title="Password updated"
-            description="Your new password is set. Use it the next time you log in."
+            title={m.auth.reset.doneTitle}
+            description={m.auth.reset.doneBody}
           >
             <Link
               href="/login"
@@ -62,7 +64,7 @@ export function ResetPasswordStep() {
                 "bg-primary-fill h-11 w-full rounded-full text-[15px] hover:-translate-y-px",
               )}
             >
-              Back to log in
+              {m.auth.backToLogin}
             </Link>
           </SuccessState>
         </SuccessCard>
@@ -74,20 +76,17 @@ export function ResetPasswordStep() {
     <StepSwap stepKey="form">
       <AuthCard
         icon={<KeyRound />}
-        title="Set a new password"
+        title={m.auth.reset.title}
         description={
           flow.email ? (
-            <>
-              For <span className="font-medium break-all text-foreground">{flow.email}</span>. Make it strong and
-              unique.
-            </>
+            <WithEmail template={m.auth.reset.forEmail} email={flow.email} />
           ) : (
-            "Make it strong and unique — at least 8 characters."
+            m.auth.reset.description
           )
         }
         footer={
           <Link href="/login" className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline">
-            <ArrowLeft className="size-4" /> Back to log in
+            <ArrowLeft className="size-4" /> {m.auth.backToLogin}
           </Link>
         }
       >
@@ -100,18 +99,18 @@ export function ResetPasswordStep() {
               rules={{ deps: ["confirmPassword"] }}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="reset-password">New password</FieldLabel>
+                  <FieldLabel htmlFor="reset-password">{m.auth.reset.password}</FieldLabel>
                   <PasswordInput
                     {...field}
                     id="reset-password"
                     autoComplete="new-password"
-                    placeholder="Create a new password"
+                    placeholder={m.auth.reset.passwordPlaceholder}
                     autoFocus
                     aria-invalid={fieldState.invalid}
                     aria-describedby="reset-password-strength"
                   />
                   <PasswordStrength id="reset-password-strength" value={password} />
-                  <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                  <AuthFieldError error={fieldState.error} />
                 </Field>
               )}
             />
@@ -120,24 +119,36 @@ export function ResetPasswordStep() {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="reset-confirm">Confirm new password</FieldLabel>
+                  <FieldLabel htmlFor="reset-confirm">{m.auth.reset.confirm}</FieldLabel>
                   <PasswordInput
                     {...field}
                     id="reset-confirm"
                     autoComplete="new-password"
-                    placeholder="Repeat it"
+                    placeholder={m.auth.reset.confirmPlaceholder}
                     aria-invalid={fieldState.invalid}
                   />
-                  <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                  <AuthFieldError error={fieldState.error} />
                 </Field>
               )}
             />
-            <SubmitButton pending={pending} pendingLabel="Updating…">
-              Update password
+            <SubmitButton pending={pending} pendingLabel={m.auth.reset.pending}>
+              {m.auth.reset.submit}
             </SubmitButton>
           </FieldGroup>
         </motion.form>
       </AuthCard>
     </StepSwap>
+  );
+}
+
+/** Renders a "…{email}…" message with the email emphasised. */
+function WithEmail({ template, email }: { template: string; email: string }) {
+  const [before, after = ""] = template.split("{email}");
+  return (
+    <>
+      {before}
+      <span className="font-medium break-all text-foreground">{email}</span>
+      {after}
+    </>
   );
 }

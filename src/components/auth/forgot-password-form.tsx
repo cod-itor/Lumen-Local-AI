@@ -7,12 +7,13 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { forgotPasswordAction } from "@/app/(auth)/actions";
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { useMessages } from "@/i18n/provider";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
-import { IconInput, SubmitButton } from "./fields";
-import { applyFieldErrors, fieldErrorClass } from "./form-utils";
+import { AuthFieldError, IconInput, SubmitButton } from "./fields";
+import { applyFieldErrors } from "./form-utils";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function ForgotPasswordForm() {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { controls, shake } = useShake();
+  const m = useMessages();
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -53,7 +55,7 @@ export function ForgotPasswordForm() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="forgot-email">Email</FieldLabel>
+              <FieldLabel htmlFor="forgot-email">{m.auth.fields.email}</FieldLabel>
               <IconInput
                 {...field}
                 icon={Mail}
@@ -61,19 +63,19 @@ export function ForgotPasswordForm() {
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={m.auth.fields.emailPlaceholder}
                 autoFocus
                 aria-invalid={fieldState.invalid}
               />
               <FieldDescription className="text-[13px]">
-                We’ll email you a 6-digit code to reset your password.
+                {m.auth.forgot.hint}
               </FieldDescription>
-              <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+              <AuthFieldError error={fieldState.error} />
             </Field>
           )}
         />
-        <SubmitButton pending={pending} done={done} pendingLabel="Sending code…">
-          Send code
+        <SubmitButton pending={pending} done={done} pendingLabel={m.auth.forgot.pending}>
+          {m.auth.forgot.submit}
         </SubmitButton>
       </FieldGroup>
     </motion.form>

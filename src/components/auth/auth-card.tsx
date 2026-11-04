@@ -6,6 +6,7 @@ import { useCallback, type ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { EASE } from "@/components/landing/motion";
+import { useTranslate } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,8 +73,9 @@ export function useShake() {
   return { controls, shake };
 }
 
-/** Form-level error (e.g. wrong password) shown above the fields. */
+/** Form-level error (e.g. wrong password) shown above the fields. `message` is an i18n key. */
 export function FormAlert({ message }: { message: string | null }) {
+  const t = useTranslate();
   return (
     <AnimatePresence initial={false}>
       {message && (
@@ -86,7 +88,7 @@ export function FormAlert({ message }: { message: string | null }) {
         >
           <Alert variant="destructive" className="rounded-xl border-destructive/30 bg-destructive/10">
             <AlertCircle />
-            <AlertDescription>{message}</AlertDescription>
+            <AlertDescription>{t(message)}</AlertDescription>
           </Alert>
         </motion.div>
       )}

@@ -7,6 +7,8 @@ import { PreviewReply } from "@/components/chat/preview-reply";
 import { EASE } from "@/components/landing/motion";
 import { GlassChip } from "@/components/landing/primitives";
 import { TypewriterLoop } from "@/components/landing/typewriter";
+import type { Localized } from "@/i18n/config";
+import { useLocale, useLocalized, useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { AuthBrandContent } from "@/types/auth";
 
@@ -20,13 +22,16 @@ const item: Variants = {
  * Desktop-only story beside the auth forms: the landing hero's voice, glass
  * and typewriter, plus a tiny live chat so the product is felt, not described.
  */
-export function BrandPanel({ content, className }: { content: AuthBrandContent; className?: string }) {
+export function BrandPanel({ content: bundle, className }: { content: Localized<AuthBrandContent>; className?: string }) {
+  const content = useLocalized(bundle);
+  const locale = useLocale();
+  const m = useMessages();
   return (
     <motion.section
       variants={list}
       initial="hidden"
       animate="show"
-      aria-label="About Lumen"
+      aria-label={m.auth.aboutLumen}
       className={cn("flex-col gap-8", className)}
     >
       <motion.div variants={item}>
@@ -42,7 +47,8 @@ export function BrandPanel({ content, className }: { content: AuthBrandContent; 
       >
         {content.headline}
         <br />
-        <TypewriterLoop phrases={content.phrases} className="text-foreground-tertiary" />
+        {/* Keyed by language so the loop restarts cleanly when it changes. */}
+        <TypewriterLoop key={locale} phrases={content.phrases} className="text-foreground-tertiary" />
       </motion.h1>
 
       <motion.p variants={item} className="max-w-[500px] text-[17px] leading-[26px] text-muted-foreground">
@@ -57,7 +63,7 @@ export function BrandPanel({ content, className }: { content: AuthBrandContent; 
         <div className="flex gap-3">
           <LumenMark size={32} className="rounded-full" />
           <div className="flex min-w-0 flex-col gap-2 pt-1">
-            <PreviewReply text={content.preview.answer} thinkMs={1600} />
+            <PreviewReply key={locale} text={content.preview.answer} thinkMs={1600} />
             <span className="text-[12px] text-subtle">{content.preview.model}</span>
           </div>
         </div>
@@ -65,7 +71,7 @@ export function BrandPanel({ content, className }: { content: AuthBrandContent; 
 
       <motion.ul variants={list} className="grid max-w-[560px] grid-cols-3 gap-4">
         {content.points.map((p) => (
-          <motion.li key={p.title} variants={item} className="flex flex-col gap-2">
+          <motion.li key={p.icon} variants={item} className="flex flex-col gap-2">
             <span className="glass flex size-9 items-center justify-center rounded-xl text-foreground">
               <Icon name={p.icon} size={17} />
             </span>

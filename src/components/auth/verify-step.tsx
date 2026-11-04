@@ -10,15 +10,17 @@ import { useEffect, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { resendOtpAction, verifyOtpAction } from "@/app/(auth)/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { verifyOtpSchema, type VerifyOtpInput } from "@/lib/validation/auth";
 import { cn } from "@/lib/utils";
 import { AuthCard, FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
-import { SubmitButton } from "./fields";
-import { applyFieldErrors, fieldErrorClass } from "./form-utils";
+import { AuthFieldError, SubmitButton } from "./fields";
+import { applyFieldErrors } from "./form-utils";
 import { StepSwap } from "./step-swap";
 import { SuccessCard, SuccessState } from "./success-state";
 
@@ -29,6 +31,18 @@ function formatSeconds(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+/** "Resend in {time}" with the countdown emphasised. */
+function ResendIn({ template, seconds }: { template: string; seconds: number }) {
+  const [before, after = ""] = template.split("{time}");
+  return (
+    <>
+      {before}
+      <span className="font-medium text-foreground tabular-nums">{formatSeconds(seconds)}</span>
+      {after}
+    </>
+  );
+}
+
 export function VerifyStep() {
   const router = useRouter();
   const { flow, setFlow, resendCooldownSec } = useAuthFlow();
@@ -36,6 +50,7 @@ export function VerifyStep() {
   const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { controls, shake } = useShake();
+  const m = useMessages();
 
   const [left, setLeft] = useState(resendCooldownSec);
   const [resending, startResend] = useTransition();
@@ -92,8 +107,8 @@ export function VerifyStep() {
       <StepSwap stepKey="done">
         <SuccessCard>
           <SuccessState
-            title={firstName ? `Welcome, ${firstName}!` : "You’re all set!"}
-            description="Your account is verified. Your private study partner is ready — everything stays on this device."
+            title={firstName ? format(m.auth.verify.welcomeName, { name: firstName }) : m.auth.verify.welcome}
+            description={m.auth.verify.welcomeBody}
           >
             <Link
               href="/chat"
@@ -102,7 +117,7 @@ export function VerifyStep() {
                 "bg-primary-fill h-11 w-full rounded-full text-[15px] hover:-translate-y-px",
               )}
             >
-              Start learning
+              {m.auth.verify.start}
             </Link>
           </SuccessState>
         </SuccessCard>
@@ -114,21 +129,21 @@ export function VerifyStep() {
     <StepSwap stepKey="form">
       <AuthCard
         icon={<MailCheck />}
-        title="Check your email"
+        title={m.auth.verify.title}
         description={
           <>
-            Enter the 6-digit code we sent to{" "}
-            <span className="font-medium break-all text-foreground">{flow.email ?? "your email"}</span>
+            {m.auth.verify.sentTo}{" "}
+            <span className="font-medium break-all text-foreground">{flow.email ?? m.auth.verify.yourEmail}</span>
           </>
         }
         footer={
           <span>
-            Wrong email?{" "}
+            {m.auth.verify.wrongEmail}{" "}
             <Link
               href={flow.purpose === "reset" ? "/forgot-password" : "/signup"}
               className="font-medium text-foreground underline-offset-4 hover:underline"
             >
-              Change it
+              {m.auth.verify.changeIt}
             </Link>
           </span>
         }
@@ -142,7 +157,7 @@ export function VerifyStep() {
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid} className="items-center">
                   <FieldLabel htmlFor="otp-code" className="sr-only">
-                    Verification code
+                    {m.auth.verify.codeLabel}
                   </FieldLabel>
                   <InputOTP
                     id="otp-code"
@@ -175,24 +190,24 @@ export function VerifyStep() {
                       ))}
                     </InputOTPGroup>
                   </InputOTP>
-                  <FieldError className={cn(fieldErrorClass, "text-center")} errors={[fieldState.error]} />
+                  <AuthFieldError className="text-center" error={fieldState.error} />
                 </Field>
               )}
             />
 
-            <SubmitButton pending={pending} pendingLabel="Verifying…">
-              Verify
+            <SubmitButton pending={pending} pendingLabel={m.auth.verify.pending}>
+              {m.auth.verify.submit}
             </SubmitButton>
 
             <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground" aria-live="polite">
               {left > 0 ? (
                 <span>
-                  {resent ? "New code sent. " : "Didn’t get it? "}Resend in{" "}
-                  <span className="font-medium text-foreground tabular-nums">{formatSeconds(left)}</span>
+                  {resent ? m.auth.verify.newCodeSent : m.auth.verify.didntGetIt}{" "}
+                  <ResendIn template={m.auth.verify.resendIn} seconds={left} />
                 </span>
               ) : (
                 <>
-                  <span>Didn’t get it?</span>
+                  <span>{m.auth.verify.didntGetIt}</span>
                   <Button
                     type="button"
                     variant="link"
@@ -202,7 +217,7 @@ export function VerifyStep() {
                     className="h-auto px-1 text-foreground"
                   >
                     {resending && <Spinner />}
-                    Resend code
+                    {m.auth.verify.resend}
                   </Button>
                 </>
               )}

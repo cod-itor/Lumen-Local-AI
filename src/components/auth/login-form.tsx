@@ -9,11 +9,12 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { loginAction } from "@/app/(auth)/actions";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { useMessages } from "@/i18n/provider";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
-import { IconInput, PasswordInput, SubmitButton } from "./fields";
-import { applyFieldErrors, fieldErrorClass } from "./form-utils";
+import { AuthFieldError, IconInput, PasswordInput, SubmitButton } from "./fields";
+import { applyFieldErrors } from "./form-utils";
 
 export function LoginForm() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function LoginForm() {
   const [done, setDone] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { controls, shake } = useShake();
+  const m = useMessages();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -54,7 +56,7 @@ export function LoginForm() {
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="login-email">Email</FieldLabel>
+                <FieldLabel htmlFor="login-email">{m.auth.fields.email}</FieldLabel>
                 <IconInput
                   {...field}
                   icon={Mail}
@@ -62,10 +64,10 @@ export function LoginForm() {
                   type="email"
                   inputMode="email"
                   autoComplete="email"
-                  placeholder="you@example.com"
+                  placeholder={m.auth.fields.emailPlaceholder}
                   aria-invalid={fieldState.invalid}
                 />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -76,22 +78,22 @@ export function LoginForm() {
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <div className="flex items-center justify-between">
-                  <FieldLabel htmlFor="login-password">Password</FieldLabel>
+                  <FieldLabel htmlFor="login-password">{m.auth.fields.password}</FieldLabel>
                   <Link
                     href="/forgot-password"
                     className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    Forgot password?
+                    {m.auth.login.forgot}
                   </Link>
                 </div>
                 <PasswordInput
                   {...field}
                   id="login-password"
                   autoComplete="current-password"
-                  placeholder="Your password"
+                  placeholder={m.auth.login.passwordPlaceholder}
                   aria-invalid={fieldState.invalid}
                 />
-                <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
+                <AuthFieldError error={fieldState.error} />
               </Field>
             )}
           />
@@ -108,14 +110,14 @@ export function LoginForm() {
                   onCheckedChange={(checked) => field.onChange(checked)}
                 />
                 <FieldLabel htmlFor="login-remember" className="font-normal text-muted-foreground">
-                  Keep me signed in
+                  {m.auth.login.remember}
                 </FieldLabel>
               </Field>
             )}
           />
 
-          <SubmitButton pending={pending} done={done} pendingLabel="Signing in…">
-            Log in
+          <SubmitButton pending={pending} done={done} pendingLabel={m.auth.login.pending}>
+            {m.auth.login.submit}
           </SubmitButton>
         </FieldGroup>
       </motion.form>

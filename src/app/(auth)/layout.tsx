@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { AuthFrame } from "@/components/auth/auth-card";
 import { AuthFlowProvider } from "@/components/auth/auth-flow";
@@ -7,6 +6,8 @@ import { ModeSwitch } from "@/components/auth/mode-switch";
 import { Glow } from "@/components/landing/motion";
 import { Logo } from "@/components/landing/top-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/i18n/language-switcher";
+import { LumenHomeLink } from "@/components/auth/lumen-home-link";
 import { getAuthBrandContent, getResendCooldownSec } from "@/services/auth";
 
 /**
@@ -26,10 +27,13 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
       </div>
 
       <header className="relative z-10 flex h-16 shrink-0 items-center justify-between px-4 sm:h-20 sm:px-8 short:sm:h-16">
-        <Link href="/" aria-label="Lumen home" className="rounded-md">
+        <LumenHomeLink className="rounded-md">
           <Logo />
-        </Link>
-        <ThemeToggle />
+        </LumenHomeLink>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher size="sm" />
+          <ThemeToggle />
+        </div>
       </header>
 
       <AuthFlowProvider resendCooldownSec={getResendCooldownSec()}>

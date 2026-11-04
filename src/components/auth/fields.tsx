@@ -4,10 +4,13 @@ import { AnimatePresence, motion } from "motion/react";
 import { Check, Eye, EyeOff, LockKeyhole, type LucideIcon } from "lucide-react";
 import { useState, type ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
+import { useMessages, useTranslate } from "@/i18n/provider";
 import { passwordScore, PASSWORD_RULES } from "@/lib/validation/auth";
 import { cn } from "@/lib/utils";
+import { fieldErrorClass } from "./form-utils";
 
 const groupClass = "h-11 rounded-xl bg-background/40 dark:bg-input/30";
 
@@ -26,6 +29,7 @@ export function IconInput({ icon: IconCmp, className, ...props }: ComponentProps
 /** Password input with a show/hide toggle. */
 export function PasswordInput({ className, ...props }: Omit<ComponentProps<"input">, "type">) {
   const [visible, setVisible] = useState(false);
+  const m = useMessages();
   return (
     <InputGroup className={cn(groupClass, className)}>
       <InputGroupAddon>
@@ -35,7 +39,7 @@ export function PasswordInput({ className, ...props }: Omit<ComponentProps<"inpu
       <InputGroupAddon align="inline-end">
         <InputGroupButton
           size="icon-xs"
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={visible ? m.auth.password.hide : m.auth.password.show}
           aria-pressed={visible}
           onClick={() => setVisible((v) => !v)}
           className="rounded-full"
@@ -59,17 +63,19 @@ export function PasswordInput({ className, ...props }: Omit<ComponentProps<"inpu
 }
 
 const LEVELS = [
-  { label: "Too short", bar: "bg-muted-foreground/40" },
-  { label: "Weak", bar: "bg-danger" },
-  { label: "Fair", bar: "bg-brand-orange" },
-  { label: "Good", bar: "bg-brand-blue" },
-  { label: "Strong", bar: "bg-success" },
+  { id: "tooShort", bar: "bg-muted-foreground/40" },
+  { id: "weak", bar: "bg-danger" },
+  { id: "fair", bar: "bg-brand-orange" },
+  { id: "good", bar: "bg-brand-blue" },
+  { id: "strong", bar: "bg-success" },
 ] as const;
 
 /** Four-bar strength meter + rule checklist. Fixed height, so nothing jumps. */
 export function PasswordStrength({ value, id }: { value: string; id?: string }) {
   const score = passwordScore(value);
   const level = LEVELS[score];
+  const m = useMessages();
+  const t = useTranslate();
   return (
     <div id={id} className="flex flex-col gap-2.5" aria-live="polite">
       <div className="flex items-center gap-1.5" aria-hidden>
@@ -104,17 +110,28 @@ export function PasswordStrength({ value, id }: { value: string; id?: string }) 
                 >
                   <Check className="size-2.5" strokeWidth={3} />
                 </span>
-                {rule.label}
-                <span className="sr-only">{ok ? "(done)" : "(missing)"}</span>
+                {t(rule.label)}
+                <span className="sr-only">{ok ? m.auth.password.ruleDone : m.auth.password.ruleMissing}</span>
               </li>
             );
           })}
         </ul>
         <span className="shrink-0 text-[12.5px] font-medium text-muted-foreground">
-          {value ? level.label : ""}
+          {value ? m.auth.password.levels[level.id] : ""}
         </span>
       </div>
     </div>
+  );
+}
+
+/** shadcn <FieldError> for a form field; the message is an i18n key (see lib/validation/auth.ts). */
+export function AuthFieldError({ error, className }: { error?: { message?: string }; className?: string }) {
+  const t = useTranslate();
+  return (
+    <FieldError
+      className={cn(fieldErrorClass, className)}
+      errors={[error?.message ? { message: t(error.message) } : undefined]}
+    />
   );
 }
 
@@ -128,6 +145,7 @@ export function SubmitButton({
   ...props
 }: ComponentProps<typeof Button> & { pending?: boolean; done?: boolean; pendingLabel: string }) {
   const state = done ? "done" : pending ? "pending" : "idle";
+  const m = useMessages();
   return (
     <Button
       type="submit"
@@ -151,7 +169,7 @@ export function SubmitButton({
         >
           {state === "pending" && <Spinner />}
           {state === "done" && <Check className="size-4" strokeWidth={2.5} />}
-          {state === "pending" ? pendingLabel : state === "done" ? "Done" : children}
+          {state === "pending" ? pendingLabel : state === "done" ? m.common.done : children}
         </motion.span>
       </AnimatePresence>
     </Button>

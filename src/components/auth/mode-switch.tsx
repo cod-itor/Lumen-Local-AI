@@ -3,11 +3,12 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 const MODES = [
-  { href: "/login", label: "Log in" },
-  { href: "/signup", label: "Sign up" },
+  { href: "/login", id: "login" },
+  { href: "/signup", id: "signup" },
 ] as const;
 
 /**
@@ -16,11 +17,12 @@ const MODES = [
  */
 export function ModeSwitch() {
   const pathname = usePathname();
-  const active = MODES.find((m) => m.href === pathname)?.href;
+  const m = useMessages();
+  const active = MODES.find((mode) => mode.href === pathname)?.href;
   return (
     // Always rendered (hidden on other steps) so the card below never shifts.
     <nav
-      aria-label="Account"
+      aria-label={m.auth.modes.aria}
       aria-hidden={!active}
       inert={!active}
       className={cn(
@@ -28,12 +30,12 @@ export function ModeSwitch() {
         !active && "pointer-events-none opacity-0",
       )}
     >
-      {MODES.map((m) => {
-        const on = m.href === active;
+      {MODES.map((mode) => {
+        const on = mode.href === active;
         return (
           <Link
-            key={m.href}
-            href={m.href}
+            key={mode.href}
+            href={mode.href}
             aria-current={on ? "page" : undefined}
             className={cn(
               "relative rounded-full px-5 py-2 text-[14px] leading-none font-medium transition-colors",
@@ -47,7 +49,7 @@ export function ModeSwitch() {
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
-            <span className="relative">{m.label}</span>
+            <span className="relative">{m.auth.modes[mode.id]}</span>
           </Link>
         );
       })}
