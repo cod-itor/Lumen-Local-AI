@@ -1,16 +1,26 @@
-/** Two soft blurred glows from the Desktop App frames (Figma "Glow" ellipses). */
+/**
+ * Two soft glows from the Desktop App frames (Figma "Glow" ellipses: blur 55–60).
+ * Drawn as radial gradients instead of CSS blur() filters — same look, but no
+ * filter for the GPU to render (matters on phones and small laptops).
+ */
 export function AppGlows() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* bottom-left orange: 340px circle, gaussian blur 60 */}
       <div
-        className="absolute size-[340px] rounded-full bg-brand-orange-soft blur-[60px]"
-        style={{ left: -140, bottom: -100 }}
+        className="absolute size-[580px]"
+        style={{
+          left: -260,
+          bottom: -220,
+          backgroundImage: "radial-gradient(closest-side, var(--brand-orange-soft) 30%, transparent 100%)",
+        }}
       />
-      {/* top-right blue: 300px circle, gaussian blur 55 */}
       <div
-        className="absolute size-[300px] rounded-full bg-brand-blue-soft blur-[55px]"
-        style={{ right: -60, top: -100 }}
+        className="absolute size-[520px]"
+        style={{
+          right: -170,
+          top: -210,
+          backgroundImage: "radial-gradient(closest-side, var(--brand-blue-soft) 30%, transparent 100%)",
+        }}
       />
     </div>
   );
