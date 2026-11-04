@@ -1,6 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion, type HTMLMotionProps } from "motion/react";
+import { motion, useInView, type HTMLMotionProps } from "motion/react";
+import { useRef } from "react";
+import { usePageVisible, usePerfTier } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
@@ -30,7 +32,7 @@ export function LiftCard({ className, ...props }: HTMLMotionProps<"div">) {
     <motion.div
       whileHover={{ y: -6 }}
       transition={{ duration: 0.3, ease: EASE }}
-      className={cn("will-change-transform", className)}
+      className={className}
       {...props}
     />
   );
@@ -55,27 +57,33 @@ export function Glow({
   duration?: number;
   blur?: number;
 }) {
-  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { margin: "200px" });
+  const visible = usePageVisible();
+  const tier = usePerfTier();
+  // Drifting moves pixels under frosted glass, which re-renders the blur each
+  // frame — so only drift on capable devices, while on screen, tab visible.
+  const drifting = tier === "full" && inView && visible;
   const color = tone === "blue" ? "var(--glow-blue)" : "var(--glow-orange)";
   const t = (x: number, y: number) => `translate3d(${x}px, ${y}px, 0)`;
   return (
-    <div aria-hidden className={cn("pointer-events-none absolute", className)}>
+    <div ref={ref} aria-hidden className={cn("pointer-events-none absolute", className)}>
       {/*
         A radial gradient approximates a Gaussian-blurred ellipse without a
         filter, so drifting it is a pure compositor transform.
       */}
       <motion.div
-        className="absolute will-change-transform"
+        className="absolute"
         style={{
           inset: -blur,
           backgroundImage: `radial-gradient(closest-side, ${color} 0%, ${color} 20%, transparent 100%)`,
         }}
         animate={
-          reduce
-            ? undefined
-            : { transform: [t(0, 0), t(drift, -drift * 0.7), t(-drift * 0.6, drift * 0.5), t(0, 0)] }
+          drifting
+            ? { transform: [t(0, 0), t(drift, -drift * 0.7), t(-drift * 0.6, drift * 0.5), t(0, 0)] }
+            : { transform: t(0, 0) }
         }
-        transition={{ duration, ease: "easeInOut", repeat: Infinity }}
+        transition={drifting ? { duration, ease: "easeInOut", repeat: Infinity } : { duration: 0.6 }}
       />
     </div>
   );

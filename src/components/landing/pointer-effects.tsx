@@ -9,6 +9,7 @@ import {
   type MotionValue,
 } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePerfTier } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 /** True only on devices with a real mouse/trackpad (no touch-only screens). */
@@ -29,7 +30,8 @@ function useFinePointer() {
  * blurred circle moved with transform, so it never repaints the page.
  */
 export function CursorSpotlight() {
-  const fine = useFinePointer();
+  const full = usePerfTier() === "full";
+  const fine = useFinePointer() && full;
   const reduce = useReducedMotion();
   const x = useMotionValue(-1000);
   const y = useMotionValue(-1000);
@@ -86,7 +88,8 @@ export function TiltOnPointer({
   max?: number;
   className?: string;
 }) {
-  const fine = useFinePointer();
+  const full = usePerfTier() === "full";
+  const fine = useFinePointer() && full;
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const px = useMotionValue(0);
@@ -121,7 +124,6 @@ export function TiltOnPointer({
       <motion.div
         ref={ref}
         style={fine && !reduce ? { rotateX, rotateY, transformStyle: "preserve-3d" } : undefined}
-        className="will-change-transform"
       >
         {children}
       </motion.div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { motion, useInView, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePageVisible } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 /** Split into user-perceived characters so Khmer clusters never break mid-glyph. */
@@ -47,6 +48,10 @@ export function TypewriterLoop({
   caretClassName?: string;
 }) {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
+  const onScreen = useInView(ref);
+  const pageVisible = usePageVisible();
+  const paused = !onScreen || !pageVisible;
   const split = useMemo(() => phrases.map(graphemes), [phrases]);
   const [index, setIndex] = useState(0);
   const [count, setCount] = useState(0);
@@ -60,7 +65,7 @@ export function TypewriterLoop({
   }, [reduce, startDelayMs]);
 
   useEffect(() => {
-    if (reduce || !started || split.length === 0) return;
+    if (reduce || !started || paused || split.length === 0) return;
     const chars = split[index];
     let delay: number;
     let next: () => void;
@@ -84,12 +89,12 @@ export function TypewriterLoop({
     }
     const t = setTimeout(next, delay);
     return () => clearTimeout(t);
-  }, [reduce, started, split, index, count, deleting, typeMs, deleteMs, holdMs]);
+  }, [reduce, started, paused, split, index, count, deleting, typeMs, deleteMs, holdMs]);
 
   const text = reduce ? phrases[0] : split[index]?.slice(0, count).join("") ?? "";
 
   return (
-    <span className={className}>
+    <span ref={ref} className={className}>
       <span className="sr-only">{phrases[0]}</span>
       <span aria-hidden>
         {text}

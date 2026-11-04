@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { usePerfTier } from "@/lib/performance";
 import { EASE } from "./motion";
 
 const W = 1200;
@@ -14,7 +15,9 @@ const H = 780;
 export function PreviewFrame({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const reduce = useReducedMotion();
+  const reducedMotion = useReducedMotion();
+  const tier = usePerfTier();
+  const reduce = reducedMotion || tier !== "full";
   // Starts tilted back and flattens as it scrolls into view.
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 25%"] });
   const rotateX = useTransform(scrollYProgress, [0, 1], [16, 0]);
