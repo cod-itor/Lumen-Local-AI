@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 /** Animated "Thinking…" indicator: three bouncing dots + shimmering label. */
 export function ThinkingIndicator() {
@@ -39,15 +39,17 @@ export function StreamedText({ text, wordMs = 45 }: { text: string; wordMs?: num
       <span className="sr-only">{text}</span>
       <span aria-hidden>
         {words.slice(0, shown).map((w, i) => (
-          <motion.span
-            key={i}
-            className="inline-block"
-            initial={{ opacity: 0, y: 3 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22 }}
-          >
-            {w}{" "}
-          </motion.span>
+          // The space sits outside the inline-block, or it would collapse.
+          <Fragment key={i}>
+            <motion.span
+              className="inline-block"
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              {w}
+            </motion.span>{" "}
+          </Fragment>
         ))}
       </span>
     </p>
