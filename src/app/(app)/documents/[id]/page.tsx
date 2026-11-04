@@ -34,7 +34,7 @@ async function MaterialOpen({ params }: { params: Promise<{ id: string }> }) {
       material={material}
       page={page}
       thread={thread}
-      totalMaterials={materials.length}
+      materials={materials}
     />
   );
 }

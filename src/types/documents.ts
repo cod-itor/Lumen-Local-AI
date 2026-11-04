@@ -64,7 +64,7 @@ export type DocumentMessage =
 export type DocumentThread = {
   id: string;
   materialId: string;
-  /** "Using 2 of 5 materials" */
-  materialsInUse: number;
+  /** Materials this chat retrieves from (multi-file RAG). Shown as "Using 2 of 5 materials". */
+  materialIds: string[];
   messages: DocumentMessage[];
 };

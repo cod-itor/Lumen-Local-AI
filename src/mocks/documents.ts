@@ -144,7 +144,7 @@ export const mockDocumentThreads: DocumentThread[] = [
   {
     id: "explain-ch2",
     materialId: "biology-ch2-cells",
-    materialsInUse: 2,
+    materialIds: ["biology-ch2-cells", "physics-lecture-05"],
     messages: [
       { id: "m1", role: "user", text: "Explain chapter 2 simply" },
       {
@@ -181,7 +181,7 @@ export const mockDocumentThreads: DocumentThread[] = [
   {
     id: "physics-5",
     materialId: "physics-lecture-05",
-    materialsInUse: 1,
+    materialIds: ["physics-lecture-05"],
     messages: [
       { id: "m1", role: "user", text: "Summarize physics lecture 5" },
       {
@@ -202,7 +202,7 @@ export const mockDocumentThreads: DocumentThread[] = [
   {
     id: "khmer-poems",
     materialId: "khmer-literature-notes",
-    materialsInUse: 1,
+    materialIds: ["khmer-literature-notes"],
     messages: [
       { id: "m1", role: "user", text: "Quiz me on Khmer poems" },
       {

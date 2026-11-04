@@ -15,6 +15,7 @@ import type {
   MaterialPage,
 } from "@/types/documents";
 import { FileViewer, type HighlightFocus } from "./file-viewer";
+import { SourcePicker } from "./source-picker";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const item = {
@@ -27,16 +28,30 @@ export function DocumentWorkspace({
   material,
   page,
   thread,
-  totalMaterials,
+  materials,
 }: {
   material: Material;
   page: MaterialPage | null;
   thread: DocumentThread | null;
-  totalMaterials: number;
+  materials: Material[];
 }) {
   const router = useRouter();
   const [viewerOpen, setViewerOpen] = useState(true);
   const [focus, setFocus] = useState<HighlightFocus | null>(null);
+  // Sources for retrieval; seeded from the thread, persisted via services later.
+  const [sources, setSources] = useState<string[]>(() => {
+    const seeded = thread?.materialIds ?? [material.id];
+    return seeded.includes(material.id) ? seeded : [material.id, ...seeded];
+  });
+  const picker = (variant: "pill" | "chip") => (
+    <SourcePicker
+      materials={materials}
+      selected={sources}
+      currentId={material.id}
+      onChange={setSources}
+      variant={variant}
+    />
+  );
 
   const openCitation = (c: Citation) => {
     if (c.materialId !== material.id) {
@@ -54,19 +69,10 @@ export function DocumentWorkspace({
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-          className="mx-auto flex w-full max-w-[720px] flex-col gap-7 pt-3 pb-6"
+          className="mx-auto flex w-full max-w-(--chat-width) flex-col gap-7 pt-3 pb-6"
         >
           <motion.li variants={item} className="flex justify-center">
-            <button
-              type="button"
-              className="flex items-center gap-[6px] rounded-full border border-border px-3 py-[6px] text-foreground transition-colors hover:bg-accent"
-            >
-              <Icon name="doc-book-sm" size={14} />
-              <span className="text-[12px] font-medium whitespace-nowrap">
-                Using {thread?.materialsInUse ?? 1} of {totalMaterials} materials
-              </span>
-              <Icon name="doc-chev-sm" size={13} className="text-muted-foreground" />
-            </button>
+            {picker("pill")}
           </motion.li>
 
           {thread ? (
@@ -88,12 +94,13 @@ export function DocumentWorkspace({
         </motion.ol>
       </div>
 
-      <div className="w-full max-w-[740px] pt-3">
+      <div className="w-full max-w-[calc(var(--chat-width)+20px)] pt-3">
         <Composer
           placeholder="Ask about your materials"
           showSearch={false}
           attachIcon="doc-clip"
           attachLabel="Attach material"
+          leading={picker("chip")}
         />
       </div>
       <p className="mt-[6px] -mb-[5px] text-center text-[11.5px] leading-[14px] text-subtle">
