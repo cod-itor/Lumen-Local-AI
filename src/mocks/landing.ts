@@ -12,7 +12,7 @@ export const mockLanding: LandingContent = {
     title: ["Your private AI", "study partner"],
     subtitle:
       "Runs locally and speaks Khmer and English. Chat with sources, ask your own documents, create images and learn step by step, without your data leaving your computer.",
-    primaryCta: { label: "Get started, it’s free", href: "/chat" },
+    primaryCta: { label: "Get started, it’s free", href: "/signup" },
     secondaryCta: { label: "See how it works", href: "#how-it-works", icon: "landing-play" },
     languagesLabel: "Answers in",
     languages: [
@@ -190,8 +190,8 @@ export const mockLanding: LandingContent = {
   cta: {
     title: "Start learning with your own private AI",
     subtitle: "Free to use. No data leaves your computer. Works in English and Khmer.",
-    primary: { label: "Get started, it’s free", href: "/chat" },
-    secondary: { label: "Log in", href: "/chat" },
+    primary: { label: "Get started, it’s free", href: "/signup" },
+    secondary: { label: "Log in", href: "/login" },
   },
   footer: {
     tagline: "Your private AI study partner",

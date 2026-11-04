@@ -67,13 +67,13 @@ export function TopNav({ links }: { links: LandingLink[] }) {
         <div className="relative flex items-center gap-2">
           <ThemeToggle />
           <Link
-            href="/chat"
+            href="/login"
             className="hidden rounded-full px-4 py-3 text-[14.5px] leading-[normal] font-medium text-foreground transition-colors hover:bg-accent sm:inline-flex"
           >
             Log in
           </Link>
           <Link
-            href="/chat"
+            href="/signup"
             className="bg-primary-fill inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] leading-[normal] font-medium transition-transform hover:-translate-y-px sm:px-5 sm:py-3"
           >
             Get started
