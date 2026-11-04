@@ -83,7 +83,12 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
 
       <FollowUpComposer onSubmit={send} />
 
-      <ShellRightPanel open={sourcesOpen} width={320} label="Sources">
+      <ShellRightPanel
+        open={sourcesOpen}
+        width={320}
+        label="Sources"
+        onClose={() => setSourcesOpen(false)}
+      >
         <SourcesPanel
           sources={conversation.sources}
           searchSteps={conversation.searchSteps}

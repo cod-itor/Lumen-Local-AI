@@ -66,7 +66,12 @@ export function ImageGallery({
         </motion.div>
       </div>
 
-      <ShellRightPanel open={panelOpen && !!selected} width={300} label="Selected image">
+      <ShellRightPanel
+        open={panelOpen && !!selected}
+        width={300}
+        label="Selected image"
+        onClose={() => setPanelOpen(false)}
+      >
         {selected && <SelectedImagePanel image={selected} onClose={() => setPanelOpen(false)} />}
       </ShellRightPanel>
     </>

@@ -100,7 +100,13 @@ export function DocumentWorkspace({
         AI can make mistakes. Check sources.
       </p>
 
-      <ShellRightPanel open={viewerOpen} width={620} label="File viewer" className="overflow-hidden">
+      <ShellRightPanel
+        open={viewerOpen}
+        width={620}
+        label="File viewer"
+        className="overflow-hidden"
+        onClose={() => setViewerOpen(false)}
+      >
         <FileViewer
           material={material}
           page={page}

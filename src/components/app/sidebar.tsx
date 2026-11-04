@@ -35,7 +35,68 @@ export function SidebarFrame({
   status: ModelStatus;
   user: User;
 }) {
-  const { sidebarOpen, toggleSidebar } = useShell();
+  const { isDesktop, sidebarOpen, mobileNavOpen, setMobileNavOpen, toggleSidebar } = useShell();
+
+  const panel = (
+    <>
+      {/* Logo row */}
+      <div className="flex w-full items-center justify-between pb-3 pl-2">
+        <Link href="/" className="flex items-center gap-[7px]">
+          <Icon name="spark" size={18} className="text-foreground" />
+          <span className="text-[17px] font-semibold tracking-[-0.17px] text-foreground">Lumen</span>
+        </Link>
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          onClick={toggleSidebar}
+          className="flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent"
+        >
+          <Icon name="panel" size={17} />
+        </button>
+      </div>
+
+      {/* Section body: nav + lists */}
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-[2px] overflow-y-auto [scrollbar-width:none]">
+        {body}
+      </div>
+
+      <ModelStatusCard status={status} />
+      <AccountRow user={user} />
+    </>
+  );
+
+  // Mobile / tablet: slide-in drawer over the content.
+  if (!isDesktop) {
+    return (
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              aria-hidden
+              onClick={() => setMobileNavOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+            />
+            <motion.aside
+              key="drawer"
+              aria-label="Sidebar"
+              initial={{ x: "-105%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-105%" }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="glass fixed inset-y-2 left-2 z-50 flex w-[min(300px,calc(100vw-48px))] flex-col gap-[2px] rounded-[28px] bg-background/80 px-3 pt-4 pb-[14px]"
+            >
+              {panel}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence initial={false}>
@@ -56,31 +117,7 @@ export function SidebarFrame({
             transition={{ duration: 0.32, ease: EASE }}
             className="glass flex h-full w-[272px] flex-col gap-[2px] rounded-[28px] px-3 pt-4 pb-[14px]"
           >
-            {/* Logo row */}
-            <div className="flex w-full items-center justify-between pb-3 pl-2">
-              <Link href="/" className="flex items-center gap-[7px]">
-                <Icon name="spark" size={18} className="text-foreground" />
-                <span className="text-[17px] font-semibold tracking-[-0.17px] text-foreground">
-                  Lumen
-                </span>
-              </Link>
-              <button
-                type="button"
-                aria-label="Close sidebar"
-                onClick={toggleSidebar}
-                className="flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent"
-              >
-                <Icon name="panel" size={17} />
-              </button>
-            </div>
-
-            {/* Section body: nav + lists */}
-            <div className="flex min-h-0 w-full flex-1 flex-col gap-[2px] overflow-y-auto [scrollbar-width:none]">
-              {body}
-            </div>
-
-            <ModelStatusCard status={status} />
-            <AccountRow user={user} />
+            {panel}
           </motion.aside>
         </motion.div>
       )}
@@ -90,10 +127,11 @@ export function SidebarFrame({
 
 /** Shown in place of the sidebar when it's closed (Figma "Sidebar Closed · Controls"). */
 export function SidebarClosedControls() {
-  const { sidebarOpen, toggleSidebar } = useShell();
+  const { isDesktop, sidebarOpen, toggleSidebar } = useShell();
+  const show = !isDesktop || !sidebarOpen;
   return (
     <AnimatePresence initial={false}>
-      {!sidebarOpen && (
+      {show && (
         <motion.div
           key="closed-controls"
           initial={{ opacity: 0, scale: 0.9 }}
