@@ -7,7 +7,9 @@ import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
 import type { LandingContent, LandingLanguage } from "@/types/landing";
 import { EASE } from "./motion";
+import { Magnetic } from "./pointer-effects";
 import { GlassChip } from "./primitives";
+import { TypeOnce } from "./typewriter";
 import { scrollToHash } from "./top-nav";
 
 const container: Variants = {
@@ -40,9 +42,9 @@ export function Hero({ hero }: { hero: LandingContent["hero"] }) {
         variants={item}
         className="text-[44px] leading-[48px] font-semibold tracking-[-1.6px] text-foreground sm:text-[62px] sm:leading-[66px] lg:text-display lg:leading-[80px] lg:tracking-[-2.66px]"
       >
-        {hero.title[0]}
+        <TypeOnce text={hero.title[0]} delayMs={300} />
         <br />
-        {hero.title[1]}
+        <TypeOnce text={hero.title[1]} delayMs={300 + hero.title[0].length * 38 + 120} />
       </motion.h1>
 
       <motion.p variants={item} className="max-w-[640px] text-[17px] leading-[26px] text-muted-foreground sm:text-[19px] sm:leading-[29px]">
@@ -50,13 +52,15 @@ export function Hero({ hero }: { hero: LandingContent["hero"] }) {
       </motion.p>
 
       <motion.div variants={item} className="flex flex-col items-center gap-3 pt-2 sm:flex-row">
-        <Link
-          href={hero.primaryCta.href}
-          className="bg-primary-fill inline-flex items-center gap-1.5 rounded-full px-[26px] py-4 text-base leading-[normal] font-medium transition-transform hover:-translate-y-0.5"
-        >
-          {hero.primaryCta.label}
-          <Icon name="landing-arrow" size={17} />
-        </Link>
+        <Magnetic>
+          <Link
+            href={hero.primaryCta.href}
+            className="bg-primary-fill inline-flex items-center gap-1.5 rounded-full px-[26px] py-4 text-base leading-[normal] font-medium transition-transform hover:-translate-y-0.5"
+          >
+            {hero.primaryCta.label}
+            <Icon name="landing-arrow" size={17} />
+          </Link>
+        </Magnetic>
         <a
           href={hero.secondaryCta.href}
           onClick={(e) => scrollToHash(e, hero.secondaryCta.href)}

@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/hero";
 import { HeroPreview } from "@/components/landing/hero-preview";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Glow } from "@/components/landing/motion";
+import { CursorSpotlight, TiltOnPointer } from "@/components/landing/pointer-effects";
 import { RunsLocally } from "@/components/landing/runs-locally";
 import { TopNav } from "@/components/landing/top-nav";
 import { getLandingContent } from "@/services/landing";
@@ -23,10 +24,13 @@ export default async function Home() {
         <Glow tone="blue" className="top-[3300px] left-[300px] h-[500px] w-[600px]" blur={120} duration={26} />
       </div>
 
+      <CursorSpotlight />
       <TopNav links={content.nav} />
       <main className="relative">
         <Hero hero={content.hero} />
-        <HeroPreview preview={content.preview} />
+        <TiltOnPointer max={3}>
+          <HeroPreview preview={content.preview} />
+        </TiltOnPointer>
         <Features features={content.features} />
         <HowItWorks steps={content.steps} />
         <RunsLocally privacy={content.privacy} />
