@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="264" height="264" viewBox="0 0 264 264" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Image Tile">
+<rect width="264" height="264" rx="18" fill="url(#paint0_linear_0_100)"/>
+<circle id="Ellipse" cx="196.918" cy="93.0492" r="50.4918" fill="white" fill-opacity="0.25"/>
+<path id="Rectangle" d="M77.1803 113.246C77.1803 110.856 79.118 108.918 81.5082 108.918H162.295C164.685 108.918 166.623 110.856 166.623 113.246V152.197C166.623 169.725 152.413 183.934 134.885 183.934H108.918C91.3898 183.934 77.1803 169.725 77.1803 152.197V113.246Z" fill="white" fill-opacity="0.1"/>
+<circle id="Ellipse_2" cx="172.393" cy="137.77" r="12.9836" stroke="white" stroke-opacity="0.1" stroke-width="8.65574"/>
+<ellipse id="Ellipse_3" cx="121.902" cy="188.262" rx="69.2459" ry="10.0984" fill="white" fill-opacity="0.1"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_100" x1="0" y1="0" x2="188.571" y2="188.571" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F4C08B"/>
+<stop offset="1" stop-color="#9A5A34"/>
+</linearGradient>
+</defs>
+</svg>

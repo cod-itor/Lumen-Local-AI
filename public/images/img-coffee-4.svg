@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="184" height="184" viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Image Tile">
+<rect width="184" height="184" rx="16" fill="url(#paint0_linear_0_249)"/>
+<circle id="Ellipse" cx="137.246" cy="64.8525" r="35.1913" fill="white" fill-opacity="0.25"/>
+<path id="Rectangle" d="M53.7924 78.929C53.7924 77.263 55.1428 75.9126 56.8087 75.9126H113.115C114.781 75.9126 116.131 77.2631 116.131 78.929V106.077C116.131 118.293 106.228 128.197 94.0109 128.197H75.9126C63.6959 128.197 53.7924 118.293 53.7924 106.077V78.929Z" fill="white" fill-opacity="0.1"/>
+<circle id="Ellipse_2" cx="120.153" cy="96.0219" r="9.04918" stroke="white" stroke-opacity="0.1" stroke-width="6.03279"/>
+<ellipse id="Ellipse_3" cx="84.9617" cy="131.213" rx="48.2623" ry="7.03825" fill="white" fill-opacity="0.1"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_249" x1="0" y1="0" x2="131.429" y2="131.429" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FBE3C4"/>
+<stop offset="1" stop-color="#D98C5F"/>
+</linearGradient>
+</defs>
+</svg>

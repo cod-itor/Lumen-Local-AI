@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="184" height="184" viewBox="0 0 184 184" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Image Tile">
+<rect width="184" height="184" rx="16" fill="url(#paint0_linear_0_72)"/>
+<rect id="Rectangle" x="45.7486" y="67.8689" width="44.2404" height="58.3169" rx="5.02732" fill="white" fill-opacity="0.1"/>
+<rect id="Rectangle_2" x="94.0109" y="67.8689" width="44.2404" height="58.3169" rx="5.02732" fill="white" fill-opacity="0.1"/>
+<path id="Star" d="M92 35.694L94.7089 44.0311H103.475L96.3831 49.1837L99.092 57.5208L92 52.3682L84.908 57.5208L87.6169 49.1837L80.525 44.0311H89.2911L92 35.694Z" fill="#F7AE68"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_72" x1="0" y1="0" x2="131.429" y2="131.429" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E7EEF8"/>
+<stop offset="1" stop-color="#8FB3E6"/>
+</linearGradient>
+</defs>
+</svg>
