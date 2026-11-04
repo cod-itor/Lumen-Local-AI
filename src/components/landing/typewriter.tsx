@@ -6,7 +6,7 @@ import { usePageVisible } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
 /** Split into user-perceived characters so Khmer clusters never break mid-glyph. */
-function graphemes(text: string): string[] {
+export function graphemes(text: string): string[] {
   if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
     const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
     return Array.from(seg.segment(text), (s) => s.segment);

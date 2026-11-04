@@ -12,26 +12,43 @@ const H = 780;
  * Renders the 1200×780 Figma "Hero Preview" at native size on desktop and
  * scales it down uniformly on narrower screens. Rises/scales in on load.
  */
-export function PreviewFrame({ children }: { children: ReactNode }) {
+export function PreviewFrame({
+  children,
+  reserveHeight,
+}: {
+  children: ReactNode;
+  /** When pinned (sticky), also fit the viewport height minus this many px. */
+  reserveHeight?: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const reducedMotion = useReducedMotion();
   const tier = usePerfTier();
   const reduce = reducedMotion || tier !== "full";
   // Starts tilted back and flattens as it scrolls into view.
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 25%"] });
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "start 60%"] });
   const rotateX = useTransform(scrollYProgress, [0, 1], [16, 0]);
   const lift = useTransform(scrollYProgress, [0, 1], [0.94, 1]);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const update = () => setScale(Math.min(1, el.clientWidth / W));
+    const update = () => {
+      const byWidth = el.clientWidth / W;
+      // Never shrink below ~55% of the width-fit, so short screens still read well.
+      const byHeight =
+        reserveHeight === undefined ? 1 : Math.max(byWidth * 0.55, (window.innerHeight - reserveHeight) / H);
+      setScale(Math.min(1, byWidth, byHeight));
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [reserveHeight]);
 
   return (
     <motion.div
@@ -47,8 +64,8 @@ export function PreviewFrame({ children }: { children: ReactNode }) {
         style={reduce ? undefined : { rotateX, scale: lift, transformPerspective: 1400 }}
       >
         <div
-          className="absolute top-0 left-0 origin-top-left"
-          style={{ width: W, height: H, transform: `scale(${scale})` }}
+          className="absolute top-0 left-1/2 origin-top-left"
+          style={{ width: W, height: H, transform: `scale(${scale}) translateX(-50%)` }}
         >
           {children}
         </div>
