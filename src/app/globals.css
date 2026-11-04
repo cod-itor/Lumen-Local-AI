@@ -382,10 +382,23 @@
   body {
     min-height: 100dvh;
     color: var(--foreground);
-    background-color: var(--bg-to);
-    background-image: linear-gradient(180deg, var(--bg-from), var(--bg-via) 50%, var(--bg-to));
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Page gradient on its own fixed, composited layer. (background-attachment: fixed
+     would repaint the whole viewport on every scroll frame.) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: linear-gradient(180deg, var(--bg-from), var(--bg-via) 50%, var(--bg-to));
+  }
+
+  /* Low-power devices: a lighter frosted-glass blur (cost grows with the radius). */
+  html[data-perf="lite"] {
+    --glass-blur: 6px;
   }
 
   :lang(km) {

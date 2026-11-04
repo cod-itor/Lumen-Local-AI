@@ -7,7 +7,7 @@ import { PreviewFrame } from "./preview-frame";
 
 /** Scaled-down glass (Figma app preview is the app at 0.8×). */
 const miniGlass =
-  "border-[0.96px] border-border-glass bg-[linear-gradient(170deg,var(--glass-from),var(--glass-to)_83%)] shadow-soft backdrop-blur-[9.6px]";
+  "border-[0.96px] border-border-glass bg-[linear-gradient(170deg,var(--glass-from),var(--glass-to)_83%)] shadow-soft backdrop-blur-[calc(var(--glass-blur)*0.8)]";
 
 const faviconTone = {
   muted: "bg-muted-foreground",
