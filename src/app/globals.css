@@ -242,6 +242,11 @@
   --color-brand-orange-strong: #f08a3c;
   --color-brand-orange-line: #f3a266;
 
+  /* Code syntax (Figma learn code block — same in both themes) */
+  --color-syntax-string: #3e8e5b;
+  --color-syntax-keyword: #b5507a;
+  --color-syntax-builtin: #3e6fd8;
+
   /* Status */
   --color-success: #34c759;
   --color-danger: #e5484d;
