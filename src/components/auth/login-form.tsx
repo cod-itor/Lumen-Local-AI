@@ -12,9 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
-import { IconInput, OrDivider, PasswordInput, SubmitButton } from "./fields";
+import { IconInput, PasswordInput, SubmitButton } from "./fields";
 import { applyFieldErrors, fieldErrorClass } from "./form-utils";
-import { SocialButtons } from "./social-buttons";
 
 export function LoginForm() {
   const router = useRouter();
@@ -46,9 +45,6 @@ export function LoginForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SocialButtons disabled={pending || done} />
-      <OrDivider>or continue with email</OrDivider>
-
       <motion.form animate={controls} noValidate onSubmit={form.handleSubmit(onSubmit, shake)}>
         <FieldGroup className="gap-5">
           <FormAlert message={message} />

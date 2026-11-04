@@ -1,8 +1,6 @@
 /** What a one-time code is for: confirming a new account or resetting a password. */
 export type OtpPurpose = "signup" | "reset";
 
-export type SocialProvider = "google" | "apple";
-
 /** Result of every auth call. Field errors are keyed by form field name. */
 export type AuthResult<T = undefined> =
   | { ok: true; data?: T }

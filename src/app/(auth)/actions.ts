@@ -10,7 +10,7 @@ import {
   verifyOtpSchema,
 } from "@/lib/validation/auth";
 import * as auth from "@/services/auth";
-import type { AuthResult, OtpPurpose, SocialProvider } from "@/types/auth";
+import type { AuthResult, OtpPurpose } from "@/types/auth";
 
 /*
   Server actions for the auth forms. Every input is re-validated here with the
@@ -24,13 +24,6 @@ function invalid(error: z.ZodError): AuthResult<never> {
 export async function loginAction(input: unknown) {
   const parsed = loginSchema.safeParse(input);
   return parsed.success ? auth.signIn(parsed.data) : invalid(parsed.error);
-}
-
-const providerSchema = z.enum(["google", "apple"]);
-
-export async function socialLoginAction(provider: SocialProvider) {
-  const parsed = providerSchema.safeParse(provider);
-  return parsed.success ? auth.signInWithProvider(parsed.data) : invalid(parsed.error);
 }
 
 export async function signupAction(input: unknown) {

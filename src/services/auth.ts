@@ -1,7 +1,7 @@
 import "server-only";
 import { mockAuthBrand, mockAuthRules } from "@/mocks/auth";
 import type { ForgotPasswordInput, LoginInput, ResetPasswordInput, SignupInput, VerifyOtpInput } from "@/lib/validation/auth";
-import type { AuthBrandContent, AuthResult, OtpPurpose, SocialProvider } from "@/types/auth";
+import type { AuthBrandContent, AuthResult, OtpPurpose } from "@/types/auth";
 
 /**
  * Auth service — mock implementation. Inputs arrive already validated by the
@@ -20,12 +20,6 @@ export async function signIn(input: LoginInput): Promise<AuthResult> {
   if (input.password === mockAuthRules.wrongPassword) {
     return { ok: false, message: "Incorrect email or password. Try again or reset your password." };
   }
-  return { ok: true };
-}
-
-export async function signInWithProvider(provider: SocialProvider): Promise<AuthResult> {
-  void provider;
-  await wait(900);
   return { ok: true };
 }
 

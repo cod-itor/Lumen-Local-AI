@@ -3,19 +3,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "motion/react";
 import { Mail, UserRound } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { signupAction } from "@/app/(auth)/actions";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { signupSchema, type SignupInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
-import { IconInput, OrDivider, PasswordInput, PasswordStrength, SubmitButton } from "./fields";
+import { IconInput, PasswordInput, PasswordStrength, SubmitButton } from "./fields";
 import { applyFieldErrors, fieldErrorClass } from "./form-utils";
-import { SocialButtons } from "./social-buttons";
 
 export function SignupForm() {
   const router = useRouter();
@@ -27,7 +24,7 @@ export function SignupForm() {
 
   const form = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "", terms: false },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
     mode: "onTouched",
   });
   const password = useWatch({ control: form.control, name: "password" });
@@ -50,9 +47,6 @@ export function SignupForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <SocialButtons disabled={pending || done} />
-      <OrDivider>or sign up with email</OrDivider>
-
       <motion.form animate={controls} noValidate onSubmit={form.handleSubmit(onSubmit, shake)}>
         <FieldGroup className="gap-5">
           <FormAlert message={message} />
@@ -136,35 +130,6 @@ export function SignupForm() {
             )}
           />
 
-          <Controller
-            name="terms"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field orientation="horizontal" data-invalid={fieldState.invalid}>
-                <Checkbox
-                  id="signup-terms"
-                  name={field.name}
-                  checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked)}
-                  onBlur={field.onBlur}
-                  aria-invalid={fieldState.invalid}
-                />
-                <FieldContent>
-                  <FieldLabel htmlFor="signup-terms" className="inline font-normal text-muted-foreground">
-                    I agree to the{" "}
-                    <Link href="/#privacy" className="font-medium text-foreground underline-offset-4 hover:underline">
-                      Terms
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="/#privacy" className="font-medium text-foreground underline-offset-4 hover:underline">
-                      Privacy Policy
-                    </Link>
-                  </FieldLabel>
-                  <FieldError className={fieldErrorClass} errors={[fieldState.error]} />
-                </FieldContent>
-              </Field>
-            )}
-          />
 
           <SubmitButton pending={pending} done={done} pendingLabel="Creating account…">
             Create account

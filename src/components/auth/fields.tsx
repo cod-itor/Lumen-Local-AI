@@ -2,10 +2,9 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Eye, EyeOff, LockKeyhole, type LucideIcon } from "lucide-react";
-import { useState, type ComponentProps, type ReactNode } from "react";
+import { useState, type ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
-import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { passwordScore, PASSWORD_RULES } from "@/lib/validation/auth";
 import { cn } from "@/lib/utils";
@@ -156,16 +155,5 @@ export function SubmitButton({
         </motion.span>
       </AnimatePresence>
     </Button>
-  );
-}
-
-/** "or" divider between social sign-in and the email form. */
-export function OrDivider({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 text-[12.5px] text-muted-foreground">
-      <Separator className="flex-1 data-horizontal:w-auto" />
-      {children}
-      <Separator className="flex-1 data-horizontal:w-auto" />
-    </div>
   );
 }

@@ -50,7 +50,6 @@ export const signupSchema = z
     email,
     password: newPassword,
     confirmPassword: z.string().min(1, "Confirm your password"),
-    terms: z.boolean().refine((v) => v, "Please accept the terms to continue"),
   })
   .refine(matchPasswords, mismatch);
 
