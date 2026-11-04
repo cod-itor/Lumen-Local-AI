@@ -26,7 +26,7 @@ export const mockModelStatus: Record<AppSection, ModelStatus> = {
     name: "Gemma 4 E2B",
     state: "ready",
     stateLabel: "Ready",
-    detail: "EmbeddingGemma loaded · Queue 0",
+    detail: "1 file embedding · Queue 1",
   },
   image: {
     name: "FLUX.2 klein",
