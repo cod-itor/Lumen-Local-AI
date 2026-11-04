@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import type { AppSection, ChatSummary, ModelStatus, User } from "@/types";
 import { AppGlows } from "./glows";
@@ -37,7 +38,18 @@ function ShellLayout({ data, children }: { data: ShellData; children: React.Reac
   const section = sectionOf(pathname);
   const { setRightPanelHost } = useShell();
 
-  const body = data.sidebars[section] ?? <ChatSidebarBody history={data.chatHistory} />;
+  const sidebarKey = section === "learn" ? "chat" : section;
+  const body = (
+    <motion.div
+      key={sidebarKey}
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col gap-[2px]"
+    >
+      {data.sidebars[section] ?? <ChatSidebarBody history={data.chatHistory} />}
+    </motion.div>
+  );
 
   return (
     <div className="bg-window relative flex h-dvh w-full overflow-hidden p-2 sm:p-4">
