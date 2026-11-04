@@ -6,15 +6,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
+import { useMessages } from "@/i18n/provider";
 import { CHAT_WIDTH, setChatWidth, useChatWidth } from "@/lib/chat-width";
 import { cn } from "@/lib/utils";
 
 const PRESETS = [
-  { label: "Narrow", value: 640 },
-  { label: "Default", value: CHAT_WIDTH.default },
-  { label: "Wide", value: 960 },
-  { label: "Full", value: CHAT_WIDTH.max },
-];
+  { id: "narrow", value: 640 },
+  { id: "default", value: CHAT_WIDTH.default },
+  { id: "wide", value: 960 },
+  { id: "full", value: CHAT_WIDTH.max },
+] as const;
 
 /**
  * Settings → Chat width. Docked at the bottom with a light, unblurred
@@ -23,6 +24,8 @@ const PRESETS = [
  */
 export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const width = useChatWidth();
+  const m = useMessages();
+  const t = m.settings.chatWidth;
   // Remember the width at the moment the dialog opens, for Cancel.
   const [wasOpen, setWasOpen] = useState(open);
   const [before, setBefore] = useState(width);
@@ -47,10 +50,10 @@ export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenC
         <DialogHeader className="gap-1.5">
           <DialogTitle className="flex items-center gap-2 text-[17px] font-semibold">
             <MoveHorizontal className="size-4" strokeWidth={1.8} />
-            Chat width
+            {t.title}
           </DialogTitle>
           <DialogDescription className="text-[13.5px]">
-            Drag or swipe to resize the conversation. It updates live behind this panel.
+            {t.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -68,13 +71,13 @@ export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between">
-            <span className="text-[13px] text-muted-foreground">Width</span>
+            <span className="text-[13px] text-muted-foreground">{t.width}</span>
             <span className="text-[15px] font-semibold tabular-nums" aria-live="polite">
               {width}px
             </span>
           </div>
           <Slider
-            aria-label="Chat width"
+            aria-label={t.title}
             min={CHAT_WIDTH.min}
             max={CHAT_WIDTH.max}
             step={CHAT_WIDTH.step}
@@ -87,7 +90,7 @@ export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenC
           <div className="grid grid-cols-4 gap-2">
             {PRESETS.map((p) => (
               <Button
-                key={p.label}
+                key={p.id}
                 type="button"
                 variant="outline"
                 size="sm"
@@ -98,7 +101,7 @@ export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenC
                   width === p.value && "bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90",
                 )}
               >
-                {p.label}
+                {t.presets[p.id]}
               </Button>
             ))}
           </div>
@@ -106,14 +109,14 @@ export function ChatWidthDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
         <DialogFooter className="mx-0 mb-0 flex-row justify-between rounded-none border-0 bg-transparent p-0 sm:justify-between">
           <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={() => setChatWidth(CHAT_WIDTH.default)}>
-            <RotateCcw /> Reset
+            <RotateCcw /> {m.common.reset}
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={cancel}>
-              Cancel
+              {m.common.cancel}
             </Button>
             <Button type="button" size="sm" className="bg-primary-fill rounded-full px-4" onClick={() => onOpenChange(false)}>
-              Done
+              {m.common.done}
             </Button>
           </div>
         </DialogFooter>

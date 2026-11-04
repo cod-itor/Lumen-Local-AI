@@ -2,6 +2,8 @@
  * Settings → AI & models. Lumen does not host AI: every model runs on the
  * user's own computer (via Ollama). These types describe which installed
  * model does which job, and the rules Lumen wraps around them.
+ * The service returns this content as Localized<AiSettingsContent> (every
+ * language); technical tokens (model names, tags, commands) stay as-is.
  */
 
 export type ModelRoleId = "chat" | "rag" | "image";
@@ -23,8 +25,11 @@ export type ModelRole = {
   job: string;
   usedIn: string[];
   icon: string;
-  /** Model ids (InstalledModel.id) currently assigned. RAG has an embedding + answer model. */
-  slots: { label: string; modelId: string; accepts: InstalledModel["role"]; why: string }[];
+  /**
+   * Model ids (InstalledModel.id) currently assigned. RAG has an embedding + answer model.
+   * `id` is stable across languages (labels are translated).
+   */
+  slots: { id: string; label: string; modelId: string; accepts: InstalledModel["role"]; why: string }[];
   requirements: string[];
   pipeline?: string[];
   tools?: { name: string; when: string }[];

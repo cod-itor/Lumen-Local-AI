@@ -3,12 +3,15 @@
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { AiSettingsContent } from "@/types/settings";
 
 /** Connection to the local model runtime. "Check again" is simulated for now. */
 export function RuntimeStatus({ runtime }: { runtime: AiSettingsContent["runtime"] }) {
   const [checking, setChecking] = useState(false);
+  const t = useMessages().settings.runtime;
   const check = () => {
     setChecking(true);
     setTimeout(() => setChecking(false), 900);
@@ -21,15 +24,15 @@ export function RuntimeStatus({ runtime }: { runtime: AiSettingsContent["runtime
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-[15px] font-semibold text-foreground">
-          {runtime.connected ? `Connected to ${runtime.name}` : `${runtime.name} not found`}
+          {format(runtime.connected ? t.connected : t.notFound, { name: runtime.name })}
         </span>
         <span className="text-[13px] text-muted-foreground">
-          Running on this computer · {runtime.host} · v{runtime.version}
+          {format(t.details, { host: runtime.host, version: runtime.version })}
         </span>
       </div>
       <Button variant="outline" size="sm" className="rounded-full" onClick={check} disabled={checking}>
         <RefreshCw className={cn(checking && "animate-spin")} />
-        {checking ? "Checking…" : "Check again"}
+        {checking ? t.checking : t.checkAgain}
       </Button>
     </div>
   );

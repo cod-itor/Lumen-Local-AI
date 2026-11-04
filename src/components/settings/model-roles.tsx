@@ -11,23 +11,26 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format } from "@/i18n/messages";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { InstalledModel, ModelRole, ModelState } from "@/types/settings";
 import { CopyCommand } from "./copy-command";
 import { SettingsIcon } from "./icons";
 
-const STATE: Record<ModelState, { label: string; className: string; dot: string }> = {
-  ready: { label: "Ready", className: "bg-success/15 text-success-foreground", dot: "bg-success" },
-  downloading: { label: "Downloading", className: "bg-brand-blue-soft text-foreground", dot: "bg-brand-blue" },
-  missing: { label: "Not installed", className: "bg-danger/12 text-danger", dot: "bg-danger" },
+const STATE: Record<ModelState, { className: string; dot: string }> = {
+  ready: { className: "bg-success/15 text-success-foreground", dot: "bg-success" },
+  downloading: { className: "bg-brand-blue-soft text-foreground", dot: "bg-brand-blue" },
+  missing: { className: "bg-danger/12 text-danger", dot: "bg-danger" },
 };
 
 export function StatePill({ state, progress }: { state: ModelState; progress?: number }) {
   const s = STATE[state];
+  const m = useMessages();
   return (
     <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", s.className)}>
       <span className={cn("size-1.5 rounded-full", s.dot)} />
-      {s.label}
+      {m.settings.state[state]}
       {state === "downloading" && progress !== undefined && ` · ${progress}%`}
     </span>
   );
@@ -39,10 +42,13 @@ export function StatePill({ state, progress }: { state: ModelState; progress?: n
  * pipeline around it. Assignments are local UI state for now.
  */
 export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed: InstalledModel[] }) {
+  const m = useMessages();
+  const t = m.settings.roles;
+  // Keyed by role + slot id (not label), so choices survive a language switch.
   const [assigned, setAssigned] = useState<Record<string, string>>(() =>
-    Object.fromEntries(roles.flatMap((r) => r.slots.map((s) => [`${r.id}:${s.label}`, s.modelId]))),
+    Object.fromEntries(roles.flatMap((r) => r.slots.map((s) => [`${r.id}:${s.id}`, s.modelId]))),
   );
-  const chatModel = assigned[`chat:${roles.find((r) => r.id === "chat")?.slots[0]?.label}`];
+  const chatModel = assigned[`chat:${roles.find((r) => r.id === "chat")?.slots[0]?.id}`];
   const find = (id: string) => installed.find((m) => m.id === id);
 
   return (
@@ -51,7 +57,7 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
         const slotModels = role.slots.map((s) => {
           // The documents "answer" slot always uses the Learning & chat model.
           const linked = role.id !== "chat" && s.accepts === "chat";
-          const id = linked ? chatModel : assigned[`${role.id}:${s.label}`];
+          const id = linked ? chatModel : assigned[`${role.id}:${s.id}`];
           return { slot: s, linked, model: find(id) };
         });
         const state: ModelState = slotModels.some((m) => !m.model || m.model.state === "missing")
@@ -73,7 +79,7 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
                 </div>
                 <p className="text-[15px] leading-[22px] text-foreground-secondary">{role.job}</p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-[12.5px] text-muted-foreground">Used in</span>
+                  <span className="text-[12.5px] text-muted-foreground">{t.usedIn}</span>
                   {role.usedIn.map((u) => (
                     <span key={u} className="rounded-full bg-foreground/8 px-2 py-0.5 text-[12px] font-medium text-foreground">
                       {u}
@@ -86,7 +92,7 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
             {/* Which model does this job */}
             <div className="flex flex-col gap-2">
               {slotModels.map(({ slot, linked, model }) => {
-                const key = `${role.id}:${slot.label}`;
+                const key = `${role.id}:${slot.id}`;
                 const options = installed.filter((m) => m.role === slot.accepts);
                 return (
                   <div key={key} className="flex flex-col gap-3 rounded-2xl bg-foreground/5 p-4 sm:flex-row sm:items-center">
@@ -98,35 +104,37 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
                       <span className="inline-flex items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-[13.5px] text-foreground">
                         <Link2 className="size-4 text-muted-foreground" />
                         {model?.name ?? "—"}
-                        <span className="text-[12px] text-muted-foreground">from Learning & chat</span>
+                        <span className="text-[12px] text-muted-foreground">{t.fromChat}</span>
                       </span>
                     ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger
-                          aria-label={`${slot.label} for ${role.title}`}
+                          aria-label={format(t.slotFor, { slot: slot.label, role: role.title })}
                           className="glass inline-flex min-w-[220px] items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-accent data-[popup-open]:bg-accent"
                         >
                           <span className="flex flex-col">
-                            <span className="text-[14px] font-medium text-foreground">{model?.name ?? "Choose a model"}</span>
+                            <span className="text-[14px] font-medium text-foreground">{model?.name ?? t.chooseModel}</span>
                             <span className="font-mono text-[11.5px] text-muted-foreground">
-                              {model ? `${model.id} · ${model.size}` : "None installed"}
+                              {model ? `${model.id} · ${model.size}` : t.noneInstalled}
                             </span>
                           </span>
                           <ChevronDown className="size-4 text-muted-foreground" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-72">
                           <DropdownMenuGroup>
-                            <DropdownMenuLabel>Installed on this computer</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t.installedHere}</DropdownMenuLabel>
                             <DropdownMenuRadioGroup
                               value={assigned[key]}
                               onValueChange={(v) => setAssigned((a) => ({ ...a, [key]: String(v) }))}
                             >
-                              {options.map((m) => (
-                                <DropdownMenuRadioItem key={m.id} value={m.id} disabled={m.state !== "ready"}>
+                              {options.map((o) => (
+                                <DropdownMenuRadioItem key={o.id} value={o.id} disabled={o.state !== "ready"}>
                                   <span className="flex flex-col">
-                                    <span>{m.name}</span>
+                                    <span>{o.name}</span>
                                     <span className="text-[11.5px] text-muted-foreground">
-                                      {m.state === "ready" ? `${m.size} · ${m.capabilities.join(" · ")}` : `Downloading · ${m.progress ?? 0}%`}
+                                      {o.state === "ready"
+                                        ? `${o.size} · ${o.capabilities.join(" · ")}`
+                                        : format(t.downloadingProgress, { progress: o.progress ?? 0 })}
                                     </span>
                                   </span>
                                 </DropdownMenuRadioItem>
@@ -143,10 +151,10 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
 
             <div className="grid gap-5 md:grid-cols-2">
               <div className="flex flex-col gap-2.5">
-                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">The model must</h4>
+                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{t.mustHave}</h4>
                 <ul className="flex flex-col gap-2">
-                  {role.requirements.map((r) => (
-                    <li key={r} className="flex items-start gap-2 text-[14px] text-foreground">
+                  {role.requirements.map((r, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[14px] text-foreground">
                       <Check className="mt-[3px] size-3.5 shrink-0 text-success" strokeWidth={2.6} />
                       {r}
                     </li>
@@ -156,12 +164,12 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
 
               {role.tools && (
                 <div className="flex flex-col gap-2.5">
-                  <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">Tools it can call</h4>
+                  <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{t.tools}</h4>
                   <ul className="flex flex-col gap-2">
-                    {role.tools.map((t) => (
-                      <li key={t.name} className="flex flex-col text-[14px]">
-                        <span className="font-medium text-foreground">{t.name}</span>
-                        <span className="text-[13px] text-muted-foreground">{t.when}</span>
+                    {role.tools.map((tool, i) => (
+                      <li key={i} className="flex flex-col text-[14px]">
+                        <span className="font-medium text-foreground">{tool.name}</span>
+                        <span className="text-[13px] text-muted-foreground">{tool.when}</span>
                       </li>
                     ))}
                   </ul>
@@ -170,10 +178,10 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
 
               {role.pipeline && (
                 <div className="flex flex-col gap-2.5">
-                  <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">How a question is answered</h4>
+                  <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{t.pipeline}</h4>
                   <ol className="flex flex-col gap-2">
                     {role.pipeline.map((p, i) => (
-                      <li key={p} className="flex items-center gap-2.5 text-[14px] text-foreground">
+                      <li key={i} className="flex items-center gap-2.5 text-[14px] text-foreground">
                         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-semibold">
                           {i + 1}
                         </span>
@@ -187,16 +195,16 @@ export function ModelRoles({ roles, installed }: { roles: ModelRole[]; installed
 
             <div className="grid gap-5 border-t border-border pt-5 md:grid-cols-2">
               <div className="flex flex-col gap-2.5">
-                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">Install</h4>
+                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{t.install}</h4>
                 {role.install.map((c) => (
                   <CopyCommand key={c} value={c} />
                 ))}
               </div>
               <div className="flex flex-col gap-2.5">
-                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">Other models that work</h4>
+                <h4 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{t.alternatives}</h4>
                 <ul className="flex flex-col gap-1.5">
-                  {role.alternatives.map((a) => (
-                    <li key={a.name} className="text-[14px]">
+                  {role.alternatives.map((a, i) => (
+                    <li key={i} className="text-[14px]">
                       <span className="font-medium text-foreground">{a.name}</span>
                       <span className="text-muted-foreground"> — {a.note}</span>
                     </li>

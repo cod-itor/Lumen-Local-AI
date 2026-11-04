@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export type SettingsNavItem = { id: string; label: string };
@@ -12,6 +13,7 @@ export type SettingsNavItem = { id: string; label: string };
  */
 export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
   const [active, setActive] = useState(items[0]?.id);
+  const m = useMessages();
 
   useEffect(() => {
     const els = items.map((i) => document.getElementById(i.id)).filter((e): e is HTMLElement => !!e);
@@ -27,7 +29,7 @@ export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
   }, [items]);
 
   return (
-    <nav aria-label="Settings sections" className="lg:sticky lg:top-24 lg:self-start">
+    <nav aria-label={m.settings.navAria} className="lg:sticky lg:top-24 lg:self-start">
       <ul className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0">
         {items.map((item) => {
           const on = item.id === active;
@@ -38,7 +40,7 @@ export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
                 aria-current={on ? "true" : undefined}
                 onClick={() => setActive(item.id)}
                 className={cn(
-                  "relative flex items-center rounded-full px-3.5 py-2 text-[14px] font-medium whitespace-nowrap transition-colors lg:rounded-xl",
+                  "relative flex items-center rounded-full px-3.5 py-2 text-[14px] font-medium whitespace-nowrap transition-colors lg:rounded-xl lg:whitespace-normal",
                   on ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
