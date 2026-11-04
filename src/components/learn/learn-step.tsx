@@ -86,7 +86,7 @@ export function LearnStep({ path }: { path: LearningPath }) {
           </AnimatePresence>
         </div>
 
-        <div className="mx-auto mt-3 w-full max-w-[700px] shrink-0">
+        <div className="mx-auto mt-3 w-full max-w-[max(calc(var(--chat-width)+20px),1080px)] shrink-0 pr-4">
           <Composer placeholder="Ask about this step" showSearch={false} />
           <p className="mt-2 -mb-[5px] text-center text-[11.5px] text-subtle">
             AI can make mistakes. Check sources.
@@ -110,7 +110,7 @@ function StepLesson({ step, children }: { step: LearningStep; children: React.Re
       animate="show"
       exit={{ opacity: 0, y: -6, transition: { duration: 0.16, ease: EASE } }}
       variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-      className="mx-auto flex w-full max-w-[680px] flex-col gap-[14px] px-4 pt-3 pb-6 min-[860px]:px-0"
+      className="mx-auto flex w-full max-w-[max(var(--chat-width),1060px)] flex-col gap-[14px] px-4 pt-3 pb-6 min-[860px]:pr-6 min-[860px]:pl-2"
     >
       <motion.h1
         variants={item}
