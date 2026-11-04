@@ -2,7 +2,6 @@
 
 import { motion, type Variants } from "motion/react";
 import { Icon } from "@/components/icon";
-import { LumenMark } from "@/components/logo";
 import { PreviewReply } from "@/components/chat/preview-reply";
 import { EASE } from "@/components/landing/motion";
 import { GlassChip } from "@/components/landing/primitives";
@@ -61,7 +60,9 @@ export function BrandPanel({ content: bundle, className }: { content: Localized<
           {content.preview.question}
         </div>
         <div className="flex gap-3">
-          <LumenMark size={32} className="rounded-full" />
+          <span className="glass flex size-8 shrink-0 items-center justify-center rounded-full">
+            <Icon name="spark" size={15} className="text-foreground" />
+          </span>
           <div className="flex min-w-0 flex-col gap-2 pt-1">
             <PreviewReply key={locale} text={content.preview.answer} thinkMs={1600} />
             <span className="text-[12px] text-subtle">{content.preview.model}</span>

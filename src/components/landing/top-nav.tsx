@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useState, type MouseEvent } from "react";
 import { Icon } from "@/components/icon";
-import { LumenLogo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/i18n/language-switcher";
 import type { LandingContent, LandingLink } from "@/types/landing";
@@ -20,9 +19,13 @@ export function scrollToHash(e: MouseEvent<HTMLAnchorElement>, href: string) {
   history.replaceState(null, "", href);
 }
 
-/** Brand logo (gradient mark + wordmark) — see components/logo.tsx. */
 export function Logo({ className }: { className?: string }) {
-  return <LumenLogo size={28} className={className} />;
+  return (
+    <span className={className ?? "flex items-center gap-2"}>
+      <Icon name="spark" size={20} className="text-foreground" />
+      <span className="text-[19px] leading-[normal] font-semibold tracking-[-0.19px] text-foreground">Lumen</span>
+    </span>
+  );
 }
 
 export function TopNav({ links, ui }: { links: LandingLink[]; ui: LandingContent["ui"] }) {

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { Icon } from "@/components/icon";
-import { LumenMark } from "@/components/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +56,7 @@ export function SidebarFrame({
       {/* Logo row */}
       <div className="flex w-full items-center justify-between pb-3 pl-2">
         <Link href="/" className="flex items-center gap-[7px]">
-          <LumenMark size={24} />
+          <Icon name="spark" size={18} className="text-foreground" />
           <span className="text-[17px] font-semibold tracking-[-0.17px] text-foreground">Lumen</span>
         </Link>
         <button
