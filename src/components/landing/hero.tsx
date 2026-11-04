@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { motion, type Variants } from "motion/react";
-import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { cn } from "@/lib/utils";
-import type { LandingContent, LandingLanguage } from "@/types/landing";
+import { useLocale } from "@/i18n/provider";
+import { LanguageSwitcher } from "@/i18n/language-switcher";
+import type { LandingContent } from "@/types/landing";
 import { EASE } from "./motion";
 import { Magnetic } from "./pointer-effects";
 import { GlassChip } from "./primitives";
@@ -22,7 +22,7 @@ const item: Variants = {
 };
 
 export function Hero({ hero }: { hero: LandingContent["hero"] }) {
-  const [language, setLanguage] = useState<LandingLanguage["id"]>("en");
+  const locale = useLocale();
 
   return (
     <motion.section
@@ -42,9 +42,9 @@ export function Hero({ hero }: { hero: LandingContent["hero"] }) {
         variants={item}
         className="text-[44px] leading-[48px] font-semibold tracking-[-1.6px] text-foreground sm:text-[62px] sm:leading-[66px] lg:text-display lg:leading-[80px] lg:tracking-[-2.66px]"
       >
-        <TypeOnce text={hero.title[0]} delayMs={300} />
+        <TypeOnce key={`${locale}-0`} text={hero.title[0]} delayMs={300} />
         <br />
-        <TypeOnce text={hero.title[1]} delayMs={300 + hero.title[0].length * 38 + 120} />
+        <TypeOnce key={`${locale}-1`} text={hero.title[1]} delayMs={300 + hero.title[0].length * 38 + 120} />
       </motion.h1>
 
       <motion.p variants={item} className="max-w-[640px] text-[17px] leading-[26px] text-muted-foreground sm:text-[19px] sm:leading-[29px]">
@@ -73,27 +73,7 @@ export function Hero({ hero }: { hero: LandingContent["hero"] }) {
 
       <motion.div variants={item} className="flex items-center gap-2 pt-1">
         <span className="text-[13px] leading-[normal] text-muted-foreground">{hero.languagesLabel}</span>
-        <div role="radiogroup" aria-label={hero.languagesLabel} className="flex items-center gap-2">
-          {hero.languages.map((l) => {
-            const selected = l.id === language;
-            return (
-              <button
-                key={l.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                lang={l.lang}
-                onClick={() => setLanguage(l.id)}
-                className={cn(
-                  "glass rounded-full px-3 py-[5px] text-[12.5px] leading-[normal] font-medium text-foreground transition-opacity",
-                  selected ? "ring-1 ring-foreground/25" : "opacity-80 hover:opacity-100",
-                )}
-              >
-                {l.label}
-              </button>
-            );
-          })}
-        </div>
+        <LanguageSwitcher size="sm" />
       </motion.div>
     </motion.section>
   );

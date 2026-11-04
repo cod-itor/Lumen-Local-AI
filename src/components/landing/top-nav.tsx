@@ -6,7 +6,8 @@ import { useState, type MouseEvent } from "react";
 import { Icon } from "@/components/icon";
 import { LumenLogo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { LandingLink } from "@/types/landing";
+import { LanguageSwitcher } from "@/i18n/language-switcher";
+import type { LandingContent, LandingLink } from "@/types/landing";
 import { EASE } from "./motion";
 
 /** Smooth-scroll to an in-page anchor; falls through for normal links. */
@@ -24,7 +25,7 @@ export function Logo({ className }: { className?: string }) {
   return <LumenLogo size={28} className={className} />;
 }
 
-export function TopNav({ links }: { links: LandingLink[] }) {
+export function TopNav({ links, ui }: { links: LandingLink[]; ui: LandingContent["ui"] }) {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 8));
@@ -43,11 +44,11 @@ export function TopNav({ links }: { links: LandingLink[] }) {
           className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-device transition-opacity duration-300"
           style={{ opacity: scrolled ? 1 : 0 }}
         />
-        <Link href="/" aria-label="Lumen home" className="relative">
+        <Link href="/" aria-label={ui.home} className="relative">
           <Logo />
         </Link>
 
-        <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-9 md:flex">
+        <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-7 lg:gap-9 md:flex">
           {links.map((l) => (
             <li key={l.label}>
               <a
@@ -62,18 +63,19 @@ export function TopNav({ links }: { links: LandingLink[] }) {
         </ul>
 
         <div className="relative flex items-center gap-2">
+          <LanguageSwitcher size="sm" className="hidden lg:flex" />
           <ThemeToggle />
           <Link
             href="/login"
             className="hidden rounded-full px-4 py-3 text-[14.5px] leading-[normal] font-medium text-foreground transition-colors hover:bg-accent sm:inline-flex"
           >
-            Log in
+            {ui.logIn}
           </Link>
           <Link
             href="/signup"
             className="bg-primary-fill inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] leading-[normal] font-medium transition-transform hover:-translate-y-px sm:px-5 sm:py-3"
           >
-            Get started
+            {ui.getStarted}
             <Icon name="landing-arrow" size={15} />
           </Link>
         </div>
