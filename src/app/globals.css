@@ -241,6 +241,19 @@
 }
 
 @theme {
+  /* Roadmap diagram: data packets travelling along a connector (transform-only) */
+  --animate-travel-x: travel-x 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  --animate-travel-y: travel-y 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+
+  @keyframes travel-x {
+    from { transform: translateX(-6%); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes travel-y {
+    from { transform: translateY(-6%); }
+    to { transform: translateY(100%); }
+  }
+
   /* Brand (same in both themes) */
   --color-brand-blue: #9cc4f2;
   --color-brand-blue-strong: #6fa6e6;
