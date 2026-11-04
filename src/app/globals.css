@@ -1,26 +1,372 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/*
+ * Design tokens synced from Figma: LocalAIChatBot ("Lumen")
+ * https://www.figma.com/design/ae8ky9u8SVMpXKWAurCQnd/LocalAIChatBot
+ *
+ * Light = "Landing · Desktop" + "Desktop App · Light"
+ * Dark  = "Landing · Desktop (Dark)" + "Desktop App · Dark"
+ *
+ * Theme is class-based (next-themes puts .light / .dark on <html>, default dark).
+ * shadcn semantic names (primary, muted-foreground, border, …) map onto the Figma palette.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------- Light */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Page background (vertical gradient) */
+  --bg-from: #f7f3ef;
+  --bg-via: #efe8e1;
+  --bg-to: #ece4dc;
+
+  /* App window (Desktop App frames) */
+  --window-from: #f6f2ee;
+  --window-to: #ede6df;
+
+  /* shadcn semantic tokens */
+  --background: #f3eee9;
+  --foreground: #1c1c1e;
+  --card: #ffffff;
+  --card-foreground: #1c1c1e;
+  --popover: #ffffff;
+  --popover-foreground: #1c1c1e;
+  --primary: #1c1c1e;
+  --primary-foreground: #ffffff;
+  --secondary: #e9e2db;
+  --secondary-foreground: #1c1c1e;
+  --muted: #ece7e2;
+  --muted-foreground: #6b6b70;
+  --accent: rgb(255 255 255 / 0.75);
+  --accent-foreground: #1c1c1e;
+  --destructive: #e5484d;
+  --border: rgb(28 28 30 / 0.12);
+  --input: rgb(28 28 30 / 0.12);
+  --ring: #9cc4f2;
+  --sidebar: transparent;
+  --sidebar-foreground: #1c1c1e;
+  --sidebar-primary: #1c1c1e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(255 255 255 / 0.75);
+  --sidebar-accent-foreground: #1c1c1e;
+  --sidebar-border: rgb(255 255 255 / 0.9);
+  --sidebar-ring: #9cc4f2;
+
+  /* Extra Figma text tones */
+  --foreground-secondary: #2c2c2e;
+  --foreground-tertiary: #3a3a3c;
+  --subtle: #8a8a8f;
+  --placeholder: #8e8e93;
+  --faint: #b9b9be;
+  --icon: #55555a;
+
+  /* Surfaces */
+  --surface: #ece7e2;
+  --surface-muted: #e9e2db;
+  --surface-raised: #ffffff; /* active tab, selected chip */
+  --nav-active: rgb(255 255 255 / 0.75);
+  --border-glass: rgb(255 255 255 / 0.9);
+
+  /* Glass — Figma "Glass/Fill" + "Glass/Surface" + "Glass/Device" */
+  --glass-from: rgb(255 255 255 / 0.85);
+  --glass-to: rgb(255 255 255 / 0.4);
+  --glass-blur: 12px; /* Figma background blur 24 */
+  --shadow-glass-value: 0 10px 28px 0 rgb(122 95 72 / 0.14), inset 0 1.5px 1px 0 rgb(255 255 255 / 0.95);
+  --shadow-soft-value: 0 2px 8px 0 rgb(122 95 72 / 0.12);
+  --shadow-device-value: 0 36px 60px -6px rgb(110 84 64 / 0.2), inset 0 0 10px 2px #ffffff;
+
+  /* Primary pill — "Glass/Dark Fill" + "Glass/Dark Button" */
+  --primary-from: #3c3c3f;
+  --primary-to: #141416;
+  --primary-fill-foreground: #ffffff;
+  --shadow-primary-value: 0 8px 18px 0 rgb(0 0 0 / 0.22), inset 0 1.5px 1px 0 rgb(255 255 255 / 0.28);
+
+  /* Hero / CTA tint */
+  --tint-from: #cfe2f8;
+  --tint-to: #fbd3ae;
+
+  /* Theme-dependent accents */
+  --success-foreground: #2e9e4f;
+  --orange-foreground: #c8692a;
+  --brand-blue-soft: rgb(156 196 242 / 0.14);
+  --brand-orange-soft: rgb(247 174 104 / 0.14);
+  --glow-blue: rgb(156 196 242 / 0.35);
+  --glow-orange: rgb(247 174 104 / 0.35);
 }
 
+/* ----------------------------------------------------------------- Dark */
+.dark {
+  color-scheme: dark;
+
+  --bg-from: #17171a;
+  --bg-via: #121214;
+  --bg-to: #0e0e10;
+  --window-from: #18181b;
+  --window-to: #0e0e10;
+
+  --background: #121214;
+  --foreground: #f2f2f3;
+  --card: #2c2c30;
+  --card-foreground: #f2f2f3;
+  --popover: #2c2c30;
+  --popover-foreground: #f2f2f3;
+  --primary: #f2f2f3;
+  --primary-foreground: #1c1c1e;
+  --secondary: #2a2a2e;
+  --secondary-foreground: #f2f2f3;
+  --muted: #2c2c30;
+  --muted-foreground: #9a9aa0;
+  --accent: rgb(255 255 255 / 0.1);
+  --accent-foreground: #f2f2f3;
+  --destructive: #e5484d;
+  --border: rgb(242 242 243 / 0.12);
+  --input: rgb(242 242 243 / 0.12);
+  --ring: #9cc4f2;
+  --sidebar: transparent;
+  --sidebar-foreground: #f2f2f3;
+  --sidebar-primary: #f2f2f3;
+  --sidebar-primary-foreground: #1c1c1e;
+  --sidebar-accent: rgb(255 255 255 / 0.1);
+  --sidebar-accent-foreground: #f2f2f3;
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-ring: #9cc4f2;
+
+  --foreground-secondary: #e5e5e7;
+  --foreground-tertiary: #d1d1d6;
+  --subtle: #7c7c82;
+  --placeholder: #7c7c82;
+  --faint: #55555a;
+  --icon: #a1a1a6;
+
+  --surface: #2c2c30;
+  --surface-muted: #2a2a2e;
+  --surface-raised: rgb(255 255 255 / 0.12);
+  --nav-active: rgb(255 255 255 / 0.1);
+  --border-glass: rgb(255 255 255 / 0.1);
+
+  --glass-from: rgb(255 255 255 / 0.11);
+  --glass-to: rgb(255 255 255 / 0.04);
+  --glass-blur: 15px; /* Figma background blur 30 */
+  --shadow-glass-value: 0 12px 30px 0 rgb(0 0 0 / 0.35), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
+  --shadow-soft-value: 0 2px 8px 0 rgb(0 0 0 / 0.3);
+  --shadow-device-value: 0 36px 70px -6px rgb(0 0 0 / 0.55), inset 0 0 8px 1px rgb(255 255 255 / 0.08);
+
+  /* "Glass Dark/Primary Fill" + "Glass Dark/Primary Button" */
+  --primary-from: #faf8f6;
+  --primary-to: #dcd6d0;
+  --primary-fill-foreground: #1c1c1e;
+  --shadow-primary-value: 0 8px 18px 0 rgb(0 0 0 / 0.4), inset 0 1.5px 1px 0 rgb(255 255 255 / 0.8);
+
+  --tint-from: #22344a;
+  --tint-to: #4a3424;
+
+  --success-foreground: #4cd964;
+  --orange-foreground: #f3a266;
+  --brand-blue-soft: rgb(156 196 242 / 0.1);
+  --brand-orange-soft: rgb(247 174 104 / 0.1);
+  --glow-blue: rgb(156 196 242 / 0.14);
+  --glow-orange: rgb(247 174 104 / 0.14);
+}
+
+/* ------------------------------------------------------- Tailwind theme */
 @theme inline {
+  /* Fonts — Figma uses SF Pro (system font on Apple), Noto Sans Khmer, Roboto Mono */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter),
+    var(--font-noto-khmer), system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-khmer: var(--font-noto-khmer), var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* shadcn semantic colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Figma extras → text-foreground-secondary, text-subtle, bg-surface, … */
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-tertiary: var(--foreground-tertiary);
+  --color-subtle: var(--subtle);
+  --color-placeholder: var(--placeholder);
+  --color-faint: var(--faint);
+  --color-icon: var(--icon);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-nav-active: var(--nav-active);
+  --color-border-glass: var(--border-glass);
+  --color-success-foreground: var(--success-foreground);
+  --color-orange-foreground: var(--orange-foreground);
+  --color-brand-blue-soft: var(--brand-blue-soft);
+  --color-brand-orange-soft: var(--brand-orange-soft);
+
+  /* Shadows → shadow-glass, shadow-soft, shadow-device, shadow-primary */
+  --shadow-glass: var(--shadow-glass-value);
+  --shadow-soft: var(--shadow-soft-value);
+  --shadow-device: var(--shadow-device-value);
+  --shadow-primary: var(--shadow-primary-value);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  /* Brand (same in both themes) */
+  --color-brand-blue: #9cc4f2;
+  --color-brand-blue-strong: #6fa6e6;
+  --color-brand-orange: #f7ae68;
+  --color-brand-orange-strong: #f08a3c;
+  --color-brand-orange-line: #f3a266;
+
+  /* Status */
+  --color-success: #34c759;
+  --color-danger: #e5484d;
+  --color-danger-strong: #c93c3c;
+  --color-info: #3e7bfa;
+  --color-teal: #14bf96;
+  --color-yellow: #e9b200;
+
+  /* Radii (Figma: 8, 10, 12, 16, 22, 28, 40, 999) */
+  --radius: 12px;
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+  --radius-3xl: 40px;
+  --radius-4xl: 48px;
+
+  /* Type scale — size / line-height / letter-spacing from Figma (px tracking) */
+  --text-display: 76px;
+  --text-display--line-height: 80px;
+  --text-display--letter-spacing: -3.5px;
+  --text-h1: 50px;
+  --text-h1--line-height: 1.08;
+  --text-h1--letter-spacing: -2.5px;
+  --text-h2: 44px;
+  --text-h2--line-height: 1.15;
+  --text-h2--letter-spacing: -2px;
+  --text-h3: 26px;
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -1.5px;
+  --text-title: 20px;
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -1px;
+  --text-lead: 19px;
+  --text-lead--line-height: 29px;
+  --text-body-lg: 17px;
+  --text-body-lg--line-height: 26px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-callout: 14.5px;
+  --text-callout--line-height: 20px;
+  --text-footnote: 13px;
+  --text-footnote--line-height: 18px;
+  --text-caption: 12.5px;
+  --text-caption--line-height: 18px;
+  --text-caption-sm: 11.5px;
+  --text-caption-sm--line-height: 16px;
+  --text-micro: 10px;
+  --text-micro--line-height: 14px;
+
+  /* Motion */
+  --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ------------------------------------------------------------ Utilities */
+
+/* Frosted glass panel — Figma "Glass/Fill" + "Glass/Surface" */
+@utility glass {
+  background-image: linear-gradient(170deg, var(--glass-from), var(--glass-to) 83%);
+  border: 1.2px solid var(--border-glass);
+  box-shadow: var(--shadow-glass-value);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Primary pill fill — "Glass/Dark Fill" (light) / "Glass Dark/Primary Fill" (dark) */
+@utility bg-primary-fill {
+  background-image: linear-gradient(180deg, var(--primary-from), var(--primary-to));
+  color: var(--primary-fill-foreground);
+  box-shadow: var(--shadow-primary-value);
+}
+
+@utility bg-page {
+  background-image: linear-gradient(180deg, var(--bg-from), var(--bg-via) 50%, var(--bg-to));
+}
+
+@utility bg-window {
+  background-image: linear-gradient(180deg, var(--window-from), var(--window-to));
+}
+
+@utility bg-tint-gradient {
+  background-image: linear-gradient(135deg, var(--tint-from), var(--tint-to));
+}
+
+/* Avatar / accent gradient (blue → orange) */
+@utility bg-brand-gradient {
+  background-image: linear-gradient(135deg, #9cc4f2, #f7ae68 83%);
+}
+
+@utility bg-brand-gradient-strong {
+  background-image: linear-gradient(135deg, #6fa6e6, #f08a3c);
+}
+
+/* -------------------------------------------------------------- Base */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  html {
+    @apply font-sans;
+    background-color: var(--bg-to);
+  }
+
+  body {
+    min-height: 100dvh;
+    color: var(--foreground);
+    background-color: var(--bg-to);
+    background-image: linear-gradient(180deg, var(--bg-from), var(--bg-via) 50%, var(--bg-to));
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :lang(km) {
+    font-family: var(--font-khmer);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
