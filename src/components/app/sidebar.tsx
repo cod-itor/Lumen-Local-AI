@@ -2,6 +2,8 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { Icon } from "@/components/icon";
@@ -9,9 +11,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -317,6 +321,7 @@ function ModelStatusCard({ status }: { status: ModelStatus }) {
 
 function AccountRow({ user }: { user: User }) {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   return (
     <div className="flex w-full shrink-0 items-center gap-[10px] pt-[10px] pl-[6px]">
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[17px] bg-brand-gradient text-[12px] font-semibold text-white">
@@ -341,6 +346,12 @@ function AccountRow({ user }: { user: User }) {
               <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          {/* UI only for now: clear the session here once auth is wired up. */}
+          <DropdownMenuItem onClick={() => router.push("/login")}>
+            <LogOut />
+            Log out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
