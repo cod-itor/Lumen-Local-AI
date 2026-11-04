@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { EASE } from "@/components/landing/motion";
 
 /** Animated check: ring pops, tick draws itself, copy rises in. */
@@ -73,11 +72,7 @@ export function SuccessState({
   );
 }
 
-/** Glass card that hosts a <SuccessState>, matching <AuthCard>. */
+/** Wrapper kept for call sites; the glass frame is <AuthFrame> in the layout. */
 export function SuccessCard({ children }: { children: ReactNode }) {
-  return (
-    <Card className="glass rounded-3xl bg-transparent px-5 py-10 text-foreground ring-0 sm:px-9">
-      <CardContent className="px-0">{children}</CardContent>
-    </Card>
-  );
+  return <div className="py-4">{children}</div>;
 }

@@ -4,11 +4,15 @@ import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 
 import { AlertCircle } from "lucide-react";
 import { useCallback, type ReactNode } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EASE } from "@/components/landing/motion";
 import { cn } from "@/lib/utils";
 
-/** Frosted card that frames every auth step — same glass as the landing page. */
+/**
+ * Content of one auth step: badge, title, form, footer. The glass card frame
+ * itself is <AuthFrame> in the (auth) layout, so it never moves or resizes
+ * between steps — only this content cross-fades inside it.
+ */
 export function AuthCard({
   icon,
   title,
@@ -26,36 +30,33 @@ export function AuthCard({
   className?: string;
 }) {
   return (
-    <Card
-      className={cn(
-        "glass gap-7 rounded-3xl bg-transparent px-5 py-8 text-foreground ring-0 has-data-[slot=card-footer]:pb-8 sm:px-9 sm:py-10 sm:has-data-[slot=card-footer]:pb-10",
-        className,
-      )}
-    >
-      <CardHeader className="justify-items-center gap-2 px-0 text-center">
-        <motion.span
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 420, damping: 22, delay: 0.05 }}
-          className="bg-primary-fill mb-2 flex size-12 items-center justify-center rounded-2xl [&_svg]:size-5 [&_svg]:stroke-[1.8]"
-        >
+    <div className={cn("flex flex-col gap-6 short:gap-4", className)}>
+      <header className="flex flex-col items-center gap-1.5 text-center">
+        <span className="bg-primary-fill mb-2 flex size-11 short:hidden items-center justify-center rounded-2xl [&_svg]:size-5 [&_svg]:stroke-[1.8]">
           {icon}
-        </motion.span>
-        <CardTitle className="text-[26px] leading-[32px] font-semibold tracking-[-0.6px] sm:text-[28px]">
-          {title}
-        </CardTitle>
+        </span>
+        <h1 className="text-[25px] leading-[31px] font-semibold tracking-[-0.6px] sm:text-[27px]">{title}</h1>
         {description && (
-          <CardDescription className="max-w-[340px] text-[15px] leading-[22px] text-balance">
-            {description}
-          </CardDescription>
+          <p className="max-w-[340px] text-[14.5px] leading-[21px] text-balance text-muted-foreground">{description}</p>
         )}
-      </CardHeader>
-      <CardContent className="px-0">{children}</CardContent>
-      {footer && (
-        <CardFooter className="justify-center rounded-none border-0 bg-transparent px-0 py-0 text-center text-sm text-muted-foreground">
-          {footer}
-        </CardFooter>
-      )}
+      </header>
+      <div>{children}</div>
+      {footer && <div className="text-center text-sm text-muted-foreground">{footer}</div>}
+    </div>
+  );
+}
+
+/**
+ * The fixed glass card for every auth step. Its height comes from the
+ * viewport, not the content, so switching steps never shifts the layout; a
+ * step taller than the space scrolls inside the card, not the page.
+ */
+export function AuthFrame({ children }: { children: ReactNode }) {
+  return (
+    <Card className="glass min-h-0 flex-1 gap-0 rounded-3xl bg-transparent py-0 text-foreground ring-0 lg:max-h-[760px]">
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 [scrollbar-width:thin] sm:px-9">
+        <div className="my-auto py-7 sm:py-8 short:py-5">{children}</div>
+      </CardContent>
     </Card>
   );
 }

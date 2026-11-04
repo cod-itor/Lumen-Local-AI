@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -18,17 +18,16 @@ export function ModeSwitch() {
   const pathname = usePathname();
   const active = MODES.find((m) => m.href === pathname)?.href;
   return (
-    <AnimatePresence initial={false}>
-      {active && (
-        <motion.nav
-          key="mode-switch"
-          aria-label="Account"
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-          className="glass mx-auto mb-4 flex w-fit rounded-full p-1"
-        >
+    // Always rendered (hidden on other steps) so the card below never shifts.
+    <nav
+      aria-label="Account"
+      aria-hidden={!active}
+      inert={!active}
+      className={cn(
+        "glass mx-auto mb-4 short:mb-3 flex w-fit shrink-0 rounded-full p-1 transition-opacity duration-200",
+        !active && "pointer-events-none opacity-0",
+      )}
+    >
       {MODES.map((m) => {
         const on = m.href === active;
         return (
@@ -52,8 +51,6 @@ export function ModeSwitch() {
           </Link>
         );
       })}
-        </motion.nav>
-      )}
-    </AnimatePresence>
+    </nav>
   );
 }

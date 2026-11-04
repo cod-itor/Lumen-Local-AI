@@ -46,7 +46,7 @@ export function ForgotPasswordForm() {
 
   return (
     <motion.form animate={controls} noValidate onSubmit={form.handleSubmit(onSubmit, shake)}>
-      <FieldGroup className="gap-5">
+      <FieldGroup className="gap-4 short:gap-3">
         <FormAlert message={message} />
         <Controller
           name="email"
