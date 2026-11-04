@@ -16,7 +16,7 @@ export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
       <h1 className="text-[30px] font-semibold tracking-[-0.9px] whitespace-nowrap text-foreground">
         What should we learn today?
       </h1>
-      <div className="mt-[22px] w-full max-w-[720px]">
+      <div className="mt-[22px] w-full max-w-[calc(var(--chat-width)+20px)]">
         <Composer onSubmit={open} />
       </div>
       <motion.ul

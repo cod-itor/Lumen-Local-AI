@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Khmer, Roboto_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PerfTierAttribute } from "@/lib/performance";
+import { chatWidthBootScript } from "@/lib/chat-width";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -39,6 +40,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={cn("h-full", inter.variable, notoKhmer.variable, robotoMono.variable)}
     >
+      <head>
+        {/* Saved chat width, applied before paint (constant script, no user input). */}
+        <script dangerouslySetInnerHTML={{ __html: chatWidthBootScript }} />
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         <PerfTierAttribute />
         <ThemeProvider>

@@ -53,7 +53,7 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-          className="mx-auto flex w-[min(720px,calc(100%-108px))] flex-col gap-7 pt-3 pb-8 max-sm:w-[calc(100%-32px)]"
+          className="mx-auto flex w-[min(var(--chat-width),calc(100%-108px))] flex-col gap-7 pt-3 pb-8 max-sm:w-[calc(100%-32px)]"
         >
           {messages.map((m) =>
             m.role === "user" ? (
@@ -114,10 +114,10 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
 const noopSubscribe = () => () => {};
 const readSourcesParam = () => new URLSearchParams(window.location.search).get("sources") === "open";
 
-/** Follow-up composer (740px, 700px with the panel open) + disclaimer. */
+/** Follow-up composer (chat width + 20px) + disclaimer. */
 function FollowUpComposer({ onSubmit }: { onSubmit?: (text: string) => void }) {
   return (
-    <div className="mx-auto w-[min(740px,calc(100%-88px))] shrink-0 pt-3 max-sm:w-[calc(100%-16px)]">
+    <div className="mx-auto w-[min(calc(var(--chat-width)+20px),calc(100%-88px))] shrink-0 pt-3 max-sm:w-[calc(100%-16px)]">
       <Composer placeholder="Ask a follow-up" onSubmit={onSubmit} />
       <p className="mt-[9px] -mb-[5px] text-center text-[11.5px] leading-[14px] text-placeholder">
         AI can make mistakes. Check sources.

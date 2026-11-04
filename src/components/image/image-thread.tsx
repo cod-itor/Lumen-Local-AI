@@ -45,7 +45,7 @@ export function ImageThread({ thread }: { thread: ImageThreadData }) {
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-          className="mx-auto flex w-full max-w-[720px] flex-col gap-7 px-1 pt-3 pb-3"
+          className="mx-auto flex w-full max-w-(--chat-width) flex-col gap-7 px-1 pt-3 pb-3"
         >
           {messages.map((m) => (
             <motion.div key={m.id} variants={riseItem}>
@@ -55,7 +55,7 @@ export function ImageThread({ thread }: { thread: ImageThreadData }) {
         </motion.div>
       </div>
 
-      <div className="mx-auto w-full max-w-[740px] shrink-0">
+      <div className="mx-auto w-full max-w-[calc(var(--chat-width)+20px)] shrink-0">
         <Composer
           placeholder={thread.composerPlaceholder}
           showSearch={false}
