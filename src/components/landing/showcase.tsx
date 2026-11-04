@@ -1,120 +1,242 @@
 "use client";
 
-import {
-  AnimatePresence,
-  motion,
-  useInView,
-  useMotionValueEvent,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "motion/react";
-import { useRef, useState } from "react";
+import { animate, AnimatePresence, motion, useInView, useMotionValue, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Icon } from "@/components/icon";
 import { usePageVisible } from "@/lib/performance";
 import { cn } from "@/lib/utils";
-import type { LandingPreview, LandingShowcase } from "@/types/landing";
+import type { LandingPreview, LandingShowcase, ShowcaseScene } from "@/types/landing";
 import { EASE, Glow } from "./motion";
 import { TiltOnPointer } from "./pointer-effects";
 import { PreviewFrame } from "./preview-frame";
-import { SceneView, miniGlass } from "./showcase-scenes";
+import { SceneView, miniGlass, sceneDurations } from "./showcase-scenes";
 
-/** Px kept free above/below the pinned window: nav + rail + caption + gaps. */
-const RESERVE = 316;
+/** Window (camera viewport) size inside the 1200×780 preview canvas. */
+const CW = 1180;
+const CH = 748;
+/** How long a finished scene stays on screen before the next one plays. */
+const HOLD_MS = 1500;
+const REDUCED_SCENE_MS = 4200;
+/** Px kept free for nav + tabs + caption so the window fits the screen. */
+const RESERVE = 300;
+
+type Shot = [target: string | null, zoom: number];
+/** Camera per step: zoom onto the element being typed/clicked/answered. */
+const OPENING: Shot[] = [
+  ["composer", 1.75],
+  ["send", 1.95],
+  ["thread", 1.35],
+];
+const FOCUS: Record<ShowcaseScene["id"], Shot[]> = {
+  chat: [...OPENING, ["c-intro", 1.55], ["c-bullets", 1.55], ["c-code", 1.5], [null, 1]],
+  learn: [...OPENING, ["l-path", 1.6], ["l-quiz", 1.45], ["l-option", 1.75], [null, 1]],
+  image: [...OPENING, ["i-prompt", 1.6], ["i-approve", 2], ["i-grid", 1.45], [null, 1]],
+  docs: [...OPENING, ["d-files", 1.7], ["d-answer", 1.6], ["d-viewer", 1.35], ["d-highlight", 1.65], [null, 1]],
+};
+/** Fake pointer per step: [target, click?]. Missing = hidden. */
+const CURSOR: Record<ShowcaseScene["id"], Record<number, [string, boolean]>> = {
+  chat: { 0: ["send", false], 1: ["send", true] },
+  learn: { 0: ["send", false], 1: ["send", true], 4: ["l-option", false], 5: ["l-option", true] },
+  image: { 0: ["send", false], 1: ["send", true], 3: ["i-approve", false], 4: ["i-approve", true] },
+  docs: { 0: ["send", false], 1: ["send", true] },
+};
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** Centre of `[data-focus=name]` in the camera layer's own (unzoomed) px. */
+function locate(layer: HTMLElement, scene: string, name: string) {
+  const el = layer.querySelector(`[data-scene="${scene}"] [data-focus="${name}"]`);
+  if (!el) return null;
+  const L = layer.getBoundingClientRect();
+  const k = L.width / CW;
+  const r = el.getBoundingClientRect();
+  return { x: (r.left + r.width / 2 - L.left) / k, y: (r.top + r.height / 2 - L.top) / k };
+}
 
 /**
- * Product demo under the hero. The app window pins to the screen while the
- * section scrolls past; each quarter of the scroll plays one workspace:
- * chat → learning path → image generation → documents (RAG).
+ * Product demo under the hero. Plays by itself: each workspace (chat →
+ * learning path → image → documents) types its prompt, sends it and gets the
+ * answer back while a camera zooms onto whatever is happening, then moves on.
  */
 export function Showcase({ preview, showcase }: { preview: LandingPreview; showcase: LandingShowcase }) {
-  const track = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
   const n = showcase.scenes.length;
-  const { scrollYProgress } = useScroll({ target: track, offset: ["start start", "end end"] });
-  const [active, setActive] = useState(0);
-  useMotionValueEvent(scrollYProgress, "change", (p) => {
-    const next = Math.min(n - 1, Math.max(0, Math.floor(p * n)));
-    setActive((cur) => (cur === next ? cur : next));
-  });
-
-  const onScreen = useInView(frame, { amount: 0.25 });
+  const [{ active, step }, setState] = useState({ active: 0, step: 0 });
+  const scene = showcase.scenes[active];
+  const durations = useMemo(() => sceneDurations(scene), [scene]);
+  const reduce = useReducedMotion() ?? false;
+  const onScreen = useInView(frame, { amount: 0.3 });
   const pageVisible = usePageVisible();
   const running = onScreen && pageVisible;
-  const scene = showcase.scenes[active];
+  const shown = reduce ? durations.length : step;
 
-  const jumpTo = (i: number) => {
-    const el = track.current;
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY;
-    const range = el.offsetHeight - window.innerHeight;
-    window.scrollTo({ top: top + (range * (i + 0.08)) / n, behavior: "smooth" });
-  };
+  // Timeline: step through the scene, hold, then the next scene.
+  useEffect(() => {
+    if (!running) return;
+    const done = reduce || step >= durations.length;
+    const ms = reduce ? REDUCED_SCENE_MS : done ? HOLD_MS : durations[step];
+    const t = setTimeout(
+      () => setState((s) => (done ? { active: (s.active + 1) % n, step: 0 } : { active: s.active, step: s.step + 1 })),
+      ms,
+    );
+    return () => clearTimeout(t);
+  }, [active, step, running, reduce, durations, n]);
 
   return (
-    <section ref={track} aria-label={showcase.railLabel} className="relative h-[320vh] sm:h-[400vh]">
-      <div className="sticky top-[84px] flex flex-col gap-4 sm:top-[108px] sm:gap-5">
-        <Rail showcase={showcase} active={active} progress={scrollYProgress} onPick={jumpTo} />
+    <section aria-label={showcase.railLabel} className="relative flex flex-col gap-4 pb-4 sm:gap-5">
+      <Rail
+        showcase={showcase}
+        active={active}
+        step={shown}
+        durations={durations}
+        onPick={(i) => setState({ active: i, step: 0 })}
+      />
 
-        <div className="relative mx-auto h-[92px] w-full max-w-[720px] px-4 text-center sm:h-[78px]">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={scene.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: EASE }}
-              className="flex flex-col gap-1.5"
-            >
-              <h2 className="text-[19px] leading-[26px] font-semibold tracking-[-0.3px] text-foreground sm:text-[24px] sm:leading-[30px]">
-                {scene.title}
-              </h2>
-              <p className="line-clamp-2 text-[14px] leading-[21px] text-muted-foreground sm:text-[15.5px] sm:leading-[23px]">
-                {scene.description}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      <div className="relative mx-auto h-[92px] w-full max-w-[720px] px-4 text-center sm:h-[78px]">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={scene.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: EASE }}
+            className="flex flex-col gap-1.5"
+          >
+            <h2 className="text-[19px] leading-[26px] font-semibold tracking-[-0.3px] text-foreground sm:text-[24px] sm:leading-[30px]">
+              {scene.title}
+            </h2>
+            <p className="line-clamp-2 text-[14px] leading-[21px] text-muted-foreground sm:text-[15.5px] sm:leading-[23px]">
+              {scene.description}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-        <div ref={frame} className="px-4 sm:px-8 xl:px-0">
-          <TiltOnPointer max={2.5}>
-            <PreviewFrame reserveHeight={RESERVE}>
-              <Window preview={preview} showcase={showcase} active={active} running={running} />
-              <AnimatePresence initial={false}>
-                <motion.span
-                  key={scene.id}
-                  initial={{ opacity: 0, y: 14, scale: 0.94 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.96 }}
-                  transition={{ duration: 0.3, ease: EASE, delay: 0.25 }}
-                  className={cn(
-                    "glass absolute flex items-center gap-1.5 rounded-full px-4 py-[11px] text-[13px] leading-[normal] font-medium whitespace-nowrap text-foreground",
-                    active % 2 === 0 ? "top-[566px] left-[-40px]" : "top-[650px] right-[-30px]",
-                  )}
-                >
-                  <Icon name={scene.chip.icon} size={14} />
-                  {scene.chip.label}
-                </motion.span>
-              </AnimatePresence>
-            </PreviewFrame>
-          </TiltOnPointer>
-        </div>
+      <div ref={frame} className="px-4 sm:px-8 xl:px-0">
+        <TiltOnPointer max={2.5}>
+          <PreviewFrame reserveHeight={RESERVE}>
+            <div className="absolute top-2.5 left-2.5 h-[748px] w-[1180px] overflow-hidden rounded-[34px] shadow-device">
+              <Camera layer={layer} scene={scene} step={shown} reduce={reduce}>
+                <Window preview={preview} showcase={showcase} active={active} step={shown} />
+              </Camera>
+            </div>
+            <AnimatePresence initial={false}>
+              <motion.span
+                key={scene.id}
+                initial={{ opacity: 0, y: 14, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.96 }}
+                transition={{ duration: 0.3, ease: EASE, delay: 0.25 }}
+                className={cn(
+                  "glass absolute flex items-center gap-1.5 rounded-full px-4 py-[11px] text-[13px] leading-[normal] font-medium whitespace-nowrap text-foreground",
+                  active % 2 === 0 ? "top-[566px] left-[-40px]" : "top-[650px] right-[-30px]",
+                )}
+              >
+                <Icon name={scene.chip.icon} size={14} />
+                {scene.chip.label}
+              </motion.span>
+            </AnimatePresence>
+          </PreviewFrame>
+        </TiltOnPointer>
       </div>
     </section>
+  );
+}
+
+/** Zooms/pans its content (transform only) and drives the fake pointer. */
+function Camera({
+  layer,
+  scene,
+  step,
+  reduce,
+  children,
+}: {
+  layer: RefObject<HTMLDivElement | null>;
+  scene: ShowcaseScene;
+  step: number;
+  reduce: boolean;
+  children: React.ReactNode;
+}) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const scale = useMotionValue(1);
+  const cx = useMotionValue(CW * 0.8);
+  const cy = useMotionValue(CH * 0.95);
+  const cOpacity = useMotionValue(0);
+  const cScale = useMotionValue(1);
+
+  useEffect(() => {
+    const el = layer.current;
+    if (!el) return;
+    const shots = FOCUS[scene.id];
+    const [target, zoom] = reduce ? [null, 1] : (shots[Math.min(step, shots.length - 1)] ?? [null, 1]);
+    const at = target ? locate(el, scene.id, target) : null;
+    const s = at ? zoom : 1;
+    const tx = at ? clamp(CW / 2 - at.x * s, CW - CW * s, 0) : 0;
+    const ty = at ? clamp(CH / 2 - at.y * s, CH - CH * s, 0) : 0;
+    const t = { duration: 0.65, ease: EASE };
+    const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
+
+    const pointer = reduce ? undefined : CURSOR[scene.id][step];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (pointer) {
+      // Measure once the target has finished rising into place.
+      const aim = () => {
+        const spot = locate(el, scene.id, pointer[0]);
+        if (!spot) return;
+        anims.push(
+          animate(cOpacity, 1, { duration: 0.2 }),
+          animate(cx, spot.x, { duration: 0.4, ease: EASE }),
+          animate(cy, spot.y, { duration: 0.4, ease: EASE }),
+        );
+        if (pointer[1]) anims.push(animate(cScale, [1, 0.72, 1], { duration: 0.28, delay: 0.05 }));
+      };
+      if (pointer[1]) aim();
+      else timer = setTimeout(aim, 340);
+    } else {
+      anims.push(animate(cOpacity, 0, { duration: 0.2 }));
+    }
+    return () => {
+      clearTimeout(timer);
+      anims.forEach((a) => a.stop());
+    };
+  }, [layer, scene.id, step, reduce, x, y, scale, cx, cy, cOpacity, cScale]);
+
+  return (
+    <motion.div ref={layer} className="absolute inset-0" style={{ x, y, scale, originX: 0, originY: 0 }}>
+      {children}
+      <motion.svg
+        aria-hidden
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        className="pointer-events-none absolute top-0 left-0 z-10 drop-shadow-[0_2px_4px_rgb(0_0_0/0.45)]"
+        style={{ x: cx, y: cy, opacity: cOpacity, scale: cScale, translateX: "-6px", translateY: "-3px" }}
+      >
+        <path d="M5 3l14 8-6 1.6L10 19z" fill="white" stroke="black" strokeWidth="1.3" strokeLinejoin="round" />
+      </motion.svg>
+    </motion.div>
   );
 }
 
 function Rail({
   showcase,
   active,
-  progress,
+  step,
+  durations,
   onPick,
 }: {
   showcase: LandingShowcase;
   active: number;
-  progress: MotionValue<number>;
+  step: number;
+  durations: number[];
   onPick: (i: number) => void;
 }) {
+  // Progress bar glides toward the end of the current step.
+  const total = durations.length + 1;
+  const target = Math.min(1, (step + 1) / total);
+  const ms = durations[step] ?? HOLD_MS;
   return (
     <div className="flex justify-center px-4">
       <div
@@ -122,61 +244,37 @@ function Rail({
         aria-label={showcase.railLabel}
         className="glass flex max-w-full gap-[2px] overflow-x-auto rounded-full p-1 [scrollbar-width:none]"
       >
-        {showcase.scenes.map((s, i) => (
-          <RailPill
-            key={s.id}
-            label={s.label}
-            icon={s.icon}
-            index={i}
-            count={showcase.scenes.length}
-            selected={i === active}
-            progress={progress}
-            onClick={() => onPick(i)}
-          />
-        ))}
+        {showcase.scenes.map((s, i) => {
+          const selected = i === active;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onPick(i)}
+              className={cn(
+                "relative flex shrink-0 items-center gap-1.5 overflow-hidden rounded-full px-3 py-2 text-[12.5px] leading-[normal] font-medium whitespace-nowrap transition-colors sm:px-4 sm:text-[13.5px]",
+                selected ? "bg-surface-raised text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon name={s.icon} size={14} className="relative" />
+              <span className="relative">{s.label}</span>
+              {selected && (
+                <motion.span
+                  key={`${s.id}-bar`}
+                  aria-hidden
+                  className="bg-brand-gradient absolute inset-x-3 bottom-[3px] h-[2px] origin-left rounded-full"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: target }}
+                  transition={{ duration: ms / 1000, ease: "linear" }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
-  );
-}
-
-function RailPill({
-  label,
-  icon,
-  index,
-  count,
-  selected,
-  progress,
-  onClick,
-}: {
-  label: string;
-  icon: string;
-  index: number;
-  count: number;
-  selected: boolean;
-  progress: MotionValue<number>;
-  onClick: () => void;
-}) {
-  // How far through this scene the scroll is (0–1), drawn as a thin bar.
-  const fill = useTransform(progress, (p) => Math.min(1, Math.max(0, p * count - index)));
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      onClick={onClick}
-      className={cn(
-        "relative flex shrink-0 items-center gap-1.5 overflow-hidden rounded-full px-3 py-2 text-[12.5px] leading-[normal] font-medium whitespace-nowrap transition-colors sm:px-4 sm:text-[13.5px]",
-        selected ? "bg-surface-raised text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <Icon name={icon} size={14} className="relative" />
-      <span className="relative">{label}</span>
-      <motion.span
-        aria-hidden
-        className="bg-brand-gradient absolute inset-x-3 bottom-[3px] h-[2px] origin-left rounded-full"
-        style={{ scaleX: fill, opacity: selected ? 1 : 0 }}
-      />
-    </button>
   );
 }
 
@@ -184,16 +282,16 @@ function Window({
   preview: p,
   showcase,
   active,
-  running,
+  step,
 }: {
   preview: LandingPreview;
   showcase: LandingShowcase;
   active: number;
-  running: boolean;
+  step: number;
 }) {
   const scene = showcase.scenes[active];
   return (
-    <div className="absolute top-2.5 left-2.5 h-[748px] w-[1180px] overflow-hidden rounded-[34px] border-[1.2px] border-border-glass bg-[linear-gradient(148deg,var(--glass-from),var(--glass-to)_83%)] shadow-device">
+    <div className="absolute inset-0 overflow-hidden rounded-[34px] border-[1.2px] border-border-glass bg-[linear-gradient(148deg,var(--glass-from),var(--glass-to)_83%)]">
       <div className="bg-window absolute top-[12.8px] left-[12.8px] h-[720px] w-[1152px] overflow-hidden rounded-[19.2px]">
         <Glow tone="blue" blur={96} drift={20} className="top-[528px] left-[-112px] size-[272px]" />
         <Glow tone="orange" blur={88} drift={20} duration={22} className="top-[-80px] left-[960px] size-[240px]" />
@@ -237,13 +335,14 @@ function Window({
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={scene.id}
+            data-scene={scene.id}
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -18 }}
             transition={{ duration: 0.28, ease: EASE }}
             className="absolute inset-0"
           >
-            <SceneView scene={scene} preview={p} showcase={showcase} running={running} />
+            <SceneView scene={scene} preview={p} showcase={showcase} step={step} />
           </motion.div>
         </AnimatePresence>
       </div>

@@ -13,8 +13,8 @@ export default async function Home() {
         <Glow tone="blue" className="top-[180px] left-[180px] h-[480px] w-[520px]" blur={120} />
         <Glow tone="orange" className="top-[260px] left-[760px] h-[500px] w-[560px]" blur={120} duration={22} />
         <Glow tone="orange" className="top-[1700px] left-[-200px] size-[520px]" blur={120} duration={20} />
-        <Glow tone="blue" className="top-[2900px] left-[1100px] size-[520px]" blur={120} duration={24} />
-        <Glow tone="blue" className="top-[4300px] left-[300px] h-[500px] w-[600px]" blur={120} duration={26} />
+        <Glow tone="blue" className="top-[2300px] left-[1100px] size-[520px]" blur={120} duration={24} />
+        <Glow tone="blue" className="top-[3300px] left-[300px] h-[500px] w-[600px]" blur={120} duration={26} />
       </div>
 
       <CursorSpotlight />

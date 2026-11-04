@@ -2,7 +2,7 @@
 
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import Image from "next/image";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
 import type { LandingPreview, LandingShowcase, ShowcaseScene } from "@/types/landing";
@@ -19,30 +19,24 @@ const faviconTone = {
   yellow: "bg-yellow",
 } as const;
 
-const MS_PER_CHAR = 22;
-/** Shared opening of every scene: type → send → user bubble + thinking. */
-const SEND_MS = 240;
-const THINK_MS = 650;
+const MS_PER_CHAR = 18;
+/** Shared opening of every scene: type → click send → user bubble + thinking. */
+const SEND_MS = 420;
+const THINK_MS = 520;
 /** Then each scene reveals its answer in a few quick beats (ms per beat). */
 const BEATS: Record<ShowcaseScene["id"], number[]> = {
-  chat: [420, 520, 380],
-  learn: [560, 700, 480],
-  image: [720, 280, 1300],
-  docs: [560, 620, 480],
+  chat: [520, 560, 520],
+  learn: [600, 640, 560],
+  image: [620, 520, 1000],
+  docs: [600, 620, 620, 900],
 };
 
 /**
- * Steps a scene's micro-timeline forward with timers while `running`.
- * The scene remounts whenever it becomes active, so it always replays.
+ * Durations (ms) of each step of a scene. Steps: 0 type, 1 send, 2 think,
+ * 3… answer beats; reaching `length` means the scene has finished.
  */
-function useSteps(durations: number[], running: boolean, reduce: boolean) {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    if (!running || reduce || step >= durations.length) return;
-    const t = setTimeout(() => setStep((s) => s + 1), durations[step]);
-    return () => clearTimeout(t);
-  }, [step, running, reduce, durations]);
-  return reduce ? durations.length : step;
+export function sceneDurations(scene: ShowcaseScene): number[] {
+  return [graphemes(scene.prompt).length * MS_PER_CHAR + 200, SEND_MS, THINK_MS, ...BEATS[scene.id]];
 }
 
 /** Text typed in with a motion value (no React re-render per character). */
@@ -58,7 +52,20 @@ function Typed({ text, perChar = MS_PER_CHAR }: { text: string; perChar?: number
 }
 
 /** Fade-rise for each block of the answer as it "streams" in. */
-function Beat({ show, children, className, delay = 0 }: { show: boolean; children: ReactNode; className?: string; delay?: number }) {
+function Beat({
+  show,
+  children,
+  className,
+  delay = 0,
+  focus,
+}: {
+  show: boolean;
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+  /** Camera target name (see FOCUS in showcase.tsx). */
+  focus?: string;
+}) {
   return (
     <AnimatePresence initial={false}>
       {show && (
@@ -67,6 +74,7 @@ function Beat({ show, children, className, delay = 0 }: { show: boolean; childre
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: EASE, delay }}
           className={className}
+          data-focus={focus}
         >
           {children}
         </motion.div>
@@ -79,17 +87,14 @@ export function SceneView({
   scene,
   preview,
   showcase,
-  running,
+  step,
 }: {
   scene: ShowcaseScene;
   preview: LandingPreview;
   showcase: LandingShowcase;
-  running: boolean;
+  step: number;
 }) {
   const reduce = useReducedMotion() ?? false;
-  const typeMs = graphemes(scene.prompt).length * MS_PER_CHAR + 260;
-  const durations = useMemo(() => [typeMs, SEND_MS, THINK_MS, ...BEATS[scene.id]], [typeMs, scene.id]);
-  const step = useSteps(durations, running, reduce);
   // Beats of the answer: -1 while still sending/thinking.
   const beat = step - 3;
   const docs = scene.id === "docs";
@@ -98,7 +103,7 @@ export function SceneView({
     <>
       <div className="absolute top-16 left-[243.2px] h-[545.28px] w-[896px] overflow-hidden">
         <div className={cn("absolute top-[9.6px] flex flex-col gap-[16px]", docs ? "left-6 w-[480px]" : "left-40 w-[576px]")}>
-          <Beat show={step >= 2} className="flex justify-end">
+          <Beat show={step >= 2} className="flex justify-end" focus="thread">
             <div className="max-w-[440px] rounded-[17.6px] bg-secondary px-[14.4px] py-[8.8px] text-[12px] leading-[17.6px] text-foreground">
               {scene.prompt}
             </div>
@@ -166,6 +171,7 @@ function Composer({
           miniGlass,
           "absolute top-[618.88px] left-[395.2px] flex w-[592px] flex-col gap-2 rounded-[22.4px] py-[11.2px] pr-[9.6px] pl-[12.8px]",
         )}
+        data-focus="composer"
       >
         <span className="h-[15px] truncate text-[12.4px] leading-[15px] whitespace-nowrap text-foreground">
           {step >= 2 ? (
@@ -197,6 +203,7 @@ function Composer({
             <Icon name="mic" size={13.6} />
           </span>
           <motion.span
+            data-focus="send"
             className="bg-primary-fill relative flex size-[28.8px] items-center justify-center rounded-full"
             animate={step === 1 ? { scale: [1, 0.82, 1.08, 1] } : { scale: 1 }}
             transition={{ duration: 0.26 }}
@@ -229,7 +236,7 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
   const m = p.message;
   return (
     <div className="flex flex-col items-start gap-[11.2px] text-foreground">
-      <Beat show={beat >= 0} className="flex flex-col gap-[11.2px]">
+      <Beat show={beat >= 0} className="flex flex-col gap-[11.2px]" focus="c-intro">
         <div className="flex items-center gap-[4.8px] text-subtle">
           <Icon name="globe" size={11.2} />
           <span className="text-[10.4px]">{m.searchTrace}</span>
@@ -239,7 +246,7 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
         </p>
       </Beat>
       {beat >= 1 && (
-        <ul className="list-disc pl-[18.6px] text-[12.4px] leading-[20.8px]">
+        <ul data-focus="c-bullets" className="list-disc pl-[18.6px] text-[12.4px] leading-[20.8px]">
           {m.bullets.map((b, i) => (
             <motion.li
               key={b.title}
@@ -258,7 +265,7 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
           ))}
         </ul>
       )}
-      <Beat show={beat >= 2} className="w-full">
+      <Beat show={beat >= 2} className="w-full" focus="c-code">
         <div className="flex w-full flex-col rounded-[11.2px] border-[0.8px] border-foreground/6 bg-foreground/5">
           <div className="flex items-center justify-between px-[9.6px] py-[5.6px] text-muted-foreground">
             <span className="text-[9.6px]">{m.code.label}</span>
@@ -306,7 +313,7 @@ function LearnAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
   const passed = beat >= 3;
   return (
     <div className="flex flex-col gap-[12px] text-foreground">
-      <Beat show={beat >= 0}>
+      <Beat show={beat >= 0} focus="l-path">
         <div className={cn(miniGlass, "flex flex-col gap-[10px] rounded-[16px] px-[14px] py-[12px]")}>
           <div className="flex items-center gap-2">
             <span className="bg-brand-gradient flex size-[26px] items-center justify-center rounded-[8px] text-white">
@@ -359,7 +366,7 @@ function LearnAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
         </div>
       </Beat>
 
-      <Beat show={beat >= 1}>
+      <Beat show={beat >= 1} focus="l-quiz">
         <div className={cn(miniGlass, "flex flex-col gap-[10px] rounded-[16px] px-[14px] py-[13px]")}>
           <span className="text-[9.6px] font-semibold tracking-[0.4px] text-brand-blue-strong uppercase">{l.quizLabel}</span>
           <p className="font-mono text-[11.2px] leading-[17px]">{l.question}</p>
@@ -370,6 +377,7 @@ function LearnAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
               return (
                 <motion.div
                   key={o}
+                  data-focus={isCorrect ? "l-option" : undefined}
                   animate={chosen && !passed ? { scale: [1, 0.98, 1] } : { scale: 1 }}
                   transition={{ duration: 0.25 }}
                   className={cn(
@@ -422,7 +430,7 @@ function ImageAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
   const done = beat >= 3;
   return (
     <div className="flex flex-col gap-[12px] text-foreground">
-      <Beat show={beat >= 0}>
+      <Beat show={beat >= 0} focus="i-prompt">
         <div className={cn(miniGlass, "flex flex-col gap-[9px] rounded-[16px] px-[14px] py-[12px]")}>
           <div className="flex items-center gap-[6px] text-brand-blue-strong">
             <Icon name="img-sparkles" size={12} />
@@ -431,6 +439,7 @@ function ImageAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
           <p className="text-[11.6px] leading-[18px] text-foreground-secondary">{im.improvedPrompt}</p>
           <div className="flex items-center gap-[6px]">
             <motion.span
+              data-focus="i-approve"
               animate={approved && !done ? { scale: [1, 0.9, 1.04, 1] } : { scale: 1 }}
               transition={{ duration: 0.26 }}
               className={cn(
@@ -455,7 +464,7 @@ function ImageAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
             </span>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-[10px]">
+        <div data-focus="i-grid" className="grid grid-cols-4 gap-[10px]">
           {im.images.map((src, i) => (
             <div key={src} className="relative aspect-square overflow-hidden rounded-[12px] bg-foreground/6">
               {!done && (
@@ -490,7 +499,7 @@ function DocsAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
   const d = s.docs;
   return (
     <div className="flex flex-col items-start gap-[11px] text-foreground">
-      <Beat show={beat >= 0} className="flex flex-col gap-[8px]">
+      <Beat show={beat >= 0} className="flex flex-col gap-[8px]" focus="d-files">
         <div className="flex items-center gap-[4.8px] text-subtle">
           <Icon name="doc-book-sm" size={11.2} />
           <span className="text-[10.4px]">{d.searching}</span>
@@ -510,7 +519,7 @@ function DocsAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
           ))}
         </div>
       </Beat>
-      <Beat show={beat >= 1} className="flex flex-col items-start gap-[8px]">
+      <Beat show={beat >= 1} className="flex flex-col items-start gap-[8px]" focus="d-answer">
         <p className="text-[12.4px] leading-[20.8px]">{d.answer}</p>
         <span className="flex items-center gap-[5px] rounded-full bg-brand-orange/14 px-[9px] py-[4px] text-[9.6px] font-medium text-foreground">
           <Icon name="doc-file-sm" size={10} />
@@ -531,6 +540,7 @@ function DocViewer({ s, beat }: { s: LandingShowcase; beat: number }) {
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.38, ease: EASE }}
+          data-focus="d-viewer"
           className={cn(miniGlass, "absolute top-[8px] left-[528px] flex h-[528px] w-[352px] flex-col rounded-[18px]")}
         >
           <div className="flex items-center gap-2 border-b-[0.8px] border-foreground/8 px-[14px] py-[11px]">
@@ -548,6 +558,7 @@ function DocViewer({ s, beat }: { s: LandingShowcase; beat: number }) {
             <p className="text-[11.2px] leading-[19px] text-foreground-secondary">
               {d.before}
               <span
+                data-focus="d-highlight"
                 className={cn(
                   "rounded-[3px] box-decoration-clone px-[2px] transition-colors duration-500",
                   lit ? "bg-brand-orange/25 text-foreground" : "bg-transparent",
