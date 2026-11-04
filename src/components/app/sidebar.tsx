@@ -86,7 +86,7 @@ export function SidebarFrame({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+              className="fixed inset-0 z-40 bg-black/45"
             />
             <motion.aside
               key="drawer"
