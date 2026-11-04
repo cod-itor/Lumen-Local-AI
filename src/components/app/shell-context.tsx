@@ -21,6 +21,9 @@ type ShellState = {
   rightPanelHost: HTMLDivElement | null;
   setRightPanelHost: (el: HTMLDivElement | null) => void;
   lastPaths: LastPaths;
+  /** Settings → Chat width dialog (lives in the shell so it outlasts the mobile drawer). */
+  chatWidthOpen: boolean;
+  setChatWidthOpen: (open: boolean) => void;
 };
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -51,6 +54,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [chatWidthOpen, setChatWidthOpen] = useState(false);
   const [rightPanelHost, setRightPanelHost] = useState<HTMLDivElement | null>(null);
   const [lastPaths, setLastPaths] = useState<LastPaths>({});
   const [seenPath, setSeenPath] = useState<string | null>(null);
@@ -77,6 +81,8 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
         rightPanelHost,
         setRightPanelHost,
         lastPaths,
+        chatWidthOpen,
+        setChatWidthOpen,
       }}
     >
       {children}

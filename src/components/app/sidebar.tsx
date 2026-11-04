@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, MoveHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
@@ -322,6 +322,7 @@ function ModelStatusCard({ status }: { status: ModelStatus }) {
 function AccountRow({ user }: { user: User }) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const { setMobileNavOpen, setChatWidthOpen } = useShell();
   return (
     <div className="flex w-full shrink-0 items-center gap-[10px] pt-[10px] pl-[6px]">
       <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[17px] bg-brand-gradient text-[12px] font-semibold text-white">
@@ -345,6 +346,19 @@ function AccountRow({ user }: { user: User }) {
               <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Layout</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => {
+                setMobileNavOpen(false);
+                setChatWidthOpen(true);
+              }}
+            >
+              <MoveHorizontal />
+              Chat width…
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           {/* UI only for now: clear the session here once auth is wired up. */}

@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import type { AppSection, ChatSummary, ModelStatus, User } from "@/types";
+import { ChatWidthDialog } from "./chat-width-dialog";
 import { AppGlows } from "./glows";
 import { sectionOf, ShellProvider, useShell } from "./shell-context";
 import { SidebarFrame } from "./sidebar";
@@ -36,7 +37,7 @@ export function AppShell({ data, children }: { data: ShellData; children: React.
 function ShellLayout({ data, children }: { data: ShellData; children: React.ReactNode }) {
   const pathname = usePathname();
   const section = sectionOf(pathname);
-  const { setRightPanelHost } = useShell();
+  const { setRightPanelHost, chatWidthOpen, setChatWidthOpen } = useShell();
 
   const sidebarKey = section === "learn" ? "chat" : section;
   const body = (
@@ -62,6 +63,7 @@ function ShellLayout({ data, children }: { data: ShellData; children: React.Reac
           <div ref={setRightPanelHost} className="relative flex h-full shrink-0" />
         </div>
       </div>
+      <ChatWidthDialog open={chatWidthOpen} onOpenChange={setChatWidthOpen} />
     </div>
   );
 }
