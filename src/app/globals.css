@@ -455,3 +455,13 @@
     background-color: var(--glass-solid);
   }
 }
+
+/* While the saved language (e.g. Khmer) renders on first load — see i18n/config.ts */
+html[data-i18n-pending] body {
+  opacity: 0;
+}
+
+/* Khmer script has tall stacked vowels: give tight display/heading leading room. */
+:lang(km) :is(h1, h2, h3) {
+  line-height: 1.3;
+}

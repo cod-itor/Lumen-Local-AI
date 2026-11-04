@@ -3,6 +3,8 @@ import { Inter, Noto_Sans_Khmer, Roboto_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PerfTierAttribute } from "@/lib/performance";
+import { localeBootScript } from "@/i18n/config";
+import { LocaleSync } from "@/i18n/provider";
 import { chatWidthBootScript } from "@/lib/chat-width";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -43,9 +45,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Saved chat width, applied before paint (constant script, no user input). */}
         <script dangerouslySetInnerHTML={{ __html: chatWidthBootScript }} />
+        {/* Saved language, applied before paint (constant script, no user input). */}
+        <script dangerouslySetInnerHTML={{ __html: localeBootScript }} />
       </head>
       <body className="flex min-h-full flex-col font-sans">
         <PerfTierAttribute />
+        <LocaleSync />
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
