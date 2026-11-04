@@ -115,7 +115,7 @@ export function SidebarClosedControls() {
             aria-label="New chat"
             className="flex size-[32px] items-center justify-center rounded-[12px] text-icon transition-colors hover:bg-accent"
           >
-            <Icon name="nav-plus" size={17} />
+            <Icon name="edit" size={17} />
           </Link>
         </motion.div>
       )}
