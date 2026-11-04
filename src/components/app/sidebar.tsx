@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { LogOut, MoveHorizontal } from "lucide-react";
+import { LogOut, MoveHorizontal, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTheme } from "next-themes";
@@ -339,7 +339,7 @@ function AccountRow({ user }: { user: User }) {
         >
           <Icon name="sliders" size={16} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="end" className="w-44">
+        <DropdownMenuContent side="top" align="end" className="w-52">
           <DropdownMenuGroup>
             <DropdownMenuLabel>Appearance</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(String(v))}>
@@ -360,6 +360,11 @@ function AccountRow({ user }: { user: User }) {
               Chat width…
             </DropdownMenuItem>
           </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
+            <Settings />
+            Settings & AI models
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           {/* UI only for now: clear the session here once auth is wired up. */}
           <DropdownMenuItem onClick={() => router.push("/login")}>

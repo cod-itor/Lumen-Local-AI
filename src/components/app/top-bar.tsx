@@ -9,6 +9,8 @@ import type { AppSection } from "@/types";
 import { useShell } from "./shell-context";
 import { SidebarClosedControls } from "./sidebar";
 
+const MotionLink = motion.create(Link);
+
 const TABS = [
   { key: "chat", label: "Chat", icon: "msg", match: ["chat", "learn"] },
   { key: "documents", label: "Documents", icon: "file", match: ["documents"] },
@@ -38,9 +40,10 @@ export function TopBar({
         <div className="hidden h-[44px] items-center md:flex">
           <AnimatePresence mode="wait" initial={false}>
             {model && (
-              <motion.button
+              <MotionLink
                 key={model}
-                type="button"
+                href="/settings#models"
+                title="Runs on your computer — choose models in Settings"
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
@@ -51,7 +54,7 @@ export function TopBar({
                   {model}
                 </span>
                 <Icon name="chev" size={14} className="text-muted-foreground" />
-              </motion.button>
+              </MotionLink>
             )}
           </AnimatePresence>
         </div>
