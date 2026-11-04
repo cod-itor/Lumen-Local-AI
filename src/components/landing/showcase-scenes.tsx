@@ -55,6 +55,9 @@ function Stream({ text, delay = 0, perWord = MS_PER_WORD }: { text: string; dela
   const parts = useMemo(() => words(text), [text]);
   const count = useMotionValue(0);
   const out = useTransform(count, (c) => parts.slice(0, Math.ceil(c)).join(""));
+  // The rest stays in the layout (invisible) so the text block has its final
+  // size from the start, and the camera can frame the whole answer.
+  const rest = useTransform(count, (c) => parts.slice(Math.ceil(c)).join(""));
   useEffect(() => {
     const a = animate(count, parts.length, {
       duration: (parts.length * perWord) / 1000,
@@ -63,7 +66,14 @@ function Stream({ text, delay = 0, perWord = MS_PER_WORD }: { text: string; dela
     });
     return () => a.stop();
   }, [count, parts, perWord, delay]);
-  return <motion.span>{out}</motion.span>;
+  return (
+    <>
+      <motion.span>{out}</motion.span>
+      <motion.span aria-hidden className="invisible">
+        {rest}
+      </motion.span>
+    </>
+  );
 }
 
 /** Text typed in with a motion value (no React re-render per character). */
@@ -129,7 +139,10 @@ export function SceneView({
   return (
     <>
       <div className="absolute top-16 left-[243.2px] h-[545.28px] w-[896px] overflow-hidden">
-        <div className={cn("absolute top-[9.6px] flex flex-col gap-[16px]", docs ? "left-6 w-[480px]" : "left-40 w-[576px]")}>
+        <div
+          data-focus="column"
+          className={cn("absolute top-[9.6px] flex flex-col gap-[16px]", docs ? "left-6 w-[480px]" : "left-40 w-[576px]")}
+        >
           <Beat show={step >= 2} className="flex justify-end" focus="thread">
             <div className="max-w-[440px] rounded-[17.6px] bg-secondary px-[14.4px] py-[8.8px] text-[12px] leading-[17.6px] text-foreground">
               {scene.prompt}

@@ -29,19 +29,23 @@ const REDUCED_SCENE_MS = 4200;
 /** Px kept free for nav + tabs + caption so the window fits the screen. */
 const RESERVE = 300;
 
-type Shot = [target: string | null, zoom: number];
-/** Camera per step: zoom onto the element being typed/clicked/answered. */
-const OPENING: Shot[] = [
-  ["composer", 1.6],
-  ["composer", 1.6],
-  ["thread", 1.3],
-];
+/**
+ * Camera per step: frame every listed element at once (with margins), zooming
+ * in no further than `max`. "column" is the whole conversation so far, so the
+ * camera pulls back as the answer grows and the full response stays in view.
+ */
+type Shot = { fit: string[]; max: number } | null;
+const ASK: Shot = { fit: ["composer"], max: 1.6 };
+const ANSWER: Shot = { fit: ["column"], max: 1.6 };
+const OPENING: Shot[] = [ASK, ASK, ANSWER];
 const FOCUS: Record<ShowcaseScene["id"], Shot[]> = {
-  chat: [...OPENING, ["c-intro", 1.55], ["c-bullets", 1.55], ["c-code", 1.5], [null, 1]],
-  learn: [...OPENING, ["l-path", 1.6], ["l-quiz", 1.45], ["l-option", 1.75], [null, 1]],
-  image: [...OPENING, ["i-prompt", 1.6], ["i-approve", 2], ["i-grid", 1.45], [null, 1]],
-  docs: [...OPENING, ["d-files", 1.7], ["d-answer", 1.6], ["d-viewer", 1.35], ["d-highlight", 1.65], [null, 1]],
+  chat: [...OPENING, ANSWER, ANSWER, ANSWER, null],
+  learn: [...OPENING, ANSWER, ANSWER, ANSWER, null],
+  image: [...OPENING, ANSWER, ANSWER, ANSWER, null],
+  docs: [...OPENING, ANSWER, ANSWER, { fit: ["column", "d-viewer"], max: 1.5 }, { fit: ["d-viewer"], max: 1.6 }, null],
 };
+/** Breathing room around a framed area (px, unzoomed); left leaves space for the pointer + caption. */
+const PAD = { l: 290, r: 40, t: 36, b: 48 };
 type Aim = [target: string, mode: "click" | "hover" | "block" | "travel"];
 /** Demo pointer per step (it carries the caption). Missing = stays put. */
 const OPEN_AIM: Record<number, Aim> = { 0: ["send", "hover"], 1: ["send", "click"], 2: ["thread", "block"] };
@@ -72,9 +76,15 @@ function measure(layer: HTMLElement, scene: string, name: string) {
   return { left, top, width: r.width / k, height: r.height / k };
 }
 
-function locate(layer: HTMLElement, scene: string, name: string) {
-  const b = measure(layer, scene, name);
-  return b && { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+/** Union box of several targets. */
+function measureAll(layer: HTMLElement, scene: string, names: string[]) {
+  const boxes = names.map((n) => measure(layer, scene, n)).filter((b) => b !== null);
+  if (!boxes.length) return null;
+  const left = Math.min(...boxes.map((b) => b.left));
+  const top = Math.min(...boxes.map((b) => b.top));
+  const right = Math.max(...boxes.map((b) => b.left + b.width));
+  const bottom = Math.max(...boxes.map((b) => b.top + b.height));
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 /**
@@ -224,15 +234,21 @@ function Camera({
     const el = layer.current;
     if (!el) return;
     const shots = FOCUS[scene.id];
-    const [target, zoom] =
-      reduce || switchTo ? [null, 1] : (shots[Math.min(step, shots.length - 1)] ?? [null, 1]);
-    const at = target ? locate(el, scene.id, target) : null;
-    // While pointing at new text, frame it a little right of centre so the
-    // pointer + caption fit in the margin on its left.
-    if (at && !switchTo && CURSOR[scene.id][step]?.[1] === "block") at.x -= 120;
-    const s = at ? zoom : 1;
-    const tx = at ? clamp(CW / 2 - at.x * s, CW - CW * s, 0) : 0;
-    const ty = at ? clamp(CH / 2 - at.y * s, CH - CH * s, 0) : 0;
+    const shot = reduce || switchTo ? null : (shots[Math.min(step, shots.length - 1)] ?? null);
+    const box = shot ? measureAll(el, scene.id, shot.fit) : null;
+    let s = 1;
+    let tx = 0;
+    let ty = 0;
+    if (box && shot) {
+      // Fit the padded box inside the window, then centre on it.
+      const w = box.width + PAD.l + PAD.r;
+      const h = box.height + PAD.t + PAD.b;
+      s = clamp(Math.min(CW / w, CH / h), 1, shot.max);
+      const cxBox = box.left - PAD.l + w / 2;
+      const cyBox = box.top - PAD.t + h / 2;
+      tx = clamp(CW / 2 - cxBox * s, CW - CW * s, 0);
+      ty = clamp(CH / 2 - cyBox * s, CH - CH * s, 0);
+    }
     // Slow, smooth ease-in-out "camera move".
     const t = { duration: 1.5, ease: CAMERA_EASE };
     const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
