@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { AppSection, ChatSummary, ModelStatus, User } from "@/types";
 import { AppGlows } from "./glows";
-import { ShellProvider, useShell } from "./shell-context";
+import { sectionOf, ShellProvider, useShell } from "./shell-context";
 import { SidebarFrame } from "./sidebar";
 import { ChatSidebarBody } from "./sidebar-chat";
 import { TopBar } from "./top-bar";
@@ -15,12 +15,9 @@ export type ShellData = {
   modelStatuses: Record<AppSection, ModelStatus>;
   /** Section-specific sidebar bodies rendered on the server (documents, image). */
   sidebars: Partial<Record<AppSection, React.ReactNode>>;
+  /** Default landing page for each tab before the user has visited it. */
+  tabHomes: { chat: string; documents: string; image: string };
 };
-
-function sectionOf(pathname: string): AppSection {
-  const seg = pathname.split("/")[1];
-  return seg === "documents" || seg === "image" || seg === "learn" ? seg : "chat";
-}
 
 export function AppShell({ data, children }: { data: ShellData; children: React.ReactNode }) {
   return (
@@ -30,6 +27,11 @@ export function AppShell({ data, children }: { data: ShellData; children: React.
   );
 }
 
+/**
+ * Layout: [sidebar] [header (full width, stable) / content + right panel].
+ * The header spans the whole area right of the sidebar, so the tab bar stays
+ * in the same place on every page; side panels open underneath it.
+ */
 function ShellLayout({ data, children }: { data: ShellData; children: React.ReactNode }) {
   const pathname = usePathname();
   const section = sectionOf(pathname);
@@ -38,14 +40,16 @@ function ShellLayout({ data, children }: { data: ShellData; children: React.Reac
   const body = data.sidebars[section] ?? <ChatSidebarBody history={data.chatHistory} />;
 
   return (
-    <div className="bg-window relative flex h-dvh min-h-[640px] w-full overflow-hidden p-4">
+    <div className="bg-window relative flex h-dvh w-full overflow-hidden p-2 sm:p-4">
       <AppGlows />
       <SidebarFrame body={body} status={data.modelStatuses[section]} user={data.user} />
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <TopBar section={section} model={data.sectionModels[section]} />
-        <main className="relative min-h-0 flex-1">{children}</main>
+        <TopBar section={section} model={data.sectionModels[section]} tabHomes={data.tabHomes} />
+        <div className="relative flex min-h-0 flex-1">
+          <main className="relative min-w-0 flex-1">{children}</main>
+          <div ref={setRightPanelHost} className="relative flex h-full shrink-0" />
+        </div>
       </div>
-      <div ref={setRightPanelHost} className="relative flex h-full shrink-0" />
     </div>
   );
 }
