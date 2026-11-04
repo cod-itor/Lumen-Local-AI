@@ -76,6 +76,13 @@ export const mockLanding: LandingContent = {
       sourcesLabel: "4 sources",
     },
     composerPlaceholder: "Ask a follow-up",
+    composerTypingPrompts: [
+      "Can you quiz me on photosynthesis?",
+      "ពន្យល់ពីរស្មីសំយោគជាភាសាខ្មែរ",
+      "Summarize chapter 2 of my biology notes",
+      "Draw a poster for our science fair",
+      "What is the difference between a list and a tuple?",
+    ],
     disclaimer: "AI can make mistakes. Check sources.",
     floatChips: [
       { label: "Answer cites 4 web sources", icon: "landing-check" },

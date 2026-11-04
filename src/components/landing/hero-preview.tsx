@@ -1,4 +1,5 @@
 import { Icon } from "@/components/icon";
+import { TypewriterLoop } from "./typewriter";
 import { cn } from "@/lib/utils";
 import type { LandingPreview } from "@/types/landing";
 import { Glow } from "./motion";
@@ -191,7 +192,13 @@ function Composer({ p }: { p: LandingPreview }) {
           "absolute top-[618.88px] left-[395.2px] flex w-[592px] flex-col gap-2 rounded-[22.4px] py-[11.2px] pr-[9.6px] pl-[12.8px]",
         )}
       >
-        <span className="text-[12.4px] text-placeholder">{p.composerPlaceholder}</span>
+        <span className="h-[15px] text-[12.4px] leading-[15px] whitespace-nowrap text-foreground">
+          <TypewriterLoop
+            phrases={p.composerTypingPrompts}
+            startDelayMs={1400}
+            caretClassName="text-brand-blue-strong"
+          />
+        </span>
         <div className="flex items-center gap-[4.8px]">
           <span className="flex size-[27.2px] items-center justify-center text-icon">
             <Icon name="plus" size={14.4} />

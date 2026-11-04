@@ -64,6 +64,8 @@ export type LandingPreview = {
   tabs: { label: string; icon: string; active?: boolean }[];
   message: LandingPreviewMessage;
   composerPlaceholder: string;
+  /** Example questions typed into the preview composer, in order. */
+  composerTypingPrompts: string[];
   disclaimer: string;
   floatChips: { label: string; icon: string }[];
 };
