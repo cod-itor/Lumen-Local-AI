@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,20 @@ export function TopBar({
           );
         })}
       </nav>
+
+      {/* Top-right: planned features. Icon-only on phones, beside the tabs. */}
+      <Link
+        href="/coming-soon"
+        aria-label="Coming soon: planned features"
+        className="glass group absolute top-[2px] right-[140px] flex h-[44px] items-center gap-2 rounded-[16px] px-3 text-foreground transition-transform hover:-translate-y-px sm:right-0 sm:px-3.5"
+      >
+        <span className="relative flex size-2" aria-hidden>
+          <span className="absolute inset-0 animate-ping rounded-full bg-brand-orange/70 [animation-duration:2s]" />
+          <span className="relative size-2 rounded-full bg-brand-orange" />
+        </span>
+        <Sparkles className="size-4 sm:hidden" strokeWidth={1.8} />
+        <span className="hidden text-[13px] font-medium whitespace-nowrap sm:inline">Coming soon</span>
+      </Link>
     </header>
   );
 }
