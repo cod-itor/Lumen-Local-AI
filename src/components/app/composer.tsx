@@ -210,9 +210,9 @@ function LevelBars() {
       {BAR_HEIGHTS.map((h, i) => (
         <motion.span
           key={i}
-          className="w-[3px] rounded-[2px] bg-danger-strong"
-          style={{ height: h }}
-          animate={reduce ? undefined : { height: [h, Math.max(4, 16 - h + 2), h] }}
+          className="h-4 w-[3px] origin-center rounded-[2px] bg-danger-strong"
+          style={{ scaleY: h / 16 }}
+          animate={reduce ? undefined : { scaleY: [h / 16, Math.max(4, 16 - h + 2) / 16, h / 16] }}
           transition={{
             duration: 0.7 + i * 0.09,
             repeat: Infinity,

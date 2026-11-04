@@ -41,9 +41,10 @@ export function StreamedText({ text, wordMs = 45 }: { text: string; wordMs?: num
         {words.slice(0, shown).map((w, i) => (
           <motion.span
             key={i}
-            initial={{ opacity: 0, filter: "blur(4px)" }}
-            animate={{ opacity: 1, filter: "blur(0px)" }}
-            transition={{ duration: 0.25 }}
+            className="inline-block"
+            initial={{ opacity: 0, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22 }}
           >
             {w}{" "}
           </motion.span>
