@@ -342,6 +342,32 @@
   background-image: linear-gradient(135deg, #6fa6e6, #f08a3c);
 }
 
+/* Light sweep across text — used for "Thinking…" / "Searching…" labels */
+@utility shimmer-text {
+  background-image: linear-gradient(
+    90deg,
+    var(--subtle) 0%,
+    var(--subtle) 40%,
+    var(--foreground) 50%,
+    var(--subtle) 60%,
+    var(--subtle) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-sweep 1.6s linear infinite;
+}
+
+@keyframes shimmer-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 /* -------------------------------------------------------------- Base */
 @layer base {
   * {

@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Composer } from "@/components/app/composer";
 import { ShellRightPanel } from "@/components/app/right-panel";
 import type { ChatMessage, Conversation, Source } from "@/types/chat";
 import { AssistantAnswer, riseItem } from "./assistant-answer";
+import { PreviewReply } from "./preview-reply";
 import { SourcesPanel } from "./sources-panel";
 
 /**
@@ -56,11 +57,19 @@ export function ChatThread({ conversation }: { conversation: Conversation }) {
         >
           {messages.map((m) =>
             m.role === "user" ? (
-              <motion.div key={m.id} variants={riseItem} className="flex w-full justify-end">
-                <p className="max-w-[85%] rounded-[22px] bg-surface-muted px-[18px] py-[11px] text-[15px] leading-[22px] whitespace-pre-wrap text-foreground">
-                  {m.text}
-                </p>
-              </motion.div>
+              <Fragment key={m.id}>
+                <motion.div variants={riseItem} className="flex w-full justify-end">
+                  <p className="max-w-[85%] rounded-[22px] bg-surface-muted px-[18px] py-[11px] text-[15px] leading-[22px] whitespace-pre-wrap text-foreground">
+                    {m.text}
+                  </p>
+                </motion.div>
+                {/* Messages typed in the prototype get a placeholder streamed reply */}
+                {m.id.startsWith("local-") && (
+                  <motion.div variants={riseItem} initial="hidden" animate="show">
+                    <PreviewReply />
+                  </motion.div>
+                )}
+              </Fragment>
             ) : (
               <AssistantAnswer
                 key={m.id}
