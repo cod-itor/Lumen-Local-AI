@@ -19,24 +19,51 @@ const faviconTone = {
   yellow: "bg-yellow",
 } as const;
 
-const MS_PER_CHAR = 42;
-/** Shared opening of every scene: type → click send → user bubble + thinking. */
-const SEND_MS = 1500;
-const THINK_MS = 1700;
-/** Then each scene reveals its answer in a few quick beats (ms per beat). */
+const MS_PER_CHAR = 22;
+/** Shared opening of every scene: type → click send → user bubble + thinking. Kept quick. */
+const SEND_MS = 650;
+const THINK_MS = 850;
+/** Then each scene reveals its answer in a few beats (ms per beat). */
 const BEATS: Record<ShowcaseScene["id"], number[]> = {
-  chat: [2200, 2200, 2000],
-  learn: [2200, 2300, 2000],
-  image: [2300, 2000, 2400],
-  docs: [2200, 2200, 2100, 2200],
+  chat: [1900, 2000, 1500],
+  learn: [1700, 1900, 1500],
+  image: [1900, 1500, 2000],
+  docs: [1700, 2000, 1700, 1800],
 };
+/** Streaming speed of answer text (ms per word/segment). */
+const MS_PER_WORD = 34;
 
 /**
  * Durations (ms) of each step of a scene. Steps: 0 type, 1 send, 2 think,
  * 3… answer beats; reaching `length` means the scene has finished.
  */
 export function sceneDurations(scene: ShowcaseScene): number[] {
-  return [graphemes(scene.prompt).length * MS_PER_CHAR + 1100, SEND_MS, THINK_MS, ...BEATS[scene.id]];
+  return [graphemes(scene.prompt).length * MS_PER_CHAR + 350, SEND_MS, THINK_MS, ...BEATS[scene.id]];
+}
+
+/** Words, so streamed text reveals like a model writing (Khmer too). */
+function words(text: string): string[] {
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    const seg = new Intl.Segmenter(undefined, { granularity: "word" });
+    return Array.from(seg.segment(text), (x) => x.segment);
+  }
+  return text.split(/(\s+)/);
+}
+
+/** Answer text streaming in word by word, like a real model response. */
+function Stream({ text, delay = 0, perWord = MS_PER_WORD }: { text: string; delay?: number; perWord?: number }) {
+  const parts = useMemo(() => words(text), [text]);
+  const count = useMotionValue(0);
+  const out = useTransform(count, (c) => parts.slice(0, Math.ceil(c)).join(""));
+  useEffect(() => {
+    const a = animate(count, parts.length, {
+      duration: (parts.length * perWord) / 1000,
+      delay: delay / 1000,
+      ease: "linear",
+    });
+    return () => a.stop();
+  }, [count, parts, perWord, delay]);
+  return <motion.span>{out}</motion.span>;
 }
 
 /** Text typed in with a motion value (no React re-render per character). */
@@ -226,6 +253,12 @@ function Composer({
   );
 }
 
+/** Source names cited in the chat answer, in order. */
+function sourceNames(m: LandingPreview["message"]): string[] {
+  const names = [m.intro.source, ...m.bullets.map((b) => b.source).filter((x): x is string => !!x)];
+  return Array.from(new Set(names));
+}
+
 /* ── Chat ─────────────────────────────────────────────────────────────── */
 
 function Cite({ children }: { children: string }) {
@@ -241,8 +274,33 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
           <Icon name="globe" size={11.2} />
           <span className="text-[10.4px]">{m.searchTrace}</span>
         </div>
+        {/* Sources found first, then the answer streams in. */}
+        <div className="flex flex-wrap gap-[6px]">
+          {sourceNames(m).map((name, i) => (
+            <motion.span
+              key={name}
+              initial={{ opacity: 0, y: 6, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.35, ease: EASE, delay: 0.1 + i * 0.14 }}
+              className={cn(miniGlass, "flex items-center gap-[5px] rounded-full py-[3.5px] pr-[9px] pl-[4px] text-[9.6px] font-medium")}
+            >
+              <span
+                className={cn(
+                  "flex size-[13px] items-center justify-center rounded-full text-[6.8px] font-bold text-white",
+                  faviconTone[m.sources[i % m.sources.length].tone],
+                )}
+              >
+                {name[0]}
+              </span>
+              {name}
+            </motion.span>
+          ))}
+        </div>
         <p className="text-[12.4px] leading-[20.8px]">
-          {m.intro.text} <Cite>{m.intro.source}</Cite>
+          <Stream text={m.intro.text} delay={650} />{" "}
+          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}>
+            <Cite>{m.intro.source}</Cite>
+          </motion.span>
         </p>
       </Beat>
       {beat >= 1 && (
@@ -252,9 +310,9 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
               key={b.title}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.28, ease: EASE, delay: i * 0.12 }}
+              transition={{ duration: 0.28, ease: EASE, delay: i * 0.52 }}
             >
-              <span className="font-semibold">{b.title}</span> {b.text}
+              <span className="font-semibold">{b.title}</span> <Stream text={b.text} delay={i * 520} perWord={30} />
               {b.source && (
                 <>
                   {" "}
@@ -275,7 +333,9 @@ function ChatAnswer({ p, beat }: { p: LandingPreview; beat: number }) {
         </div>
       </Beat>
       <Beat show={beat >= 3} className="flex flex-col items-start gap-[11.2px]">
-        <p className="text-[12.4px] leading-[20.8px]">{m.followUp}</p>
+        <p className="text-[12.4px] leading-[20.8px]">
+          <Stream text={m.followUp} />
+        </p>
         <div className={cn(miniGlass, "flex items-center gap-[6.4px] rounded-full py-[4.8px] pr-[9.6px] pl-[6.4px]")}>
           <div className="flex">
             {m.sources.map((s, i) => (
@@ -369,7 +429,9 @@ function LearnAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
       <Beat show={beat >= 1} focus="l-quiz">
         <div className={cn(miniGlass, "flex flex-col gap-[10px] rounded-[16px] px-[14px] py-[13px]")}>
           <span className="text-[9.6px] font-semibold tracking-[0.4px] text-brand-blue-strong uppercase">{l.quizLabel}</span>
-          <p className="font-mono text-[11.2px] leading-[17px]">{l.question}</p>
+          <p className="font-mono text-[11.2px] leading-[17px]">
+            <Stream text={l.question} perWord={26} />
+          </p>
           <div className="flex flex-col gap-[6px]">
             {l.options.map((o, i) => {
               const isCorrect = i === l.correct;
@@ -436,7 +498,9 @@ function ImageAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
             <Icon name="img-sparkles" size={12} />
             <span className="text-[9.6px] font-semibold tracking-[0.4px] uppercase">{im.improvedLabel}</span>
           </div>
-          <p className="text-[11.6px] leading-[18px] text-foreground-secondary">{im.improvedPrompt}</p>
+          <p className="min-h-[36px] text-[11.6px] leading-[18px] text-foreground-secondary">
+            <Stream text={im.improvedPrompt} delay={200} perWord={28} />
+          </p>
           <div className="flex items-center gap-[6px]">
             <motion.span
               data-focus="i-approve"
@@ -520,7 +584,9 @@ function DocsAnswer({ s, beat }: { s: LandingShowcase; beat: number }) {
         </div>
       </Beat>
       <Beat show={beat >= 1} className="flex flex-col items-start gap-[8px]" focus="d-answer">
-        <p className="text-[12.4px] leading-[20.8px]">{d.answer}</p>
+        <p className="text-[12.4px] leading-[20.8px]">
+          <Stream text={d.answer} />
+        </p>
         <span className="flex items-center gap-[5px] rounded-full bg-brand-orange/14 px-[9px] py-[4px] text-[9.6px] font-medium text-foreground">
           <Icon name="doc-file-sm" size={10} />
           {d.citation}

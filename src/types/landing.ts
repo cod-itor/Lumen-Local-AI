@@ -96,6 +96,8 @@ export type LandingShowcase = {
   thinking: string;
   /** Caption while the prompt is typed, sent and thought about. */
   opening: string;
+  /** Caption while the pointer opens the next workspace: "Opening {label}". */
+  switchTo: string;
   scenes: ShowcaseScene[];
   learn: {
     path: string;

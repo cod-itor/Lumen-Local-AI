@@ -22,7 +22,9 @@ import { SceneView, miniGlass, sceneDurations } from "./showcase-scenes";
 const CW = 1180;
 const CH = 748;
 /** How long a finished scene stays on screen before the next one plays. */
-const HOLD_MS = 3200;
+const HOLD_MS = 2000;
+/** Then the pointer travels to the next workspace's tab and clicks it. */
+const SWITCH_MS = 1750;
 const REDUCED_SCENE_MS = 4200;
 /** Px kept free for nav + tabs + caption so the window fits the screen. */
 const RESERVE = 300;
@@ -30,9 +32,9 @@ const RESERVE = 300;
 type Shot = [target: string | null, zoom: number];
 /** Camera per step: zoom onto the element being typed/clicked/answered. */
 const OPENING: Shot[] = [
-  ["composer", 1.75],
-  ["send", 1.95],
-  ["thread", 1.35],
+  ["composer", 1.6],
+  ["composer", 1.6],
+  ["thread", 1.3],
 ];
 const FOCUS: Record<ShowcaseScene["id"], Shot[]> = {
   chat: [...OPENING, ["c-intro", 1.55], ["c-bullets", 1.55], ["c-code", 1.5], [null, 1]],
@@ -40,7 +42,7 @@ const FOCUS: Record<ShowcaseScene["id"], Shot[]> = {
   image: [...OPENING, ["i-prompt", 1.6], ["i-approve", 2], ["i-grid", 1.45], [null, 1]],
   docs: [...OPENING, ["d-files", 1.7], ["d-answer", 1.6], ["d-viewer", 1.35], ["d-highlight", 1.65], [null, 1]],
 };
-type Aim = [target: string, mode: "click" | "hover" | "block"];
+type Aim = [target: string, mode: "click" | "hover" | "block" | "travel"];
 /** Demo pointer per step (it carries the caption). Missing = stays put. */
 const OPEN_AIM: Record<number, Aim> = { 0: ["send", "hover"], 1: ["send", "click"], 2: ["thread", "block"] };
 const CURSOR: Record<ShowcaseScene["id"], Record<number, Aim>> = {
@@ -57,7 +59,10 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 /** Box of `[data-focus=name]` in the camera layer's own (unzoomed) px. */
 function measure(layer: HTMLElement, scene: string, name: string) {
-  const el = layer.querySelector(`[data-scene="${scene}"] [data-focus="${name}"]`);
+  // "ui-*" targets are window chrome (tabs, sidebar), shared by every scene.
+  const el = name.startsWith("ui-")
+    ? layer.querySelector(`[data-focus="${name}"]`)
+    : layer.querySelector(`[data-scene="${scene}"] [data-focus="${name}"]`);
   if (!el) return null;
   const L = layer.getBoundingClientRect();
   const k = L.width / CW;
@@ -88,21 +93,31 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
   const onScreen = useInView(frame, { amount: 0.3 });
   const pageVisible = usePageVisible();
   const running = onScreen && pageVisible;
-  const shown = reduce ? durations.length : step;
-  // Only three captions per scene: asking → answering → finished.
-  const captionText = shown < 3 ? showcase.opening : shown < durations.length ? scene.beats[0] : scene.beats[1];
+  const last = durations.length;
+  const shown = reduce ? last : step;
+  const switching = !reduce && shown > last;
+  const nextScene = showcase.scenes[(active + 1) % n];
+  // Three captions per scene (asking → answering → finished), then the switch.
+  const captionText = switching
+    ? showcase.switchTo.replace("{label}", nextScene.label)
+    : shown < 3
+      ? showcase.opening
+      : shown < last
+        ? scene.beats[0]
+        : scene.beats[1];
 
   // Timeline: step through the scene, hold, then the next scene.
   useEffect(() => {
     if (!running) return;
-    const done = reduce || step >= durations.length;
-    const ms = reduce ? REDUCED_SCENE_MS : done ? HOLD_MS : durations[step];
+    // steps < last: the scene · last: hold the result · last + 1: click the next tab.
+    const end = reduce || step > last;
+    const ms = reduce ? REDUCED_SCENE_MS : step < last ? durations[step] : step === last ? HOLD_MS : SWITCH_MS;
     const t = setTimeout(
-      () => setState((s) => (done ? { active: (s.active + 1) % n, step: 0 } : { active: s.active, step: s.step + 1 })),
+      () => setState((s) => (end ? { active: (s.active + 1) % n, step: 0 } : { active: s.active, step: s.step + 1 })),
       ms,
     );
     return () => clearTimeout(t);
-  }, [active, step, running, reduce, durations, n]);
+  }, [active, step, running, reduce, last, durations, n]);
 
   return (
     <section aria-label={showcase.railLabel} className="relative flex flex-col gap-4 pb-4 sm:gap-5">
@@ -144,6 +159,7 @@ export function Showcase({ preview, showcase }: { preview: LandingPreview; showc
                 step={shown}
                 reduce={reduce}
                 caption={captionText}
+                switchTo={switching ? nextScene : null}
               >
                 <Window preview={preview} showcase={showcase} active={active} step={shown} />
               </Camera>
@@ -179,6 +195,7 @@ function Camera({
   step,
   reduce,
   caption,
+  switchTo,
   children,
 }: {
   layer: RefObject<HTMLDivElement | null>;
@@ -186,6 +203,8 @@ function Camera({
   step: number;
   reduce: boolean;
   caption: string;
+  /** When set, the pointer heads to this scene's tab and clicks it. */
+  switchTo: ShowcaseScene | null;
   children: React.ReactNode;
 }) {
   const x = useMotionValue(0);
@@ -205,13 +224,17 @@ function Camera({
     const el = layer.current;
     if (!el) return;
     const shots = FOCUS[scene.id];
-    const [target, zoom] = reduce ? [null, 1] : (shots[Math.min(step, shots.length - 1)] ?? [null, 1]);
+    const [target, zoom] =
+      reduce || switchTo ? [null, 1] : (shots[Math.min(step, shots.length - 1)] ?? [null, 1]);
     const at = target ? locate(el, scene.id, target) : null;
+    // While pointing at new text, frame it a little right of centre so the
+    // pointer + caption fit in the margin on its left.
+    if (at && !switchTo && CURSOR[scene.id][step]?.[1] === "block") at.x -= 120;
     const s = at ? zoom : 1;
     const tx = at ? clamp(CW / 2 - at.x * s, CW - CW * s, 0) : 0;
     const ty = at ? clamp(CH / 2 - at.y * s, CH - CH * s, 0) : 0;
     // Slow, smooth ease-in-out "camera move".
-    const t = { duration: 1.9, ease: CAMERA_EASE };
+    const t = { duration: 1.5, ease: CAMERA_EASE };
     const anims = [animate(x, tx, t), animate(y, ty, t), animate(scale, s, t)];
 
     if (reduce) {
@@ -219,7 +242,7 @@ function Camera({
       return () => anims.forEach((a) => a.stop());
     }
 
-    const glide = (px: number, py: number, duration: number) => {
+    const glide = (px: number, py: number, duration: number, beside = false) => {
       rest.current = { x: px, y: py };
       const sx = clamp(px * s + tx, 16, CW - 16);
       const sy = clamp(py * s + ty, 16, CH - 16);
@@ -228,36 +251,43 @@ function Camera({
         animate(cOpacity, 1, { duration: 0.6 }),
         animate(cx, sx, { duration, ease: CAMERA_EASE }),
         animate(cy, sy, { duration, ease: CAMERA_EASE }),
-        animate(labelX, sx > CW * 0.6 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
-        animate(labelY, sy > CH * 0.72 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
+        animate(labelX, beside || sx > CW * 0.6 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
+        animate(labelY, beside ? "-50%" : sy > CH * 0.72 ? "-100%" : "0%", { duration: 1.4, ease: CAMERA_EASE }),
       );
     };
 
-    const aimAt = CURSOR[scene.id][step];
+    // Learning path lives in the sidebar; the others are window tabs.
+    const tabOf = (sc: ShowcaseScene) => (sc.id === "learn" ? `ui-nav-${sc.nav}` : `ui-tab-${sc.tab}`);
+    const aimAt: Aim | undefined = switchTo ? [tabOf(switchTo), "travel"] : CURSOR[scene.id][step];
     let timer: ReturnType<typeof setTimeout> | undefined;
     if (aimAt) {
       const [name, mode] = aimAt;
       const go = () => {
         const b = measure(el, scene.id, name);
         if (!b) return;
-        // Buttons: point at the centre. Blocks: rest just under the new
-        // content's left edge, where the next part hasn't appeared yet.
-        const px = mode === "block" ? b.left + Math.min(56, b.width / 3) : b.left + b.width / 2;
-        const py = mode === "block" ? b.top + b.height + 6 : b.top + b.height / 2;
-        glide(px, py, mode === "click" ? 0.9 : 1.8);
-        if (mode === "click") anims.push(animate(cScale, [1, 0.8, 1], { duration: 0.5, delay: 0.25, ease: "easeInOut" }));
+        // Buttons: point at the centre. Text blocks: point from the left
+        // margin, caption beside it, so nothing covers the streaming text.
+        const block = mode === "block";
+        const px = block ? b.left - 14 : b.left + b.width / 2;
+        const py = block ? b.top + Math.min(16, b.height / 2) : b.top + b.height / 2;
+        glide(px, py, mode === "click" ? 0.7 : mode === "travel" ? 1.15 : 1.4, block);
+        if (mode === "click" || mode === "travel")
+          anims.push(
+            animate(cScale, [1, 0.8, 1], { duration: 0.45, delay: mode === "travel" ? 1.2 : 0.2, ease: "easeInOut" }),
+          );
       };
       if (mode === "click") go();
+      else if (mode === "travel") timer = setTimeout(go, 150);
       else timer = setTimeout(go, 400);
     } else {
       // No new target: stay on the same spot while the camera moves.
-      glide(rest.current.x, rest.current.y, 1.9);
+      glide(rest.current.x, rest.current.y, 1.5, true);
     }
     return () => {
       clearTimeout(timer);
       anims.forEach((a) => a.stop());
     };
-  }, [layer, scene.id, step, reduce, x, y, scale, cx, cy, cOpacity, cScale, labelX, labelY]);
+  }, [layer, scene.id, step, reduce, switchTo, x, y, scale, cx, cy, cOpacity, cScale, labelX, labelY]);
 
   return (
     <>
@@ -433,6 +463,7 @@ function Window({
             return (
               <span
                 key={t.label}
+                data-focus={`ui-tab-${i}`}
                 className={cn(
                   "flex items-center gap-[5.6px] rounded-[9.6px] px-[12.8px] py-[7.2px] text-[10.8px] font-medium transition-[background-color,color,box-shadow] duration-300",
                   on ? "bg-surface-raised text-foreground shadow-soft" : "text-muted-foreground",
@@ -496,6 +527,7 @@ function Sidebar({
       {p.nav.map((n, i) => (
         <div
           key={n.label}
+          data-focus={`ui-nav-${i}`}
           className={cn(
             "flex h-8 items-center gap-[9.6px] rounded-[9.6px] pr-[6.4px] pl-2 text-foreground transition-colors duration-300",
             i === nav && "bg-nav-active/60 dark:bg-foreground/30",

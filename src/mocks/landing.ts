@@ -80,6 +80,7 @@ const en: LandingContent = {
     railLabel: "See each workspace",
     thinking: "Thinking on your laptop…",
     opening: "Asking the model on your laptop",
+    switchTo: "Next: {label}",
     scenes: [
       {
         id: "chat",
@@ -372,6 +373,7 @@ const km: LandingContent = {
     railLabel: "មើលកន្លែងធ្វើការនីមួយៗ",
     thinking: "កំពុងគិតលើកុំព្យូទ័ររបស់អ្នក…",
     opening: "កំពុងសួរម៉ូដែលលើកុំព្យូទ័ររបស់អ្នក",
+    switchTo: "បន្ទាប់៖ {label}",
     scenes: [
       {
         id: "chat",
