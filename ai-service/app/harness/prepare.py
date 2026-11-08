@@ -457,6 +457,14 @@ async def _prepare_structured(req: dict[str, Any], eval_case: Any) -> AsyncItera
         "taskInput": ti,
         "metrics": {"estimatedPromptTokens": None, "topSim": None, "chunksUsed": 0, "abstainedBeforeModel": False},
     }
+    if task == "IMAGE_PROMPT":  # "Use my original" needs the request in English (the image model reads English)
+        request = str(ti.get("request") or "").strip()
+        english = request
+        if re.search(r"[\u1780-\u17FF]", request):
+            from app.models.translator import translate_markdown
+
+            english = (await translate_markdown(request, "KM", "EN")) or request
+        context["requestEnglish"] = english
     if eval_case is not None:
         context["evalCaseId"] = eval_case.id
         context["evalTask"] = task

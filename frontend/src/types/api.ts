@@ -344,3 +344,24 @@ export interface QuizResultDto {
   results: { index: number; selected: number | null; correctIndex: number; correct: boolean; explanation: string; evidence: string }[];
   step: LearningStepDto; nextStep: LearningStepDto | null;
 }
+
+// ---------------------------------------------------------------- Images (API_CONTRACT §4.8)
+export type AspectRatio = "SQUARE" | "PORTRAIT" | "LANDSCAPE" | "WIDE";
+export interface ImageSessionDto { id: UUID; title: string; coverImageId: UUID | null; createdAt: Instant; updatedAt: Instant; }
+export interface ImageDto {
+  id: UUID; sessionId: UUID; parentId: UUID | null; kind: "GENERATED" | "VARIATION" | "BG_REMOVED"; prompt: string;
+  originalPrompt: string | null; url: string; width: number; height: number; meta: Record<string, unknown>; createdAt: Instant;
+}
+export interface ImageClarifyResult { questions: { id: string; question: string; options: string[] }[]; }
+export interface ImagePromptResult { prompt: string; originalPrompt: string; originalPromptEnglish: string; }
+
+// ---------------------------------------------------------------- System (API_CONTRACT §4.11)
+export interface SystemStatusDto {
+  backend: { version: string };
+  ai: {
+    reachable: boolean; profile: "lite" | "full" | null;
+    features: { hostChat: boolean; images: boolean; bgRemoval: boolean; voice: boolean; tts: boolean; translation: boolean; webSearch: boolean; guardClassifier: boolean };
+    loadedModels: { name: string; sizeMb: number }[];
+    queue: { heavyJobsQueued: number; heavyJobRunning: boolean };
+  };
+}

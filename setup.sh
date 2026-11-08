@@ -2,6 +2,9 @@
 # One-time setup of Lumen on a new Mac. Safe to run again: it skips what is already done.
 set -euo pipefail
 cd "$(dirname "$0")"
+# ./setup.sh --images also installs image generation (FLUX.2 klein 4B, 4-bit: ~4.6 GB + ~1 GB of libraries).
+IMAGES=false; for a in "$@"; do [ "$a" = "--images" ] && IMAGES=true; done
+[ -d ai-service/models/flux2-klein-4b-mflux-4bit/transformer ] && IMAGES=true
 say() { printf "\n\033[1m▸ %s\033[0m\n" "$*"; }
 need() { command -v "$1" >/dev/null || { echo "Missing: $1 — $2"; exit 1; }; }
 
@@ -35,9 +38,18 @@ ollama pull llama3.2
 ollama pull embeddinggemma
 
 say "AI service (Python)"
-(cd ai-service && uv sync --frozen && uv run python scripts/validate_rules.py >/dev/null)
+UVG=(); $IMAGES && UVG=(--group images)
+(cd ai-service && uv sync --frozen ${UVG[@]+"${UVG[@]}"} && uv run ${UVG[@]+"${UVG[@]}"} python scripts/validate_rules.py >/dev/null)
 say "Khmer translation model (one-time ~3 GB download, keeps 0.6 GB)"
 (cd ai-service && uv run python scripts/download_models.py --translation)
+say "Background removal model (isnet-general-use, 170 MB)"
+(cd ai-service && uv run python scripts/download_models.py --background)
+if $IMAGES; then
+  say "Image generation model (FLUX.2 klein 4B, 4-bit, ~4.6 GB)"
+  (cd ai-service && uv run --group images python scripts/download_models.py --images)
+else
+  echo "Image generation is off. Run ./setup.sh --images to install it (~6 GB)."
+fi
 
 say "Backend (Java)"
 (cd backend && ./mvnw -q -DskipTests package)

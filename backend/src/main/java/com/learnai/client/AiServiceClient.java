@@ -60,6 +60,11 @@ public class AiServiceClient {
         return c;
     }
 
+    /** AI service /status (loaded models, queue). */
+    public JsonNode status() {
+        return getJson("/status", Duration.ofSeconds(4));
+    }
+
     public JsonNode profile(String kind, String model, JsonNode overrides) {
         ObjectNode body = json.createObjectNode().put("kind", kind).put("model", model);
         body.set("overrides", overrides == null ? json.createObjectNode() : overrides);
@@ -97,6 +102,16 @@ public class AiServiceClient {
     /** POST /rag/ingest (AI_SERVICE.md §13): progress / done / error events. */
     public Flux<AiEvent> ingest(JsonNode req) {
         return stream("/rag/ingest", req, Duration.ofSeconds(cfg.jobTimeoutS()));
+    }
+
+    /** POST /images/generate or /images/variations (AI_SERVICE.md §10.1): progress / done / error. */
+    public Flux<AiEvent> images(boolean variations, JsonNode req) {
+        return stream(variations ? "/images/variations" : "/images/generate", req, Duration.ofSeconds(cfg.jobTimeoutS()));
+    }
+
+    public JsonNode removeBackground(String inputPath, String outputPath) {
+        ObjectNode body = json.createObjectNode().put("inputPath", inputPath).put("outputPath", outputPath);
+        return postJson("/images/remove-background", body, Duration.ofSeconds(180));
     }
 
     public void deleteDocumentChunks(java.util.UUID documentId) {

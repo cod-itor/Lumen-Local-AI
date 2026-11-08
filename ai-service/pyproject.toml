@@ -21,9 +21,12 @@ dependencies = [
     "ctranslate2==4.8.3",
     "sentencepiece==0.2.2",
     "trafilatura==2.3.1",
+    "rembg[cpu]==2.0.85",   # background removal; model isnet-general-use (Apache-2.0), never bria-rmbg
 ]
 
 [dependency-groups]
+# Opt-in FLUX.2 [klein] image generation on Apple Silicon: `./setup.sh --images` (adds torch; ~4.6 GB model).
+images = ["mflux==0.23.0"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",

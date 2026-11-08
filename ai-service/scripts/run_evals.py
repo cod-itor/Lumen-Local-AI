@@ -25,11 +25,22 @@ async def run_case(case_id: str, suite: str, model: str, profile: dict) -> dict:
     from app.harness.prepare import prepare
     from app.models import ollama_runtime
 
-    user = {"id": "00000000-0000-0000-0000-000000000000", "timezone": "Asia/Phnom_Penh",
-            "now": datetime.now(UTC).isoformat(), "outputLanguage": "EN", "guardProfile": "TEST"}
+    user = {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "timezone": "Asia/Phnom_Penh",
+        "now": datetime.now(UTC).isoformat(),
+        "outputLanguage": "EN",
+        "guardProfile": "TEST",
+    }
     provider = {"kind": "HOST", "model": model, "profile": profile}
-    req = {"turnId": f"eval-{case_id}", "task": "EVAL_CASE", "attempt": 1, "user": user, "provider": provider,
-           "taskInput": {"suite": suite, "caseId": case_id}}
+    req = {
+        "turnId": f"eval-{case_id}",
+        "task": "EVAL_CASE",
+        "attempt": 1,
+        "user": user,
+        "provider": provider,
+        "taskInput": {"suite": suite, "caseId": case_id},
+    }
     prepared = None
     async for name, data in prepare(req):
         if name == "prepared":
@@ -38,11 +49,17 @@ async def run_case(case_id: str, suite: str, model: str, profile: dict) -> dict:
             return {"caseId": case_id, "passed": False, "error": f"prepare ended with {name}"}
     assert prepared is not None
     out = {"content": "", "finishReason": "ERROR", "stats": None}
-    async for name, data in ollama_runtime.generate({
-        "turnId": req["turnId"], "target": {"kind": "HOST", "model": model}, "messages": prepared["messages"],
-        "params": prepared["params"], "outputSchema": prepared["outputSchema"], "modelProfile": profile,
-        "clientGuard": prepared["clientGuard"],
-    }):
+    async for name, data in ollama_runtime.generate(
+        {
+            "turnId": req["turnId"],
+            "target": {"kind": "HOST", "model": model},
+            "messages": prepared["messages"],
+            "params": prepared["params"],
+            "outputSchema": prepared["outputSchema"],
+            "modelProfile": profile,
+            "clientGuard": prepared["clientGuard"],
+        }
+    ):
         if name == "done":
             out = {"content": data["content"], "finishReason": data["finishReason"], "stats": data.get("stats")}
         elif name == "error":

@@ -1,6 +1,6 @@
 # rules/harness.yaml — numeric settings and patterns for the harness (HARNESS.md).
 # Values marked [CALIBRATE] must be re-tuned with scripts/calibrate.py (HARNESS.md §13.2).
-version: 4
+version: 5
 
 tokenEstimate:
   asciiCharsPerToken: 3.6
@@ -173,6 +173,20 @@ quiz:
   # A question is dropped when its marked answer shares no content word with its own evidence + explanation while
   # another option shares at least this share of its words (the model marked the wrong option). Deterministic.
   answerMismatchOverlap: 0.5
+
+image:
+  # IMAGE_CLARIFY: a question about a detail the request already gives is dropped (deterministic; small models
+  # over-ask). A detail counts as given when one of its words appears in the request as a whole word or word start.
+  givenDetails:
+    style: [photo, photograph, realistic, cartoon, anime, illustration, illustrated, drawing, sketch, painting, painted, oil, watercolor, watercolour, "3d", render, pixel, vector, flat, digital art, poster, logo, icon]
+    colors: [color, colour, colors, colours, red, orange, yellow, green, blue, purple, pink, brown, black, white, gray, grey, golden, gold, silver, pastel, warm, cool, monochrome, neon]
+    mood: [mood, calm, cozy, cosy, happy, sad, funny, dark, bright, peaceful, dramatic, mysterious, playful, serene, scary, cheerful, romantic]
+    setting: [beach, forest, city, street, room, kitchen, garden, park, mountain, mountains, sea, ocean, river, lake, space, desert, field, sky, snow, snowy, sofa, window, windowsill, temple, village, school, office, background, indoors, outdoors]
+    composition: [close-up, closeup, portrait, wide shot, landscape, top view, aerial, centered, full body]
+  # The subject counts as given when the request has a content word that is not a detail word or an ignore word.
+  # IMAGE_PROMPT: the prompt must keep at least one content word of the request (the subject); request words that
+  # only name the medium are ignored. Checked for English requests only (Khmer requests are translated first).
+  promptIgnoreWords: [something, anything, thing, stuff, image, picture, photo, drawing, draw, make, create, generate, please, want, show, style, poster, wallpaper, nice, beautiful, cool]
 
 evals:                             # Model Test scoring (HARNESS.md §12.5); read by the AI service and sent to the backend
   weights: { SAFETY: 2, INJECTION: 2, RAG_FAITHFULNESS: 2, RAG_ABSTAIN: 2, KNOWLEDGE_HUMILITY: 2, TOOL_USE: 1, INSTRUCTION: 1, JSON: 1, KHMER: 1 }

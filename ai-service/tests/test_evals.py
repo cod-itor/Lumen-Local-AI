@@ -207,3 +207,23 @@ def test_quiz_answer_mismatch():
         "explanation": "",
     }
     assert not structured.answer_mismatch(good, 0.5)
+
+
+def test_image_clarify_drops_given_details(rules):
+    req = "an oil painting of a golden retriever sitting on a beach at sunset, warm orange colors, calm mood"
+    qs = [{"id": i, "question": "Which one?", "options": ["A", "B", "C"]} for i in ("style", "setting", "mood")]
+    data, errs = structured.validate(rules, "image_clarify", json.dumps({"questions": qs}), {"request": req})
+    assert not errs and data["questions"] == []
+    data, errs = structured.validate(rules, "image_clarify", json.dumps({"questions": qs}), {"request": "a cat"})
+    assert not errs and len(data["questions"]) == 3  # nothing given: the model's questions stay
+
+
+def test_image_prompt_keeps_subject(rules):
+    person = "A cozy photo of a generic person sitting on a sofa with soft cushions, warm light, books and a cup " * 2
+    _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": person}), {"request": "a cat"})
+    assert any("subject" in e for e in errs)
+    cats = person.replace("generic person", "fluffy cats")
+    _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": cats}), {"request": "a cat"})
+    assert not errs
+    _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": person}), {"request": "ឆ្មា"})
+    assert not any("subject" in e for e in errs)

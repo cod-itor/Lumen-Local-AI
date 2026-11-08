@@ -9,7 +9,8 @@ ollama list >/dev/null 2>&1 || { open -a Ollama; until ollama list >/dev/null 2>
 
 pids=()
 trap 'echo; echo "Stopping…"; kill "${pids[@]}" 2>/dev/null; wait; exit 0' INT TERM
-(cd ai-service && exec uv run uvicorn app.main:app --host 127.0.0.1 --port 8001) > logs/ai.log 2>&1 & pids+=($!)
+UVG=(); [ -d ai-service/models/flux2-klein-4b-mflux-4bit/transformer ] && UVG=(--group images)
+(cd ai-service && exec uv run ${UVG[@]+"${UVG[@]}"} uvicorn app.main:app --host 127.0.0.1 --port 8001) > logs/ai.log 2>&1 & pids+=($!)
 (cd backend && exec java -jar target/*.jar) > logs/backend.log 2>&1 & pids+=($!)
 (cd frontend && exec npx next start -p 3000) > logs/frontend.log 2>&1 & pids+=($!)
 

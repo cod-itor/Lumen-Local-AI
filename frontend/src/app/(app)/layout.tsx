@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     image: "/image",
   };
 
-  // Section-specific sidebar bodies (Documents is live; Image still reads its mocks until phase 12).
+  // Section-specific sidebar bodies (both live).
   const sidebars = {
     documents: <DocumentsSidebarList />,
     image: <ImageSidebarBody />,

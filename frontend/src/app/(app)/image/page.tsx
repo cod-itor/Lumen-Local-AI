@@ -1,8 +1,6 @@
-import { ImageThread } from "@/components/image/image-thread";
-import { getImageThread } from "@/services/images";
+import { ImageStudio } from "@/components/image/live/image-studio";
 
-/** Figma "06 · Image · Prompt approval" */
-export default async function ImagePage() {
-  const thread = await getImageThread();
-  return <ImageThread thread={thread} />;
+/** Figma "06 · Image · Prompt approval" + "07 · Generated images", live (`?s=` = the open session). */
+export default function ImagePage() {
+  return <ImageStudio />;
 }

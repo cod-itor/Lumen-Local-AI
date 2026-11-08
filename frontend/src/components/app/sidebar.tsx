@@ -286,7 +286,7 @@ export function SidebarHistoryItem({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-[34px] w-full shrink-0 items-center gap-2 rounded-[10px] px-[10px] transition-colors",
+        "group relative flex h-[34px] w-full shrink-0 items-center gap-2 rounded-[10px] px-[10px] transition-colors",
         !active && "hover:bg-accent/60",
       )}
     >

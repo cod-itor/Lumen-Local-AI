@@ -178,12 +178,12 @@ def _schema_checks(r: Rules, case: EvalCase, out: str, want: dict[str, Any], ti:
             res.append(_check(name, obj.get("done") is v, f"done = {obj.get('done')}"))
         elif k == "learning_topic":
             res.append(_check(name, obj.get("topic") == v, f"topic = {obj.get('topic')}"))
-        elif k == "clarify_min":
-            c = len(obj.get("questions") or [])
-            res.append(_check(name, c >= int(v), f"{c} questions (min {v})"))
-        elif k == "clarify_max":
-            c = len(obj.get("questions") or [])
-            res.append(_check(name, c <= int(v), f"{c} questions (max {v})"))
+        elif k in ("clarify_min", "clarify_max"):
+            # Count what the user is shown: the harness drops questions about details the request already gives.
+            given = structured.given_details(str(ti.get("request") or ""), r)
+            c = sum(1 for q in obj.get("questions") or [] if isinstance(q, dict) and q.get("id") not in given)
+            ok = c >= int(v) if k == "clarify_min" else c <= int(v)
+            res.append(_check(name, ok, f"{c} questions shown ({'min' if k == 'clarify_min' else 'max'} {v})"))
         elif k == "prompt_words":
             c = len(str(obj.get("prompt") or "").split())
             lo, hi = int(v.get("min", 0)), int(v.get("max", 10**6))

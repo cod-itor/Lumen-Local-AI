@@ -190,11 +190,42 @@ def _has_url(obj: Any) -> bool:
     return False
 
 
+def _mentions(text: str, word: str) -> bool:
+    return re.search(rf"(?<![a-z0-9]){re.escape(word.lower())}", text.lower()) is not None
+
+
+def given_details(request: str, r: Rules) -> set[str]:
+    """Clarify ids whose detail the IMAGE REQUEST already gives (rules/harness.yaml image.givenDetails)."""
+    img = r.harness.get("image") or {}
+    words = img.get("givenDetails") or {}
+    given = {k for k, ws in words.items() if any(_mentions(request, w) for w in ws)}
+    detail = {w.lower() for ws in words.values() for w in ws}
+    ignore = {w.lower() for w in img.get("promptIgnoreWords") or []} | detail
+    if any(w not in _STOP and w not in ignore for w in re.findall(r"[a-z]{3,}", request.lower())):
+        given.add("subject")  # an English content word that is not a detail or filler names the subject
+    return given
+
+
+def lost_subject(request: str, prompt: str, r: Rules) -> bool:
+    """An English request has content words but the prompt keeps none of them (word start match: cat ~ cats)."""
+    letters = [c for c in request if c.isalpha()]
+    if not letters or sum(1 for c in letters if c.isascii()) / len(letters) < 0.8:
+        return False
+    ignore = {w.lower() for w in (r.harness.get("image") or {}).get("promptIgnoreWords") or []}
+    words = [w for w in re.findall(r"[a-z0-9]{3,}", request.lower()) if w not in _STOP and w not in ignore]
+    if not words:
+        return False
+    p = prompt.lower()
+    return not any(_mentions(p, w[: max(3, min(len(w), 5))]) for w in words)
+
+
 def semantic(schema_id: str, obj: dict[str, Any], ti: dict[str, Any], r: Rules) -> tuple[dict[str, Any], list[str]]:
     """RULES.md §5 semantic checks. Returns (possibly cleaned data, errors)."""
     errors: list[str] = []
     if schema_id == "image_clarify":
-        qs = obj.get("questions") or []
+        given = given_details(str(ti.get("request") or ""), r)
+        qs = [q for q in obj.get("questions") or [] if q.get("id") not in given]
+        obj = {**obj, "questions": qs}
         if len(qs) > 3:
             errors.append(f"$.questions: at most 3 questions, got {len(qs)}")
         ids = [q.get("id") for q in qs]
@@ -213,6 +244,8 @@ def semantic(schema_id: str, obj: dict[str, Any], ti: dict[str, Any], r: Rules) 
         letters = [c for c in p if c.isalpha()]
         if letters and sum(1 for c in letters if c.isascii()) / len(letters) < 0.8:
             errors.append("$.prompt: must be written in English")
+        if lost_subject(str(ti.get("request") or ""), p, r):
+            errors.append("$.prompt: keep the subject of the IMAGE REQUEST (it is missing from the prompt)")
         for rule in (r.guardrails.get("imagePolicy") or {}).get("blockPatterns") or []:
             if re.search(rule["pattern"], p, re.IGNORECASE | re.UNICODE):
                 errors.append(f"$.prompt: breaks the image policy ({rule['category']})")

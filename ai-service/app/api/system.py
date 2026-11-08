@@ -26,7 +26,7 @@ def features(s: Settings) -> dict[str, bool]:
     # frontend never offers something that would fail (models are downloaded per feature to save disk).
     return {
         "hostChat": pick(s.feature_host_chat, full),
-        "images": pick(s.feature_images, full) and _module_available(image_lib),
+        "images": pick(s.feature_images, full) and _module_available(image_lib) and _image_model_ready(s),
         "bgRemoval": pick(s.feature_bg_removal, True) and _module_available("rembg"),
         "voice": pick(s.feature_voice, True) and _module_available("faster_whisper"),
         "tts": pick(s.feature_tts, False),
@@ -34,6 +34,12 @@ def features(s: Settings) -> dict[str, bool]:
         "webSearch": pick(s.feature_web_search, True),
         "guardClassifier": s.guard_injection_classifier or s.guard_content_classifier,
     }
+
+
+def _image_model_ready(s: Settings) -> bool:
+    if s.image_backend != "mflux":
+        return True  # diffusers downloads into the Hugging Face cache on first use
+    return (s.image_model_dir / "transformer").is_dir() or any(s.image_model_dir.glob("*.safetensors"))
 
 
 def _module_available(name: str) -> bool:

@@ -25,8 +25,11 @@ public class JobRunner {
     private final JobRepository jobs;
     private final DocumentRepository documents;
     private final IngestJobHandler ingest;
+    private final ImageJobHandler imageJobs;
     private final TransactionTemplate tx;
     private final Semaphore ingestSlots = new Semaphore(4);
+    /** The AI service runs one image job at a time; one more waits there as QUEUED. */
+    private final Semaphore imageSlots = new Semaphore(1);
     private final ExecutorService jobExecutor =
             Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("job-", 0).factory());
 
@@ -41,6 +44,25 @@ public class JobRunner {
                 if (doc != null) {
                     tx.executeWithoutResult(s -> documents.failIfOpen(UUID.fromString(doc),
                             "Indexing was interrupted. Please upload the file again."));
+                }
+            });
+        }
+    }
+
+    @Scheduled(fixedDelay = 1000, initialDelay = 2500)
+    public void pollImages() {
+        if (imageSlots.availablePermits() == 0) return;
+        List<UUID> claimed = tx.execute(s -> jobs.claim(List.of("IMAGE", "VARIATION", "BG_REMOVAL"), 1));
+        if (claimed == null) return;
+        for (UUID id : claimed) {
+            imageSlots.acquireUninterruptibly();
+            jobExecutor.submit(() -> {
+                try {
+                    imageJobs.run(id);
+                } catch (RuntimeException e) {
+                    log.error("job {} crashed", id, e);
+                } finally {
+                    imageSlots.release();
                 }
             });
         }

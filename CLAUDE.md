@@ -151,7 +151,7 @@ ollama pull llama3.2 && ollama pull embeddinggemma                # once (≈2.6
 cd ai-service && cp .env.example .env && uv sync    # INTERNAL_TOKEN = backend AI_SERVICE_TOKEN
 uv run python scripts/validate_rules.py                                # rules/ loader checks
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8001
-uv run python scripts/download_models.py                               # TODO phases 8/12/13 (per-feature downloads)
+uv run python scripts/download_models.py --translation --background   # per feature; --images needs `uv sync --group images` (or ./setup.sh --images)
 cd backend && cp .env.example .env && ./mvnw spring-boot:run           # Flyway migrates on start (fill JWT_SECRET etc.)
 open http://localhost:8080/swagger-ui.html
 cd frontend && npm install && npm run dev                              # http://localhost:3000
@@ -231,8 +231,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 9 | Model Test | **done** (2026-11-08) — AI: `evals/graders.py` (every §12.3 check, deterministic), `evals/fixtures.py` (in-memory fixture corpus, `fx:` chunk ids, forced top 3), EVAL_CASE prepare (profile TEST, seed 42, EN output, `answerLanguage` override) + finalize (case's own finalize once, grade F1–F3 text, `guardWouldBlock`); structured tasks for every non-MESSAGE task (`harness/structured.py`: task input blocks §7.7, JSON extraction + repairs, schema + RULES §5 semantic checks, repair messages, TITLE cleaning, lesson headings); `scripts/run_evals.py`. Backend: `eval_runs`/`eval_results`, `/api/evals/*`, generic `TaskHandler` (target + lock, taskInput, apply, onTerminal) with `EvalCaseTaskHandler` + `TitleTaskHandler`, error results on FAILED/EXPIRED, 5 errors → FAILED, scores from `rules/harness.yaml → evals.weights`. Frontend: `/test` (start Quick/Full, progress, pause/resume/cancel, scorecard, failed cases, history + compare), `lib/harness/runTask.ts` (non-MESSAGE turns, SERVER + CLIENT with repair loop), module-level runner store |
 | 10 | Web search | **done** (2026-11-08) — AI: `web/searxng.py` (JSON API, `WEB_UNAVAILABLE`), `guard/url_safety.safe_get` (every hop checked, connect to the validated IP with original Host + SNI, ≤ 3 manual redirects, size/time limits), `web/extract.py` (trafilatura, precision, tables kept), `web/evidence.py` (query rule §7.4.1, filter + per-domain cap, parallel fetch, chunk 300 tokens, embed, 24 h cache in `chunks` `source=WEB`, best 2 per page / 5 overall, injection-flagged chunks dropped), WEB prepare (edited query re-checked by the input guard, `needs_approval`, SEARCHING → READING, abstain `NO_WEB_RESULTS` / `WEB_UNAVAILABLE`), hourly purge; WEB grounding reuses F9–F11. Backend: `POST /api/harness/turns/{id}/approval` (APPROVE / EDIT 1–200 chars, AWAITING_APPROVAL → PREPARING, query stored in the request, same TurnRunner). Frontend: approval wait in `useHarnessTurn` (`respond`, Stop cancels), `SearchApproval` card, WEB source chips (links, `noopener noreferrer`), WEB grounding badge, TURN_ON/VERIFY_WITH_WEB_SEARCH re-ask, "Ask before searching" switch in Settings → Privacy |
 | 11 | Learning paths + quizzes | **done** (2026-11-08) — Backend: `learning_paths`/`learning_steps`/`quizzes`/`quiz_attempts` entities, `LearningService` (create with `/guard/check`, answers, skip, plan edit with §9.9 checks, approve → steps, restart, quiz submit: score, best score, ≥ 0.7 unlocks the next step or completes the path; answers hidden until submit), `/api/learning-paths`, `/api/learning-steps`, `/api/quizzes`; task handlers LEARN_QUESTION / LEARN_PLAN / LEARN_STEP (FAILED → contentStatus FAILED) / QUIZ, lock `path:{id}`, 409 while a turn holds it. AI: quiz answer–evidence check (`rules/harness.yaml → quiz`). Frontend: live `/learn` (path list + new goal, interview with option chips, editable plan + approve, step list + lesson Markdown + quiz → result with explanations/evidence, retake, restart, delete) |
-| 12 | Images | next |
-| 13 | Voice | todo |
+| 12 | Images | **done** (2026-11-08) — AI: `images/flux.py` (mflux 0.23 `Flux2Klein`, prebuilt 4-bit weights, one job at a time, unload after job, progress QUEUED → LOADING_MODEL → GENERATING), `images/background.py` (rembg 2.0.85 `isnet-general-use`), `/images/generate`, `/images/variations` (SSE), `/images/remove-background`; paths relative to STORAGE_DIR, `.png` only; IMAGE_PROMPT pivots a Khmer request to English for "Use my original"; clarify drops questions about details the request already gives and the prompt must keep the request's subject (`rules/harness.yaml → image`). Backend: `image_sessions`/`images`, `ImageService` (feature check → 503 FEATURE_UNAVAILABLE, shared storage quota, IMAGE_PROMPT guard), `ImageJobHandler` (IMAGE / VARIATION / BG_REMOVAL, one image slot), `/api/image-sessions`, `/api/images/*`, `/api/files/images/{id}`, IMAGE_CLARIFY / IMAGE_PROMPT task handlers, `GET /api/system/status`. Frontend: live Image tab (`lib/images.tsx` sessions + features, `components/image/live/image-studio.tsx`: clarify chips + Skip, editable approval card with Generate / Use my original / Cancel, aspect ratio + count, job progress, session gallery, selected-image panel with variations / remove background / download / delete), sidebar sessions; mocks removed |
+| 13 | Voice | next |
 | 14 | Calibration + polish | todo |
 
 ## 10. Decisions log
@@ -330,6 +330,24 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   ("Rain is formed by the sun") that the grader missed before — in the app the repair loop retries it.
   Live API run (photosynthesis): 3 interview questions → 8-step plan → approve → lesson 1 → quiz → 0 % then 100 % →
   step 2 CURRENT; answers never sent before submit; wrong-state calls → 409.
+- 2026-11-08 — Phase 12: image generation is **opt-in**: `./setup.sh --images` installs the `images` uv group
+  (`mflux==0.23.0`, Apple MLX) and downloads the prebuilt 4-bit `Runpod/FLUX.2-klein-4B-mflux-4bit` (Apache-2.0, not
+  gated, 4.6 GB) into `ai-service/models/flux2-klein-4b-mflux-4bit`; `start.sh` adds `--group images` when that folder
+  exists. Without it `features.images` is false, Generate is disabled with "needs the host machine" and the API returns
+  503 FEATURE_UNAVAILABLE; clarify and prompt writing still work with any model. Background removal is always installed:
+  `rembg[cpu]==2.0.85` + `isnet-general-use` (Apache-2.0; never `bria-rmbg`, non-commercial), model file checked by md5
+  `fc16ebd8b0c10d971d3513d564d01e29`. AI image paths are relative to STORAGE_DIR and must end in `.png`; the AI service
+  runs one image job at a time and unloads FLUX after each job. Variations re-run the prompt with new seeds (mflux klein
+  is used prompt-only). New `GET /api/system/status` (API_CONTRACT §4.11, cached 10 s) tells the UI which features exist.
+  Routes: `/image?s=<sessionId>` (the old mock `/image/[id]` route and image mocks were removed). New rules (harness v5
+  `image`): clarify questions about details the request already gives are dropped (`givenDetails` word lists; an
+  English content word that is not a detail word counts as the subject), and an IMAGE_PROMPT that keeps none of the
+  request's content words is rejected → repair (found live: llama3.2 turned "a cat" into "a generic person"). The
+  Model Test clarify counts now grade the questions the user is shown. Model Test FULL after the rule change
+  (rules `rules-4022108442d3`): **0.915**, safety with guardrails 1.0; the only new pass needed was
+  `json-image-clarify-specific`, which passes after the grader change (single-case re-run; expected full score 0.927).
+  Live API run: clarify → 3 questions for "a cat", 1 for a detailed request; prompt keeps the subject; generate → 503
+  without FLUX; background removal job → transparent PNG; deleting a session deletes its files.
 
 ## 11. Known issues / gotchas
 
@@ -352,8 +370,9 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   copies the raw `.ts` to `static/media` (unused, harmless).
 - llama3.2 3B sometimes abstains when a DOC source carries the "instruction-like text" label even if the answer
   is in it (it never followed the injected instruction in tests) — revisit in calibration (phase 14).
-- NLLB 600M handles everyday Khmer well but misses technical terms (e.g. "រស្មីសំយោគ" photosynthesis → "sound").
-  A larger NLLB (1.3B/3.3B) or MADLAD would help but costs RAM/disk; revisit in phase 14.
+- NLLB 600M int8 is weak for Khmer, also on everyday words ("ឆ្មា…សាឡុង" cat on a sofa → "a pig's head… saloon";
+  EN→KM "a cat on a sofa" → "a dog on a chair"); tokens and language tags were checked and are correct. Khmer image
+  requests therefore get poor prompts. A larger NLLB (1.3B/3.3B) or MADLAD would help but costs RAM/disk; phase 14.
 - `csam_cooccurrence` matches topic words (e.g. "sex education for children" → BLOCK); acceptable for now (critical
   category), revisit with the Model Test over-refusal cases.
 - Model Test KHMER checks measure script, not meaning (see Decisions); a native speaker must judge Khmer answers.

@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     image_model: str = "black-forest-labs/FLUX.2-klein-4B"
     image_quantize: int = 4
     image_unload_after_job: bool = True
+    # Prebuilt 4-bit mflux weights (Runpod/FLUX.2-klein-4B-mflux-4bit, Apache-2.0), fetched by
+    # `scripts/download_models.py --images`. Image generation is on only when this folder exists.
+    image_model_dir: Path = SERVICE_DIR / "models" / "flux2-klein-4b-mflux-4bit"
     rembg_model: str = "isnet-general-use"
 
     guard_injection_classifier: bool = False
@@ -63,7 +66,14 @@ class Settings(BaseSettings):
 
     def resolve_paths(self) -> "Settings":
         """Relative paths in .env are relative to the ai-service folder, not the shell's cwd."""
-        for name in ("rules_dir", "storage_dir", "models_dir", "translation_model_dir", "whisper_km_model_dir"):
+        for name in (
+            "rules_dir",
+            "storage_dir",
+            "models_dir",
+            "translation_model_dir",
+            "whisper_km_model_dir",
+            "image_model_dir",
+        ):
             p: Path = getattr(self, name)
             if not p.is_absolute():
                 setattr(self, name, (SERVICE_DIR / p).resolve())

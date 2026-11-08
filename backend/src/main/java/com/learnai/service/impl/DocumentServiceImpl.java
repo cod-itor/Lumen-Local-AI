@@ -57,6 +57,7 @@ public class DocumentServiceImpl implements DocumentService {
             "md", "text/markdown");
 
     private final DocumentRepository documents;
+    private final com.learnai.repository.ImageRepository images;
     private final JobRepository jobs;
     private final FileStorage storage;
     private final AppProperties props;
@@ -86,7 +87,7 @@ public class DocumentServiceImpl implements DocumentService {
         if (!sniff(ext, bytes)) throw unsupported();
 
         long quota = props.userStorageQuotaMb() * 1024L * 1024L;
-        if (documents.totalBytes(userId) + bytes.length > quota) {
+        if (documents.totalBytes(userId) + images.totalBytes(userId) + bytes.length > quota) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "QUOTA_EXCEEDED",
                     "Your storage is full. Delete some documents first.");
         }
