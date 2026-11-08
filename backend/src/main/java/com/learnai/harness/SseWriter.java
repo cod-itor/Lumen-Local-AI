@@ -76,6 +76,11 @@ public class SseWriter {
     private void disconnected() {
         if (closed.compareAndSet(false, true)) {
             ping.cancel(false);
+            try { // end the response too, so a client that is still there never waits for the async timeout
+                emitter.complete();
+            } catch (IllegalStateException ignored) {
+                // already completed
+            }
             onDisconnect.run();
         }
     }

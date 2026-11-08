@@ -2,7 +2,7 @@
 # Profile resolution: defaults → first family whose `match` regex is found in the model id (case-insensitive)
 # → family.kinds[<provider kind>] → per-provider overrides from Model Test → clamp.
 # Facts verified 2026-11-08 against ollama.com/library and @mlc-ai/web-llm v0.2.87 prebuiltAppConfig.
-version: 2
+version: 3
 
 defaults:
   family: default
@@ -76,6 +76,7 @@ families:
   - family: llama3.2
     match: ['llama3\.2', 'llama-3\.2']
     contextWindow: 8192
+    tokenFactor: 0.9               # calibrated 2026-11-08: median actual/estimated 0.852 over 65 host turns
     kinds:
       BROWSER: { contextWindow: 4096 }
 

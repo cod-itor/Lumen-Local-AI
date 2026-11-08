@@ -312,6 +312,20 @@ def validate(r: Rules, schema_id: str, text: str, ti: dict[str, Any]) -> tuple[A
     return (None, sem[:5]) if sem else (data, [])
 
 
+_HEADING_LINE = re.compile(r"^[ \t]*[#*_ \t]*(?P<name>[^#*_\n:]+?)[ \t]*[*_]*:?[*_]*[ \t]*$")
+
+
+def fix_headings(text: str) -> str:
+    """Rewrite near-miss lesson heading lines ('### ## Overview', '**Key ideas:**', '# worked example') to the
+    exact '## Heading'. Only lines whose whole text is one of the headings are touched."""
+    names = {h[3:].lower(): h for h in LESSON_HEADINGS}
+    out = []
+    for line in text.split("\n"):
+        m = _HEADING_LINE.match(line) if line.lstrip()[:1] in ("#", "*", "_") else None
+        out.append(names.get(m.group("name").strip().lower(), line) if m else line)
+    return "\n".join(out)
+
+
 def missing_headings(text: str) -> list[str]:
     return [h for h in LESSON_HEADINGS if not re.search(rf"(?im)^{re.escape(h)}\b", text)]
 

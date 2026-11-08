@@ -53,7 +53,9 @@ def rule_hits(r: Rules, texts: list[str], stage: str) -> list[tuple[str, str]]:
         if rule["stage"] not in (stage, "BOTH"):
             continue
         pats = r.patterns.get(f"guard.rule.{rule['id']}", [])
-        if any(p.search(t) for p in pats for t in texts if t):
+        excepts = r.patterns.get(f"guard.except.{rule['id']}", [])
+        hit = any(p.search(t) and not any(e.search(t) for e in excepts) for p in pats for t in texts if t)
+        if hit:
             out.append((rule["category"], rule["id"]))
     return out
 
@@ -283,6 +285,16 @@ def ensure_disclaimers(r: Rules, text: str, keys: list[str], lang: str) -> str:
             continue
         text = f"{text.rstrip()}\n\n{disc['KM' if lang == 'KM' else 'EN']}"
     return text
+
+
+def redact_instructions(r: Rules, text: str) -> str:
+    """Replace each paragraph of an untrusted chunk that scores as an injection by the redaction marker."""
+    threshold = float(r.guardrails["classifiers"]["injection"]["threshold"])
+    marker = str(((r.guardrails.get("injection") or {}).get("untrustedText") or {}).get("redactMarker") or "")
+    if not marker:
+        return text
+    parts = re.split(r"(\n\s*\n)", text)
+    return "".join(marker if i % 2 == 0 and untrusted_score(r, p) >= threshold else p for i, p in enumerate(parts))
 
 
 def untrusted_score(r: Rules, text: str) -> float:

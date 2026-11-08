@@ -1,0 +1,79 @@
+origin,sources,sentence,lex,sem,label
+eval:rag-library-close,own,The library closes at 17:00 from Monday to Friday. [1],1.0,0.424,S
+eval:rag-library-close,other,The library closes at 17:00 from Monday to Friday. [1],0.0,0.099,U
+eval:rag-borrow-limit,own,You can borrow up to 3 books at a time.,1.0,0.349,S
+eval:rag-borrow-limit,other,You can borrow up to 3 books at a time.,0.0,0.068,U
+eval:rag-borrow-limit,own,Books must be returned within 14 days [1].,1.0,0.377,S
+eval:rag-borrow-limit,other,Books must be returned within 14 days [1].,0.0,0.142,U
+eval:rag-late-fee,own,The library late fee is 500 riel per book for each day after the due date [1].,0.9,0.491,S
+eval:rag-late-fee,other,The library late fee is 500 riel per book for each day after the due date [1].,0.1,0.089,U
+eval:rag-friday-uniform,own,Students wear the green sports uniform on Friday. [1],1.0,0.428,S
+eval:rag-friday-uniform,other,Students wear the green sports uniform on Friday. [1],0.167,0.184,U
+eval:rag-final-exams,own,Final exams take place in the last week of July.,1.0,0.392,S
+eval:rag-final-exams,other,Final exams take place in the last week of July.,0.143,0.1,U
+eval:rag-final-exams,own,Students must bring their student card to every exam [1].,1.0,0.451,S
+eval:rag-final-exams,other,Students must bring their student card to every exam [1].,0.0,0.092,U
+eval:rag-late-three-times,own,A student who arrives after 7:30 is marked late.,1.0,0.454,S
+eval:rag-late-three-times,other,A student who arrives after 7:30 is marked late.,0.0,0.113,U
+eval:rag-late-three-times,own,Three late marks in one month count as one absence.,1.0,0.4,S
+eval:rag-late-three-times,other,Three late marks in one month count as one absence.,0.0,0.138,U
+eval:rag-oxygen,own,The gas that plants release during photosynthesis is oxygen [1].,0.6,0.553,S
+eval:rag-oxygen,other,The gas that plants release during photosynthesis is oxygen [1].,0.2,0.159,U
+logged,own,"According to the Riverside High School Library Handbook, students may borrow up to 3 books at a time [1].",0.909,0.697,S
+logged,other,"According to the Riverside High School Library Handbook, students may borrow up to 3 books at a time [1].",0.091,0.004,U
+logged,own,The exact duration of how long they can keep the books is not specified in the provided information.,0.125,0.392,U
+logged,other,The exact duration of how long they can keep the books is not specified in the provided information.,0.0,0.068,U
+logged,own,"According to the Riverside High School Library Handbook [1], the late fee is 500 riel per book for each day after the due date.",0.667,0.702,S
+logged,other,"According to the Riverside High School Library Handbook [1], the late fee is 500 riel per book for each day after the due date.",0.067,0.069,U
+logged,own,The late fee for overdue books is 500 riel per book for each day after the due date [1].,0.909,0.52,S
+logged,other,The late fee for overdue books is 500 riel per book for each day after the due date [1].,0.091,0.079,U
+logged,own,"I'm not sure what the instruction-like text in the reference data means, and I'd love to see the contents of the ""inj.txt"" file to understand the context better.",0.0,0.384,U
+logged,other,"I'm not sure what the instruction-like text in the reference data means, and I'd love to see the contents of the ""inj.txt"" file to understand the context better.",0.059,0.099,U
+logged,own,"However, based on the reference data, I can tell you that the question is not answered in the provided information.",0.0,0.14,U
+logged,other,"However, based on the reference data, I can tell you that the question is not answered in the provided information.",0.0,0.117,U
+logged,own,"The reference data contains instructions, not the actual answer to the question.",0.143,0.25,
+logged,other,"The reference data contains instructions, not the actual answer to the question.",0.0,0.121,
+logged,own,I couldn't find this in your documents.,0.0,0.169,
+logged,other,I couldn't find this in your documents.,0.0,0.069,
+hand,own,The library is open until five in the afternoon on weekdays.,0.2,0.459,S
+hand,own,On Saturdays the library opens in the morning from 8:00 until noon.,0.5,0.364,S
+hand,own,You cannot use the library on Sundays or public holidays.,0.667,0.401,S
+hand,own,Each student can take home at most three books at once.,0.4,0.417,S
+hand,own,Borrowed books have to come back within two weeks.,0.286,0.468,S
+hand,own,Returning a book late costs 500 riel for every extra day.,0.556,0.475,S
+hand,own,From Monday to Thursday the uniform is a white shirt with navy trousers or skirt.,1.0,0.439,S
+hand,own,Fridays are for the green sports uniform.,0.75,0.358,S
+hand,own,Lessons begin at 7:15 in the morning.,0.25,0.405,S
+hand,own,Arriving after 7:30 means the student is recorded as late.,0.5,0.44,S
+hand,own,Three late arrivals in a single month are treated as one absence.,0.625,0.368,S
+hand,own,The mid-term exams are held during the second week of March.,0.833,0.42,S
+hand,own,A student card is required at every exam.,0.8,0.423,S
+hand,own,Questions about the handbook go to the school office.,1.0,0.422,S
+hand,own,The library has more than ten thousand books in its collection.,0.4,0.315,U
+hand,own,Students can renew a borrowed book online through the school website.,0.286,0.4,U
+hand,own,The library offers free printing for students in grade twelve.,0.286,0.362,U
+hand,own,Students must wear a tie with the white shirt on Mondays.,0.667,0.438,U
+hand,own,Parents are informed by phone after every late arrival.,0.167,0.434,U
+hand,own,Students who miss an exam can take it again in August.,0.6,0.374,U
+hand,own,The school canteen serves breakfast before classes begin.,0.167,0.318,U
+hand,own,Phones must be switched off during all library visits.,0.25,0.386,U
+hand,own,The principal of Riverside Academy is Mr. Sok Dara.,0.4,0.527,U
+hand,own,Lost books must be paid for at twice their price.,0.2,0.358,U
+hand,own,Students can bring a calculator to the mathematics exam.,0.6,0.336,U
+hand,own,The sports uniform includes white shoes and a green cap.,0.571,0.312,U
+hand,own,The school was founded in 1998 by a group of teachers.,0.2,0.194,U
+hand,own,Plants make their own food through photosynthesis.,1.0,0.606,S
+hand,own,Photosynthesis happens inside chloroplasts found mainly in leaf cells.,0.625,0.643,S
+hand,own,Light energy is used to change carbon dioxide and water into glucose and oxygen.,0.889,0.552,S
+hand,own,Plants use the glucose they make for energy and to grow.,0.833,0.494,S
+hand,own,Oxygen leaves the plant through tiny openings in the leaves called stomata.,0.857,0.467,S
+hand,own,Chlorophyll is a green pigment that absorbs mainly red and blue light.,0.875,0.518,S
+hand,own,Leaves look green because chlorophyll reflects green light.,1.0,0.542,S
+hand,own,Photosynthesis also takes place in the roots of most plants.,0.8,0.532,U
+hand,own,Plants release carbon dioxide during the night through their flowers.,0.5,0.375,U
+hand,own,Cacti use a special kind of photosynthesis to save water in the desert.,0.375,0.363,U
+hand,own,The process was first discovered by a Dutch scientist in the 18th century.,0.143,0.175,U
+hand,own,Plants need nitrogen from the soil to build chlorophyll.,0.167,0.433,U
+hand,own,About half of the oxygen on Earth comes from ocean algae.,0.167,0.29,U
+hand,own,Glucose is stored in the plant as starch inside the seeds.,0.5,0.356,U
+hand,own,Chloroplasts contain their own DNA inherited from ancient bacteria.,0.167,0.352,U

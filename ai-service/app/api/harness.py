@@ -63,4 +63,8 @@ async def generate(body: dict[str, Any] = Body(...)) -> EventSourceResponse:  # 
 async def harness_finalize(body: dict[str, Any] = Body(...)) -> dict[str, Any]:  # noqa: B008
     if not body.get("task") or "output" not in body:
         raise ServiceError("VALIDATION_ERROR", "task and output are required.", 400)
-    return await finalize(body)
+    res = await finalize(body)
+    if res.get("status") in ("SCHEMA_INVALID", "EMPTY"):  # only check names, never model text
+        task, status, attempt = body.get("task"), res["status"], body.get("attempt")
+        log.info("finalize %s %s attempt %s: %s", task, status, attempt, res.get("errors"))
+    return res

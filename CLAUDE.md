@@ -158,7 +158,9 @@ cd frontend && npm install && npm run dev                              # http://
 ```
 Tests: `cd backend && ./mvnw test` · `cd ai-service && uv run pytest` · `cd frontend && npx tsc --noEmit && npx eslint src && npx next build`.
 Evals: `cd ai-service && uv run python scripts/run_evals.py --mode QUICK|FULL [--case id] [--verbose]` (host model, in
-process) or the `/test` page for any provider. Calibration: `scripts/calibrate.py` (TODO phase 14).
+process) or the `/test` page for any provider. Calibration (HARNESS §13.2; prints values, never edits `rules/`):
+`uv run python scripts/calibrate.py --retrieval` · `--collect-support` (writes `calibration/support_candidates.csv`,
+also scores the hand-written `calibration/support_extra.csv`; label → `support_labels.csv`) · `--support` · `--tokens`.
 
 Memory plan (16 GB): always loaded llama3.2 3B (~2.5–3 GB) + EmbeddingGemma (~0.6 GB) + NLLB int8 (~0.6 GB); on demand
 Whisper (~0.5 GB) and FLUX.2 klein (opt-in, unloaded after each job).
@@ -233,7 +235,7 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 11 | Learning paths + quizzes | **done** (2026-11-08) — Backend: `learning_paths`/`learning_steps`/`quizzes`/`quiz_attempts` entities, `LearningService` (create with `/guard/check`, answers, skip, plan edit with §9.9 checks, approve → steps, restart, quiz submit: score, best score, ≥ 0.7 unlocks the next step or completes the path; answers hidden until submit), `/api/learning-paths`, `/api/learning-steps`, `/api/quizzes`; task handlers LEARN_QUESTION / LEARN_PLAN / LEARN_STEP (FAILED → contentStatus FAILED) / QUIZ, lock `path:{id}`, 409 while a turn holds it. AI: quiz answer–evidence check (`rules/harness.yaml → quiz`). Frontend: live `/learn` (path list + new goal, interview with option chips, editable plan + approve, step list + lesson Markdown + quiz → result with explanations/evidence, retake, restart, delete) |
 | 12 | Images | **done** (2026-11-08) — AI: `images/flux.py` (mflux 0.23 `Flux2Klein`, prebuilt 4-bit weights, one job at a time, unload after job, progress QUEUED → LOADING_MODEL → GENERATING), `images/background.py` (rembg 2.0.85 `isnet-general-use`), `/images/generate`, `/images/variations` (SSE), `/images/remove-background`; paths relative to STORAGE_DIR, `.png` only; IMAGE_PROMPT pivots a Khmer request to English for "Use my original"; clarify drops questions about details the request already gives and the prompt must keep the request's subject (`rules/harness.yaml → image`). Backend: `image_sessions`/`images`, `ImageService` (feature check → 503 FEATURE_UNAVAILABLE, shared storage quota, IMAGE_PROMPT guard), `ImageJobHandler` (IMAGE / VARIATION / BG_REMOVAL, one image slot), `/api/image-sessions`, `/api/images/*`, `/api/files/images/{id}`, IMAGE_CLARIFY / IMAGE_PROMPT task handlers, `GET /api/system/status`. Frontend: live Image tab (`lib/images.tsx` sessions + features, `components/image/live/image-studio.tsx`: clarify chips + Skip, editable approval card with Generate / Use my original / Cancel, aspect ratio + count, job progress, session gallery, selected-image panel with variations / remove background / download / delete), sidebar sessions; mocks removed |
 | 13 | Voice | **done** (2026-11-08) — AI: `voice/stt.py` (faster-whisper 1.2.1 small EN int8 CPU + `seanghay/whisper-small-khmer-v2` → CT2 int8; Silero VAD v6 ONNX bundled with faster-whisper, run frame by frame with its h/c state; 800 ms silence → final, ~1 s partials, 60 s utterance cap, AUTO = Whisper language detection on the first 3 s → Khmer model if km ≥ 0.5), `WS /voice/stream` (internal token, 2 connections service-wide → VOICE_BUSY, 5 min limit), `POST /voice/tts` → 503 (read aloud off). Backend: `POST /api/voice/token` (Caffeine, single use, 60 s, rate limit), `/ws/voice` relay (`VoiceWebSocketHandler`: one connection per user, origin = PUBLIC_URL, java.net.http upstream with chained sends, 5 min limit), `POST /api/voice/tts` (503 unless `features.tts`). Frontend: `lib/status.tsx` (shared `/api/system/status`), `public/pcm-worklet.js` (16 kHz Int16 512-sample frames, resamples if needed), `lib/voice/use-voice.ts`, Composer mic = live voice (partial text, finals appended, level bars from the mic, errors inline, hidden when voice is off; decorative on the landing page) |
-| 14 | Calibration + polish | next |
+| 14 | Calibration + polish | **done** (2026-11-08) — `scripts/calibrate.py` (retrieval p10/p90, support grid search on 74 labelled sentences, tokenFactor from turn_metrics), calibrated `lexicalSupport` / llama3.2 `tokenFactor`, 20-attempt red-team pass with fixes (DOC injection paragraph redaction, `self_harm_lethal_means`, `csam_explicit` / `csam_cooccurrence` with education exceptions), lesson heading repair, SSE stream always closes on disconnect, finalize failure log, README rewrite, NLLB 1.3B compared (kept 600M), end-to-end API check |
 
 ## 10. Decisions log
 
@@ -357,6 +359,33 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   partials every ~1 s, final "Explain how plants make food from sunlight. What is photosynthesis?" exact; KM model
   runs (no Khmer test speech on this Mac, so a Khmer speaker must try it); reused token → 1008; second tab → 1008
   "already open"; foreign Origin → 403.
+- 2026-11-08 — Phase 14 (calibration + polish). **Calibration** (`scripts/calibrate.py`, HARNESS §13.2):
+  `retrieval.minTopSimilarity` kept at 0.35 (answerable p10 / unanswerable p90 give 0.36, which would gate the
+  answerable `rag-late-three-times` case at 0.356); `grounding.lexicalSupport` 0.55 → **0.40** (74 hand-labelled
+  sentences in `ai-service/calibration/support_labels.csv`, 40 unsupported; precision(U) ≥ 0.9 with recall ≥ 0.7);
+  `semanticSupport` kept at 0.62 (embeddinggemma scores supported paraphrases only 0.36–0.64, so the lexical score does the work); llama3.2 `tokenFactor` 1.0 → **0.9** (median
+  actual/estimated 0.852 over 65 turns, rounded up to 0.05). **Red team** (20 attempts through the public API, script
+  in the session scratchpad): role-play DAN / "grandma" / fiction nerve gas, prompt extraction, "developer mode"
+  hacking, Khmer bomb, Khmer self-harm, mixed KM/EN poison, leetspeak, base64, bullying, malware, document injection,
+  document link exfiltration, chat link exfiltration, 4000+ char flood (400 VALIDATION_ERROR), flood-then-attack,
+  doxxing a teacher, lethal dose, consent education (must not refuse). All end safe. Fixes found by it: (1) DOC
+  chunks flagged as injection made llama3.2 abstain on real questions → the injected paragraphs are now replaced by
+  `[instruction-like text removed]` (`guard/engine.redact_instructions`, `injection.untrustedText.redactMarker`);
+  (2) "lethal dose of paracetamol" got a refusal with US hotline numbers → new INPUT rule `self_harm_lethal_means`
+  (SUPPORT); (3) `csam_cooccurrence` blocked sex education → split into `csam_explicit` (no exceptions) and
+  `csam_cooccurrence` with education/protection `exceptPatterns` (rules loader compiles `guard.except.{id}`).
+  Rules after the changes: harness v6, models v3, guardrails v4 → **Model Test FULL 0.927**, safety with guardrails 1.0
+  (rules `rules-c1c785f70e9a`; same 4 fails as phase 10: injection-repeat-above, rag-late-three-times,
+  instr-one-sentence, json-quiz). **End-to-end API check** (auth, status, HOST provider, chat, title, calculator,
+  guard block, Khmer in → Khmer out, web search with sources, upload → READY → cited answer → abstain, learning path
+  question → plan → approve → lesson → quiz, image clarify → prompt → generate 503 without FLUX, voice token, logout)
+  found two bugs, both fixed: llama3.2 writes `### ## Overview`, so every lesson failed the heading check → finalize
+  now rewrites near-miss heading lines to the exact `## Heading` (`structured.fix_headings`); when the backend saw a
+  stream as disconnected it cancelled the turn but left the HTTP response open until the async timeout →
+  `SseWriter` now completes the emitter on disconnect. The AI service logs the error list (never the model text) of
+  every SCHEMA_INVALID / EMPTY finalize. **NLLB 1.3B** (converted with `download_models.py --translation-model
+  facebook/nllb-200-distilled-1.3B`) is not clearly better on the Khmer test phrases (still "cat" → "wolf",
+  "photosynthesis" → "make sound"), is ~60 % slower and needs twice the RAM → kept 600M. Hosting stays local demo only.
 
 ## 11. Known issues / gotchas
 
@@ -377,13 +406,16 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
 - Turbopack bundles `new Worker(new URL('./webllm.worker.ts', import.meta.url))` into its own worker chunk; it also
   copies the raw `.ts` to `static/media` (unused, harmless).
-- llama3.2 3B sometimes abstains when a DOC source carries the "instruction-like text" label even if the answer
-  is in it (it never followed the injected instruction in tests) — revisit in calibration (phase 14).
+- Fixed in phase 14: llama3.2 abstained when a DOC source carried the "instruction-like text" label; flagged DOC
+  chunks now have their injected paragraphs replaced by `[instruction-like text removed]`. An injection written inside
+  the same paragraph as real content is only labelled, not removed.
 - NLLB 600M int8 is weak for Khmer, also on everyday words ("ឆ្មា…សាឡុង" cat on a sofa → "a pig's head… saloon";
   EN→KM "a cat on a sofa" → "a dog on a chair"); tokens and language tags were checked and are correct. Khmer image
-  requests therefore get poor prompts. A larger NLLB (1.3B/3.3B) or MADLAD would help but costs RAM/disk; phase 14.
-- `csam_cooccurrence` matches topic words (e.g. "sex education for children" → BLOCK); acceptable for now (critical
-  category), revisit with the Model Test over-refusal cases.
+  requests therefore get poor prompts. NLLB 1.3B was tried in phase 14 and is not clearly better; MADLAD-400 or a Khmer fine-tune is the next thing to try.
+- Fixed in phase 14: `csam_cooccurrence` blocked "sex education for children"; it now has education/protection
+  `exceptPatterns`, and explicit material is a separate rule (`csam_explicit`) with no exceptions.
+- llama3.2 adds US crisis numbers to self-harm-adjacent refusals when the guard does not route them to SUPPORT; the
+  SUPPORT text has no numbers until verified Cambodian emergency numbers are added (owner to provide).
 - Model Test KHMER checks measure script, not meaning (see Decisions); a native speaker must judge Khmer answers.
 - llama3.2 3B weak spots in the Full suite: repeats its instructions when asked "repeat everything above" (the leak
   guard replaces it outside TEST), follows a document's "prize" injection when summarising, ignores "one sentence",

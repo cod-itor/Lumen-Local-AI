@@ -32,10 +32,12 @@ CONVERTER_PINS = [
 NLLB = "facebook/nllb-200-distilled-600M"
 
 
-def translation() -> None:
+def translation(repo: str = NLLB) -> None:
     from app.config import get_settings
 
     out = get_settings().translation_model_dir
+    if repo != NLLB:  # e.g. facebook/nllb-200-distilled-1.3B → models/nllb-200-distilled-1.3B-int8
+        out = get_settings().models_dir / f"{repo.split('/')[-1]}-int8"
     if (out / "model.bin").is_file() and (out / "sentencepiece.bpe.model").is_file():
         print(f"translation model already present: {out}")
         return
@@ -54,7 +56,7 @@ def translation() -> None:
             [
                 str(venv / "bin" / "ct2-transformers-converter"),
                 "--model",
-                NLLB,
+                repo,
                 "--output_dir",
                 str(out),
                 "--quantization",
@@ -64,7 +66,7 @@ def translation() -> None:
             check=True,
             env=env,
         )
-        spm = next(hf.glob("hub/models--facebook--nllb-200-distilled-600M/snapshots/*/sentencepiece.bpe.model"))
+        spm = next(hf.glob(f"hub/models--{repo.replace('/', '--')}/snapshots/*/sentencepiece.bpe.model"))
         shutil.copy(spm, out / "sentencepiece.bpe.model")
     print(f"translation model ready: {out}")
 
@@ -143,15 +145,16 @@ def images() -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--translation", action="store_true", help="NLLB-200 600M int8 for Khmer ↔ English")
+    ap.add_argument("--translation-model", default=NLLB, help="NLLB repo for --translation (official facebook/*)")
     ap.add_argument("--voice", action="store_true", help="faster-whisper small (EN) + Khmer Whisper fine-tune")
     ap.add_argument("--background", action="store_true", help="rembg isnet-general-use for background removal")
     ap.add_argument("--images", action="store_true", help="FLUX.2 [klein] 4B 4-bit (needs `uv run --group images`)")
     args = ap.parse_args()
-    if not any(vars(args).values()):
+    if not any(v for k, v in vars(args).items() if k != "translation_model"):
         ap.print_help()
         return
     if args.translation:
-        translation()
+        translation(args.translation_model)
     if args.voice:
         voice()
     if args.background:

@@ -1,6 +1,6 @@
 # rules/harness.yaml — numeric settings and patterns for the harness (HARNESS.md).
 # Values marked [CALIBRATE] must be re-tuned with scripts/calibrate.py (HARNESS.md §13.2).
-version: 5
+version: 6
 
 tokenEstimate:
   asciiCharsPerToken: 3.6
@@ -85,7 +85,7 @@ retrieval:
   vectorCandidates: 20
   lexicalCandidates: 20
   rrfK: 60
-  minTopSimilarity: 0.35       # [CALIBRATE] below this and no lexical hit → abstain without calling the model
+  minTopSimilarity: 0.35       # [CALIBRATE] 2026-11-08: kept (formula → 0.36 would gate a real answerable case at 0.356) below this and no lexical hit → abstain without calling the model
   minChunkSimilarity: 0.30     # [CALIBRATE]
   lexicalRankKeep: 3
   maxChunks: 5
@@ -122,8 +122,8 @@ chunking:
   khmerSentenceEnds: ["។", "៕", "?", "!"]
 
 grounding:
-  lexicalSupport: 0.55         # [CALIBRATE]
-  semanticSupport: 0.62        # [CALIBRATE]
+  lexicalSupport: 0.40         # [CALIBRATE] 2026-11-08: 74 labelled sentences → precision(U) 0.91, recall(U) 0.78
+  semanticSupport: 0.62        # [CALIBRATE] 2026-11-08: kept (supported paraphrases score only 0.36–0.64 with embeddinggemma)
   sourceWindowSentences: 3
   groundedRatio: 0.9
   partialRatio: 0.5

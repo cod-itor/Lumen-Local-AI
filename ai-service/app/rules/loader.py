@@ -215,6 +215,7 @@ def _compile_all(harness: dict[str, Any], guard: dict[str, Any], errors: list[st
     _compile(p, "grounding.specificFacts", harness.get("grounding", {}).get("specificFactPatterns") or [], errors)
     for rule in guard.get("rules") or []:
         _compile(p, f"guard.rule.{rule.get('id')}", rule.get("patterns") or [], errors)
+        _compile(p, f"guard.except.{rule.get('id')}", rule.get("exceptPatterns") or [], errors)
     for item in (guard.get("injection") or {}).get("patterns") or []:
         _compile(p, f"guard.injection.{item.get('id')}", [item["pattern"]], errors)
     for i, item in enumerate((guard.get("imagePolicy") or {}).get("blockPatterns") or []):

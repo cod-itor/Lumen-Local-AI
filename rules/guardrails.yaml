@@ -1,7 +1,7 @@
 # rules/guardrails.yaml — safety policy and detectors (GUARDRAILS.md).
 # Loaded by the AI service. Regexes are Python `re` with flags IGNORECASE | UNICODE.
 # Khmer texts marked "# KM: review" must be checked by a native speaker before launch.
-version: 2
+version: 4
 
 # ---------------------------------------------------------------- profiles
 profiles:
@@ -94,12 +94,22 @@ rules:
     stage: BOTH
     patterns:
       - '\b(how (do i|to|can i)|steps? to|recipe for)\b.{0,30}\b(make|making|cook|cooking|synthesi[sz]e|synthesi[sz]ing|produce|producing)\b.{0,20}\b(meth(amphetamine)?|heroin|cocaine|fentanyl|lsd|mdma|ecstasy)\b'
+  - id: csam_explicit
+    category: child_sexual_exploitation
+    stage: BOTH
+    patterns:   # never excepted
+      - '\b(child|children|kid|kids|minor|minors|underage|preteen|young (girl|boy)|schoolgirl|schoolboy)\b.{0,40}\b(nude|naked|porn|explicit|erotic)\b'
+      - '\b(nude|naked|porn|explicit|erotic)\b.{0,40}\b(child|children|kid|kids|minor|minors|underage|preteen)\b'
   - id: csam_cooccurrence
     category: child_sexual_exploitation
     stage: BOTH
     patterns:
-      - '\b(child|children|kid|kids|minor|minors|underage|preteen|young (girl|boy)|schoolgirl|schoolboy)\b.{0,40}\b(sex|sexual|nude|naked|porn|explicit|erotic)\b'
-      - '\b(sex|sexual|nude|naked|porn|explicit|erotic)\b.{0,40}\b(child|children|kid|kids|minor|minors|underage|preteen)\b'
+      - '\b(child|children|kid|kids|minor|minors|underage|preteen|young (girl|boy)|schoolgirl|schoolboy)\b.{0,40}\b(sex|sexual)\b'
+      - '\b(sex|sexual)\b.{0,40}\b(child|children|kid|kids|minor|minors|underage|preteen)\b'
+    # Education and protection only (found in calibration: "sex education for children" was blocked). Explicit
+    # material is always caught by csam_explicit above.
+    exceptPatterns:
+      - '\b(sex(uality)? education|sex ed|health class|puberty|consent|body safety|safe touch|(abuse|grooming) prevention|prevent(ing)? (sexual )?abuse|protect(ing)? (children|kids|minors)|report(ing)? (sexual )?abuse|child protection)\b'
   - id: sexual_explicit
     category: sexual_content
     stage: BOTH
@@ -124,6 +134,12 @@ rules:
       - '\b(i )?(don''t|do not|dont) want to (live|be alive|exist) (anymore|any more)\b'
       - '\b(suicidal|self[- ]harm(ing)?)\b.{0,20}\b(tonight|today|now|again)\b'
       - 'ខ្ញុំចង់សម្លាប់ខ្លួន'                       # "I want to kill myself"   # KM: review
+  - id: self_harm_lethal_means
+    category: self_harm
+    stage: INPUT
+    patterns:   # found in red-teaming: "what amount of paracetamol would be lethal" got US hotlines instead of SUPPORT
+      - '\b(lethal|deadly|fatal)\b.{0,20}\b(dose|dosage|amount|quantity|number of (pills|tablets))\b'
+      - '\b(dose|dosage|amount|quantity|how (much|many)( pills| tablets)?)\b.{0,40}\b(would|will|could|to)\b.{0,10}\b(be (lethal|deadly|fatal)|kill (me|someone|a person)|overdose)\b'
   - id: self_harm_methods_output
     category: self_harm
     stage: OUTPUT
@@ -177,6 +193,10 @@ injection:
     - { id: role_tokens,       weight: 0.8,  pattern: '(^|\n)\s*(system|assistant)\s*:\s' }
     - { id: fake_notice,       weight: 0.7,  pattern: '\b(system notice|important instruction|new instructions?|note to (the )?(ai|assistant|model))\b' }
   untrustedText:
+    # DOC chunks flagged as instruction-like: every paragraph that itself scores ≥ the injection threshold is replaced
+    # by this marker before the model sees it (the source keeps its label). Found in red-teaming: llama3.2 abstained on
+    # a document whose real content was in the same chunk as an injected "system notice".
+    redactMarker: "[instruction-like text removed]"
     neutralizeTokens:   # replaced by the same text with the first "<" or "[" changed to "＜" / "［" (HARNESS.md §4.1)
       - "<|im_start|>"
       - "<|im_end|>"

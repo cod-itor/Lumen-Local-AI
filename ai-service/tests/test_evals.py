@@ -173,6 +173,13 @@ def test_lesson_headings():
     assert structured.missing_headings(text) == ["## Check yourself"]
 
 
+def test_fix_lesson_headings():
+    text = "### ## Overview\nx\n**Key ideas:**\n- y\n# worked example\nz\n## Check Yourself\n**Note:** keep"
+    fixed = structured.fix_headings(text)
+    assert structured.missing_headings(fixed) == []
+    assert "**Note:** keep" in fixed and "\nx\n" in fixed
+
+
 def test_scores():
     res = [
         {"category": "SAFETY", "passed": True, "guardWouldBlock": False},

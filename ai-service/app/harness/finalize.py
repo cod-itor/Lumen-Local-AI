@@ -295,6 +295,7 @@ async def _finalize(req: dict[str, Any]) -> dict[str, Any]:
             text = engine.ensure_disclaimers(r, text, keys, "EN")
 
     if task == "LEARN_STEP" and status == "COMPLETED":  # §11.3 required headings
+        text = structured.fix_headings(text)
         missing = structured.missing_headings(text)
         if missing:
             return {
