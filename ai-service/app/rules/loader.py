@@ -28,14 +28,36 @@ from app.rules.models import (
 )
 from app.rules.render import RulesRenderError, render, variables_in
 
-REQUIRED_MODE_KEYS = ("id", "version", "task", "pipeline", "output", "schema", "temperature", "max_output_tokens",
-                      "max_words", "reference_data")
+REQUIRED_MODE_KEYS = (
+    "id",
+    "version",
+    "task",
+    "pipeline",
+    "output",
+    "schema",
+    "temperature",
+    "max_output_tokens",
+    "max_words",
+    "reference_data",
+)
 SECTIONS = ("## Instructions", "## Example", "## Reminder")
 MAX_SYSTEM_TOKENS = 900
 RE_FLAGS = re.IGNORECASE | re.UNICODE
 #: JSON Schema keywords the runtimes can all enforce (RULES.md §5).
-SCHEMA_KEYWORDS = {"type", "properties", "required", "items", "enum", "minItems", "maxItems", "additionalProperties",
-                   "$schema", "$id", "title", "description"}
+SCHEMA_KEYWORDS = {
+    "type",
+    "properties",
+    "required",
+    "items",
+    "enum",
+    "minItems",
+    "maxItems",
+    "additionalProperties",
+    "$schema",
+    "$id",
+    "title",
+    "description",
+}
 
 
 class RulesInvalid(Exception):
@@ -60,7 +82,7 @@ def _front_matter(text: str, where: str, errors: list[str]) -> tuple[dict[str, A
     if not isinstance(meta, dict):
         errors.append(f"{where}: front matter must be a mapping")
         return {}, text
-    return meta, text[end + 5:]
+    return meta, text[end + 5 :]
 
 
 def _split_sections(body: str, where: str, errors: list[str]) -> dict[str, str]:
@@ -157,12 +179,21 @@ def _load_mode(path: Path, schemas: dict[str, Any], errors: list[str]) -> Mode |
     if len(errors) > n_errors:
         return None
     return Mode(
-        id=meta["id"], version=int(meta["version"]), task=meta["task"], pipeline=meta["pipeline"],
-        output=meta["output"], schema=schema, temperature=float(meta["temperature"]),
-        max_output_tokens=int(meta["max_output_tokens"]), max_words=int(meta["max_words"]),
-        reference_data=meta["reference_data"], instructions=sections.get("## Instructions", ""),
-        example=sections.get("## Example") or None, reminder=sections.get("## Reminder", ""),
-        abstain_text=meta.get("abstain_text"), stop=tuple(meta.get("stop") or ()),
+        id=meta["id"],
+        version=int(meta["version"]),
+        task=meta["task"],
+        pipeline=meta["pipeline"],
+        output=meta["output"],
+        schema=schema,
+        temperature=float(meta["temperature"]),
+        max_output_tokens=int(meta["max_output_tokens"]),
+        max_words=int(meta["max_words"]),
+        reference_data=meta["reference_data"],
+        instructions=sections.get("## Instructions", ""),
+        example=sections.get("## Example") or None,
+        reminder=sections.get("## Reminder", ""),
+        abstain_text=meta.get("abstain_text"),
+        stop=tuple(meta.get("stop") or ()),
         variables=tuple(declared),
     )
 
@@ -224,10 +255,18 @@ def _load_suites(folder: Path, fixtures: dict[str, str], errors: list[str]) -> d
             for doc in raw.get("documents") or []:
                 if doc not in fixtures:
                     errors.append(f"{where}: case '{cid}' uses missing fixture '{doc}'")
-            cases.append(EvalCase(id=cid, category=raw.get("category", ""), quick=bool(raw.get("quick")),
-                                  task=raw.get("task", "MESSAGE"), raw=raw))
-        suites[data.get("suite", path.stem)] = EvalSuite(id=data.get("suite", path.stem),
-                                                          version=int(data.get("version", 1)), cases=tuple(cases))
+            cases.append(
+                EvalCase(
+                    id=cid,
+                    category=raw.get("category", ""),
+                    quick=bool(raw.get("quick")),
+                    task=raw.get("task", "MESSAGE"),
+                    raw=raw,
+                )
+            )
+        suites[data.get("suite", path.stem)] = EvalSuite(
+            id=data.get("suite", path.stem), version=int(data.get("version", 1)), cases=tuple(cases)
+        )
     return suites
 
 
@@ -241,9 +280,18 @@ def rules_version(rules_dir: Path) -> str:
 
 def sample_variables(mode: Mode, app_name: str) -> dict[str, object]:
     """Values used to render every mode once at load time (NORMAL answer length)."""
-    return {"APP_NAME": app_name, "TODAY": "8 November 2026", "WEEKDAY": "Sunday", "TIMEZONE": "Asia/Phnom_Penh",
-            "ANSWER_LANGUAGE": "English", "MAX_WORDS": mode.max_words, "COUNT": 5, "SOURCE_LANGUAGE": "English",
-            "TARGET_LANGUAGE": "Khmer", "EMERGENCY_LINE": ""}
+    return {
+        "APP_NAME": app_name,
+        "TODAY": "8 November 2026",
+        "WEEKDAY": "Sunday",
+        "TIMEZONE": "Asia/Phnom_Penh",
+        "ANSWER_LANGUAGE": "English",
+        "MAX_WORDS": mode.max_words,
+        "COUNT": 5,
+        "SOURCE_LANGUAGE": "English",
+        "TARGET_LANGUAGE": "Khmer",
+        "EMERGENCY_LINE": "",
+    }
 
 
 def system_message(system: SystemPrompt, mode: Mode, values: dict[str, object], with_example: bool = True) -> str:
@@ -296,6 +344,16 @@ def load_rules(rules_dir: Path, app_name: str = "Lumen") -> Rules:
 
     if errors:
         raise RulesInvalid(errors)
-    return Rules(version=rules_version(rules_dir), loaded_at=datetime.now(UTC), system=system, modes=modes,
-                 schemas=schemas, harness=harness, guardrails=guardrails, models=models, suites=suites,
-                 fixtures=fixtures, patterns=patterns)
+    return Rules(
+        version=rules_version(rules_dir),
+        loaded_at=datetime.now(UTC),
+        system=system,
+        modes=modes,
+        schemas=schemas,
+        harness=harness,
+        guardrails=guardrails,
+        models=models,
+        suites=suites,
+        fixtures=fixtures,
+        patterns=patterns,
+    )

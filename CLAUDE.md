@@ -220,8 +220,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 0 | Monorepo setup, docs, rules, compose, CLAUDE.md | **done** (2026-11-08) |
 | 1 | Database + backend auth | **done** (2026-11-08) — Flyway V1, register/login/refresh(rotation+reuse)/logout/me, settings, delete account, CSRF origin check, rate limits, Swagger; `AuthFlowIntegrationTest` (Testcontainers) |
 | 2 | AI service skeleton + rules loader | **done** (2026-11-08) — FastAPI app, X-Internal-Token, rules loader with all RULES.md §2 checks, `/health` `/capabilities` `/status` `/rules/reload` `/models/catalog` `/models/profile` `/evals/suites`, `validate_rules.py`, pytest |
-| 3 | Harness CHAT (HOST) | next |
-| 4 | Frontend wiring | todo |
+| 3 | Harness CHAT (HOST) | **done** (2026-11-08) — AI: normalize, language, router (intents/notes/suggestions), history 4–6, budget + exact prompt layout, params, client guard, Ollama runtime (slots + `queued`, reasoning/stop/loop/guard stops), finalize F1–F4/F8/F11(CHAT)/F14; backend: providers (auto HOST), chats/messages API, `POST /api/harness/turns` SSE, complete/cancel/get, TurnRunner on virtual threads, conditional status changes, MESSAGE handler (AUTO title, preview), turn_metrics, housekeeping. DOCS tab abstains (`NO_DOCUMENTS`) until phase 6 |
+| 4 | Frontend wiring | next |
 | 5 | Client providers (WebLLM, local Ollama) | todo |
 | 6 | Documents (RAG) + grounding | todo |
 | 7 | Guardrails | todo |
@@ -253,6 +253,12 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   `/capabilities` reports a feature as on only when its model/library is actually installed. Paths in
   ai-service/.env are resolved relative to `ai-service/`. Allowed schema annotations: `$schema`, `$id`, `title`, `description`.
 - 2026-11-08 — Stack fixed by the spec and confirmed by the owner: AI service = Python FastAPI, backend = Spring Boot.
+- 2026-11-08 — Phase 3: internal AI payloads are handled as Jackson `JsonNode` trees (no `dto/ai` records) and JSONB
+  columns map to `JsonNode` via `JsonNodeConverter` (text + `stringtype=unspecified`; test containers set the same URL
+  param). `WebClient.builder()` is used directly (Boot 4 has no `WebClient.Builder` bean without the webclient module).
+  Status changes = native conditional `UPDATE … WHERE status IN (…)` or a row-locked read-check-write (`TurnStore`).
+  Not-yet-built parts answer honestly: input guard = ALLOW (phase 7), no pivot translation/tools (phase 8), RAG/WEB →
+  `NOT_IMPLEMENTED` (phases 6/10), non-MESSAGE tasks → 503 `FEATURE_UNAVAILABLE`.
 
 ## 11. Known issues / gotchas
 
@@ -269,6 +275,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Port 5432 is used by another PostgreSQL on this Mac → Lumen's Docker Postgres is on **5433**:
   `DB_URL=jdbc:postgresql://localhost:5433/learnai`, `DATABASE_URL=postgresql://learnai:…@localhost:5433/learnai`.
 - Spring Boot 4 uses Jackson 3 (`tools.jackson.*`); `@SpringBootTest` needs `@AutoConfigureMockMvc`.
+  Jackson 3: `asString()` not `asText()`, `deepCopy()` returns `JsonNode` (cast), SSE from Spring is `event:x` (no space).
+- Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
 
 ## 12. Glossary
 

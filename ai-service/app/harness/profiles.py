@@ -5,12 +5,24 @@ from __future__ import annotations
 import re
 from typing import Any
 
-PROFILE_KEYS = ("family", "contextWindow", "systemRole", "jsonSchema", "thinking", "disableThinking", "khmerNative",
-                "maxOutputTokens", "topP", "repeatPenalty", "tokenFactor")
+PROFILE_KEYS = (
+    "family",
+    "contextWindow",
+    "systemRole",
+    "jsonSchema",
+    "thinking",
+    "disableThinking",
+    "khmerNative",
+    "maxOutputTokens",
+    "topP",
+    "repeatPenalty",
+    "tokenFactor",
+)
 
 
-def resolve_profile(models: dict[str, Any], kind: str, model: str, overrides: dict[str, Any] | None = None
-                    ) -> dict[str, Any]:
+def resolve_profile(
+    models: dict[str, Any], kind: str, model: str, overrides: dict[str, Any] | None = None
+) -> dict[str, Any]:
     profile: dict[str, Any] = {k: v for k, v in models["defaults"].items() if k in PROFILE_KEYS}
     for family in models.get("families") or []:
         if any(re.search(p, model, re.IGNORECASE) for p in family.get("match") or []):

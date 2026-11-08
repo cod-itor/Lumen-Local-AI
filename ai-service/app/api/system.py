@@ -60,8 +60,12 @@ def _installed(tags: list[str], model: str) -> bool:
 @router.get("/health")
 async def health() -> dict:
     s = get_settings()
-    return {"status": "ok", "ollama": await ollama_models(s) is not None, "db": await db.ping(),
-            "profile": s.ai_profile}
+    return {
+        "status": "ok",
+        "ollama": await ollama_models(s) is not None,
+        "db": await db.ping(),
+        "profile": s.ai_profile,
+    }
 
 
 @router.get("/capabilities")
@@ -71,9 +75,15 @@ async def capabilities() -> dict:
     tags = await ollama_models(s) or []
     host_models = [s.ollama_chat_model] if f["hostChat"] and _installed(tags, s.ollama_chat_model) else []
     f["hostChat"] = bool(host_models)
-    return {"profile": s.ai_profile, "features": f, "hostChatModels": host_models,
-            "defaultChatModel": s.ollama_chat_model, "embedModel": s.ollama_embed_model, "embedDim": s.embed_dim,
-            "rulesVersion": state.rules().version}
+    return {
+        "profile": s.ai_profile,
+        "features": f,
+        "hostChatModels": host_models,
+        "defaultChatModel": s.ollama_chat_model,
+        "embedModel": s.ollama_embed_model,
+        "embedDim": s.embed_dim,
+        "rulesVersion": state.rules().version,
+    }
 
 
 @router.get("/status")
@@ -86,8 +96,10 @@ async def status() -> dict:
             loaded = [{"name": m["name"], "sizeMb": round(m.get("size", 0) / 1_048_576)} for m in r.json()["models"]]
     except (httpx.HTTPError, ValueError, KeyError):
         pass
-    return {"loadedModels": loaded,
-            "queue": {"heavyJobsQueued": 0, "heavyJobRunning": False, "serverTurnsActive": 0, "serverTurnsQueued": 0}}
+    return {
+        "loadedModels": loaded,
+        "queue": {"heavyJobsQueued": 0, "heavyJobRunning": False, "serverTurnsActive": 0, "serverTurnsQueued": 0},
+    }
 
 
 @router.post("/rules/reload")
@@ -96,7 +108,8 @@ async def reload_rules() -> dict:
     try:
         new = load_rules(s.rules_dir, s.app_name)
     except RulesInvalid as e:
-        raise ServiceError("RULES_INVALID", "The new rules failed validation; the old rules stay active.", 422,
-                           {"errors": e.errors}) from e
+        raise ServiceError(
+            "RULES_INVALID", "The new rules failed validation; the old rules stay active.", 422, {"errors": e.errors}
+        ) from e
     state.set_rules(new)
     return {"rulesVersion": new.version, "loadedAt": new.loaded_at.isoformat().replace("+00:00", "Z")}

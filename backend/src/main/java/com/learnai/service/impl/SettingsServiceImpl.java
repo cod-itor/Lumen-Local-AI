@@ -2,10 +2,12 @@ package com.learnai.service.impl;
 
 import com.learnai.dto.request.UpdateSettingsRequest;
 import com.learnai.dto.response.SettingsDto;
+import com.learnai.entity.ModelProvider;
 import com.learnai.entity.UserSettings;
 import com.learnai.entity.enums.GuardProfile;
 import com.learnai.exception.ApiException;
 import com.learnai.mapper.UserMapper;
+import com.learnai.repository.ModelProviderRepository;
 import com.learnai.repository.UserRepository;
 import com.learnai.repository.UserSettingsRepository;
 import com.learnai.service.SettingsService;
@@ -24,6 +26,7 @@ public class SettingsServiceImpl implements SettingsService {
     private final UserSettingsRepository settingsRepo;
     private final UserRepository users;
     private final UserMapper mapper;
+    private final ModelProviderRepository providers;
 
     @Override
     @Transactional
@@ -50,8 +53,13 @@ public class SettingsServiceImpl implements SettingsService {
         }
         if (r.showSpeedStats() != null) s.setShowSpeedStats(r.showSpeedStats());
         if (r.defaultProviderId() != null) {
-            // Providers arrive in phase 3 (ProviderService); until then no provider id can be valid.
-            throw ApiException.validation("defaultProviderId", "defaultProviderId must be one of your providers");
+            var p = providers.findByIdAndUserId(r.defaultProviderId(), userId).orElseThrow(
+                    () -> ApiException.validation("defaultProviderId", "defaultProviderId must be one of your providers"));
+            providers.clearDefault(userId);
+            var fresh = providers.findById(p.getId()).orElseThrow();
+            fresh.setDefaultProvider(true);
+            providers.saveAndFlush(fresh);
+            s = load(userId);
         }
         return mapper.toDto(s, defaultProviderId(userId));
     }
@@ -62,6 +70,6 @@ public class SettingsServiceImpl implements SettingsService {
     }
 
     private UUID defaultProviderId(UUID userId) {
-        return null;
+        return providers.findByUserIdAndDefaultProviderTrue(userId).map(ModelProvider::getId).orElse(null);
     }
 }

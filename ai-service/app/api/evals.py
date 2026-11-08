@@ -11,8 +11,16 @@ router = APIRouter(prefix="/evals", dependencies=[Depends(require_internal_token
 
 @router.get("/suites")
 async def suites() -> list[dict]:
-    return [{"id": s.id, "version": s.version, "quickCount": s.quick_count, "fullCount": len(s.cases),
-             "categories": s.categories} for s in state.rules().suites.values()]
+    return [
+        {
+            "id": s.id,
+            "version": s.version,
+            "quickCount": s.quick_count,
+            "fullCount": len(s.cases),
+            "categories": s.categories,
+        }
+        for s in state.rules().suites.values()
+    ]
 
 
 @router.get("/suites/{suite_id}")
@@ -20,5 +28,8 @@ async def suite(suite_id: str) -> dict:
     s = state.rules().suites.get(suite_id)
     if s is None:
         raise ServiceError("NOT_FOUND", "Unknown suite.", 404)
-    return {"id": s.id, "version": s.version,
-            "cases": [{"id": c.id, "category": c.category, "quick": c.quick, "task": c.task} for c in s.cases]}
+    return {
+        "id": s.id,
+        "version": s.version,
+        "cases": [{"id": c.id, "category": c.category, "quick": c.quick, "task": c.task} for c in s.cases],
+    }

@@ -21,8 +21,9 @@ async def _configure(conn: AsyncConnection) -> None:
 
 async def open_pool(url: str) -> AsyncConnectionPool:
     global _pool
-    _pool = AsyncConnectionPool(url, min_size=1, max_size=10, open=False, configure=_configure,
-                                kwargs={"autocommit": True})
+    _pool = AsyncConnectionPool(
+        url, min_size=1, max_size=10, open=False, configure=_configure, kwargs={"autocommit": True}
+    )
     await _pool.open(wait=False)
     return _pool
 

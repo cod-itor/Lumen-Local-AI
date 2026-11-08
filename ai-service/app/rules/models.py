@@ -7,19 +7,56 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
-Task = Literal["MESSAGE", "TITLE", "IMAGE_CLARIFY", "IMAGE_PROMPT", "LEARN_QUESTION", "LEARN_PLAN", "LEARN_STEP",
-               "QUIZ", "INTERNAL"]
-TASKS: set[str] = {"MESSAGE", "TITLE", "IMAGE_CLARIFY", "IMAGE_PROMPT", "LEARN_QUESTION", "LEARN_PLAN", "LEARN_STEP",
-                   "QUIZ", "INTERNAL"}
+Task = Literal[
+    "MESSAGE",
+    "TITLE",
+    "IMAGE_CLARIFY",
+    "IMAGE_PROMPT",
+    "LEARN_QUESTION",
+    "LEARN_PLAN",
+    "LEARN_STEP",
+    "QUIZ",
+    "INTERNAL",
+]
+TASKS: set[str] = {
+    "MESSAGE",
+    "TITLE",
+    "IMAGE_CLARIFY",
+    "IMAGE_PROMPT",
+    "LEARN_QUESTION",
+    "LEARN_PLAN",
+    "LEARN_STEP",
+    "QUIZ",
+    "INTERNAL",
+}
 PIPELINES: set[str | None] = {"CHAT", "RAG", "WEB", None}
 OUTPUTS = {"text", "json"}
 REFERENCE_DATA = {"none", "documents", "web", "lesson"}
-EVAL_CATEGORIES = {"SAFETY", "INJECTION", "RAG_FAITHFULNESS", "RAG_ABSTAIN", "KNOWLEDGE_HUMILITY", "TOOL_USE",
-                   "INSTRUCTION", "JSON", "KHMER"}
+EVAL_CATEGORIES = {
+    "SAFETY",
+    "INJECTION",
+    "RAG_FAITHFULNESS",
+    "RAG_ABSTAIN",
+    "KNOWLEDGE_HUMILITY",
+    "TOOL_USE",
+    "INSTRUCTION",
+    "JSON",
+    "KHMER",
+}
 
 #: Variables every template may use (RULES.md §3).
-GLOBAL_VARIABLES = {"APP_NAME", "TODAY", "WEEKDAY", "TIMEZONE", "ANSWER_LANGUAGE", "MAX_WORDS", "COUNT",
-                    "SOURCE_LANGUAGE", "TARGET_LANGUAGE", "EMERGENCY_LINE"}
+GLOBAL_VARIABLES = {
+    "APP_NAME",
+    "TODAY",
+    "WEEKDAY",
+    "TIMEZONE",
+    "ANSWER_LANGUAGE",
+    "MAX_WORDS",
+    "COUNT",
+    "SOURCE_LANGUAGE",
+    "TARGET_LANGUAGE",
+    "EMERGENCY_LINE",
+}
 
 
 @dataclass(frozen=True)

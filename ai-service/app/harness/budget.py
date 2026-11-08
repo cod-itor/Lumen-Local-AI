@@ -23,6 +23,9 @@ def est_tokens(text: str, harness: dict[str, Any], token_factor: float = 1.0, me
             khmer_chars += 1
         else:
             other_chars += 1
-    raw = (ascii_chars / te["asciiCharsPerToken"] + khmer_chars * te["khmerTokensPerChar"]
-           + other_chars * te["otherTokensPerChar"]) * token_factor
+    raw = (
+        ascii_chars / te["asciiCharsPerToken"]
+        + khmer_chars * te["khmerTokensPerChar"]
+        + other_chars * te["otherTokensPerChar"]
+    ) * token_factor
     return math.ceil(raw) + te["perMessageOverhead"] * messages

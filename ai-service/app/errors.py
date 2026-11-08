@@ -22,5 +22,6 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, e: RequestValidationError) -> JSONResponse:
         errors = [f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors()]
-        return JSONResponse({"code": "VALIDATION_ERROR", "message": "Invalid request.", "errors": errors},
-                            status_code=400)
+        return JSONResponse(
+            {"code": "VALIDATION_ERROR", "message": "Invalid request.", "errors": errors}, status_code=400
+        )

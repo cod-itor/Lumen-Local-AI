@@ -1,0 +1,3 @@
+package com.learnai.entity.enums;
+
+public enum Task { MESSAGE, TITLE, IMAGE_CLARIFY, IMAGE_PROMPT, LEARN_QUESTION, LEARN_PLAN, LEARN_STEP, QUIZ, EVAL_CASE }

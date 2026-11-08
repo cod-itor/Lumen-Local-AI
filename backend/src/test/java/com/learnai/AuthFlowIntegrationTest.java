@@ -35,7 +35,8 @@ class AuthFlowIntegrationTest {
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer(
-            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"));
+            DockerImageName.parse("pgvector/pgvector:pg16").asCompatibleSubstituteFor("postgres"))
+            .withUrlParam("stringtype", "unspecified");
 
     private static final String ORIGIN = "http://localhost:3000";
 
