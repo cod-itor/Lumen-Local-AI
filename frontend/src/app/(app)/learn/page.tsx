@@ -1,8 +1,6 @@
-import { LearnStep } from "@/components/learn/learn-step";
-import { getCurrentLearningPath } from "@/services/learn";
+import { LearnHome } from "@/components/learn/live/learn-home";
 
-/** Figma "08 · Learn · Step + quiz" */
-export default async function LearnPage() {
-  const path = await getCurrentLearningPath();
-  return <LearnStep path={path} />;
+/** Figma "08 · Learn · Step + quiz", wired to the learning API (API_CONTRACT §6.9). */
+export default function LearnPage() {
+  return <LearnHome />;
 }

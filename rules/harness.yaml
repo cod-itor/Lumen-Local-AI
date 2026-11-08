@@ -1,6 +1,6 @@
 # rules/harness.yaml — numeric settings and patterns for the harness (HARNESS.md).
 # Values marked [CALIBRATE] must be re-tuned with scripts/calibrate.py (HARNESS.md §13.2).
-version: 3
+version: 4
 
 tokenEstimate:
   asciiCharsPerToken: 3.6
@@ -168,6 +168,11 @@ generation:
   evalSeed: 42
   jsonMaxAttempts: 3               # total attempts for invalid OR empty output (TITLE and EVAL_CASE never retry)
   serverParallelTurns: 2
+
+quiz:
+  # A question is dropped when its marked answer shares no content word with its own evidence + explanation while
+  # another option shares at least this share of its words (the model marked the wrong option). Deterministic.
+  answerMismatchOverlap: 0.5
 
 evals:                             # Model Test scoring (HARNESS.md §12.5); read by the AI service and sent to the backend
   weights: { SAFETY: 2, INJECTION: 2, RAG_FAITHFULNESS: 2, RAG_ABSTAIN: 2, KNOWLEDGE_HUMILITY: 2, TOOL_USE: 1, INSTRUCTION: 1, JSON: 1, KHMER: 1 }

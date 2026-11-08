@@ -44,11 +44,12 @@ def task_text(task: str, ti: dict[str, Any]) -> str:
         return f"GOAL: {ti.get('goal') or ''}\nANSWERS:\n{lines or '- (none)'}"
     if task == "LEARN_STEP":
         objectives = "\n".join(f"- {o}" for o in ti.get("objectives") or [])
-        prev = "; ".join(ti.get("previousSteps") or []) or "none"
+        prev = "; ".join(ti.get("previousTitles") or ti.get("previousSteps") or []) or "none"
+        total = ti.get("totalSteps") or ti.get("stepCount") or 1
         return (
             f"PLAN TITLE: {ti.get('planTitle') or ''}\n"
             f"LEVEL: {ti.get('level') or 'BEGINNER'}\n"
-            f"STEP {ti.get('stepNumber') or 1} of {ti.get('stepCount') or 1}: {ti.get('title') or ''}\n"
+            f"STEP {ti.get('stepNumber') or 1} of {total}: {ti.get('title') or ''}\n"
             f"SUMMARY: {ti.get('summary') or ''}\n"
             f"OBJECTIVES:\n{objectives}\n"
             f"PREVIOUS STEPS: {prev}"
@@ -153,6 +154,32 @@ def evidence_ok(evidence: str, lesson: str, min_ratio: float = 0.85) -> bool:
     return any(difflib.SequenceMatcher(None, ev, s).ratio() >= min_ratio for s in sentences)
 
 
+_STOP = frozenset(
+    "a an and are as at be by for from has have in into is it its of on or that the their this to was were which "
+    "with what when where who why how do does not no".split()
+)
+
+
+def _content_words(text: str) -> set[str]:
+    """Lower-case words of 3+ letters without stop words, cut to a 5-letter stem ("leaves" ~ "leaf" is not caught)."""
+    return {w[:5] for w in re.findall(r"[a-z0-9]{3,}", text.lower()) if w not in _STOP}
+
+
+def answer_mismatch(q: dict[str, Any], min_other: float) -> bool:
+    """The marked option has no word in evidence + explanation while another option clearly does."""
+    support = _content_words(f"{q.get('evidence') or ''} {q.get('explanation') or ''}")
+    opts = [str(o) for o in q.get("options") or []]
+    idx = q.get("answerIndex")
+    if not support or not isinstance(idx, int) or not 0 <= idx < len(opts):
+        return False
+
+    def share(o: str) -> float:
+        words = _content_words(o)
+        return len(words & support) / len(words) if words else 0.0
+
+    return share(opts[idx]) == 0 and any(share(o) >= min_other for i, o in enumerate(opts) if i != idx)
+
+
 def _has_url(obj: Any) -> bool:
     if isinstance(obj, str):
         return bool(_URL.search(obj))
@@ -220,7 +247,10 @@ def semantic(schema_id: str, obj: dict[str, Any], ti: dict[str, Any], r: Rules) 
         count = int(ti.get("count") or 5)
         kept: list[dict[str, Any]] = []
         seen: set[str] = set()
+        mismatch = float((r.harness.get("quiz") or {}).get("answerMismatchOverlap", 0.5))
         for q in obj.get("questions") or []:
+            if answer_mismatch(q, mismatch):
+                continue
             opts = [_norm(str(o)) for o in q.get("options") or []]
             key = _norm(str(q.get("question") or ""))
             if len(set(opts)) != len(opts) or key in seen or not evidence_ok(str(q.get("evidence") or ""), lesson):
@@ -230,7 +260,8 @@ def semantic(schema_id: str, obj: dict[str, Any], ti: dict[str, Any], r: Rules) 
         if len(kept) < min(3, count):
             errors.append(
                 f"$.questions: only {len(kept)} questions passed the checks (evidence copied from the LESSON, "
-                f"4 different options, no repeats); {count} needed"
+                f"4 different options, no repeats, answerIndex pointing at the option the evidence supports); "
+                f"{count} needed"
             )
         obj = {**obj, "questions": kept}
     return obj, errors

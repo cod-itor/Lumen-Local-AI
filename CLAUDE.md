@@ -230,8 +230,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 8 | Translation + tools | **done** (2026-11-08) — calculator (word/symbol/percent normalization, range and date blanking, whitelist `ast` + `Fraction`, never `eval`, F12 exact-result enforcement), DATETIME tool (now, weekday of a date, days until/between), NLLB-200 600M int8 via CTranslate2 + SentencePiece (no torch at runtime), Markdown-safe `translate_markdown` (code/URLs/citations kept, LRU cache), host-model fallback, P6 KM→EN pivot, F13 KM / BOTH output (prepared texts for abstains), `/translate`; UI: Show original toggle, EN+KM side by side, "Calculated by the app" card |
 | 9 | Model Test | **done** (2026-11-08) — AI: `evals/graders.py` (every §12.3 check, deterministic), `evals/fixtures.py` (in-memory fixture corpus, `fx:` chunk ids, forced top 3), EVAL_CASE prepare (profile TEST, seed 42, EN output, `answerLanguage` override) + finalize (case's own finalize once, grade F1–F3 text, `guardWouldBlock`); structured tasks for every non-MESSAGE task (`harness/structured.py`: task input blocks §7.7, JSON extraction + repairs, schema + RULES §5 semantic checks, repair messages, TITLE cleaning, lesson headings); `scripts/run_evals.py`. Backend: `eval_runs`/`eval_results`, `/api/evals/*`, generic `TaskHandler` (target + lock, taskInput, apply, onTerminal) with `EvalCaseTaskHandler` + `TitleTaskHandler`, error results on FAILED/EXPIRED, 5 errors → FAILED, scores from `rules/harness.yaml → evals.weights`. Frontend: `/test` (start Quick/Full, progress, pause/resume/cancel, scorecard, failed cases, history + compare), `lib/harness/runTask.ts` (non-MESSAGE turns, SERVER + CLIENT with repair loop), module-level runner store |
 | 10 | Web search | **done** (2026-11-08) — AI: `web/searxng.py` (JSON API, `WEB_UNAVAILABLE`), `guard/url_safety.safe_get` (every hop checked, connect to the validated IP with original Host + SNI, ≤ 3 manual redirects, size/time limits), `web/extract.py` (trafilatura, precision, tables kept), `web/evidence.py` (query rule §7.4.1, filter + per-domain cap, parallel fetch, chunk 300 tokens, embed, 24 h cache in `chunks` `source=WEB`, best 2 per page / 5 overall, injection-flagged chunks dropped), WEB prepare (edited query re-checked by the input guard, `needs_approval`, SEARCHING → READING, abstain `NO_WEB_RESULTS` / `WEB_UNAVAILABLE`), hourly purge; WEB grounding reuses F9–F11. Backend: `POST /api/harness/turns/{id}/approval` (APPROVE / EDIT 1–200 chars, AWAITING_APPROVAL → PREPARING, query stored in the request, same TurnRunner). Frontend: approval wait in `useHarnessTurn` (`respond`, Stop cancels), `SearchApproval` card, WEB source chips (links, `noopener noreferrer`), WEB grounding badge, TURN_ON/VERIFY_WITH_WEB_SEARCH re-ask, "Ask before searching" switch in Settings → Privacy |
-| 11 | Learning paths + quizzes | next |
-| 12 | Images | todo |
+| 11 | Learning paths + quizzes | **done** (2026-11-08) — Backend: `learning_paths`/`learning_steps`/`quizzes`/`quiz_attempts` entities, `LearningService` (create with `/guard/check`, answers, skip, plan edit with §9.9 checks, approve → steps, restart, quiz submit: score, best score, ≥ 0.7 unlocks the next step or completes the path; answers hidden until submit), `/api/learning-paths`, `/api/learning-steps`, `/api/quizzes`; task handlers LEARN_QUESTION / LEARN_PLAN / LEARN_STEP (FAILED → contentStatus FAILED) / QUIZ, lock `path:{id}`, 409 while a turn holds it. AI: quiz answer–evidence check (`rules/harness.yaml → quiz`). Frontend: live `/learn` (path list + new goal, interview with option chips, editable plan + approve, step list + lesson Markdown + quiz → result with explanations/evidence, retake, restart, delete) |
+| 12 | Images | next |
 | 13 | Voice | todo |
 | 14 | Calibration + polish | todo |
 
@@ -320,6 +320,16 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   Model Test after the rule change, rules `rules-0a0cb21637a4`: **Full 0.927**, safety with guardrails 1.0 (same fails as phase 9;
   suite core has no WEB cases). Live check: "Who designed the Independence Monument" → Vann Molyvann [3], GROUNDED;
   APPROVE and EDIT approval flows both verified through the public API.
+
+- 2026-11-08 — Phase 11: LEARN_STEP task input uses the BACKEND §7.5 names (`totalSteps`, `previousTitles`); the AI
+  also accepts the old `stepCount`/`previousSteps`. Skip-interview drops an unanswered pending question. New rule
+  (harness v4 `quiz.answerMismatchOverlap: 0.5`): a quiz question is dropped when its marked answer shares no content
+  word with its own evidence + explanation while another option shares ≥ 50 % (found live: llama3.2 marked "absorb
+  carbon dioxide" as the main purpose of photosynthesis). Model Test after the change, rules `rules-d059ffb778c4`:
+  **Full 0.915**, safety with guardrails 1.0; `json-quiz` now fails because the check catches a real wrong answer
+  ("Rain is formed by the sun") that the grader missed before — in the app the repair loop retries it.
+  Live API run (photosynthesis): 3 interview questions → 8-step plan → approve → lesson 1 → quiz → 0 % then 100 % →
+  step 2 CURRENT; answers never sent before submit; wrong-state calls → 409.
 
 ## 11. Known issues / gotchas
 

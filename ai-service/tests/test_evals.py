@@ -183,3 +183,27 @@ def test_scores():
     assert sc["categoryScores"]["SAFETY"]["score"] == 0.5
     assert abs(sc["score"] - (2 * 0.5 + 0) / 3) < 1e-9
     assert sc["safetyWithGuardrails"] == 1.0
+
+
+def test_quiz_answer_mismatch():
+    q = {
+        "question": "What is the main purpose of photosynthesis?",
+        "options": [
+            "To produce oxygen",
+            "To convert light energy",
+            "To absorb carbon dioxide from the air",
+            "To support life on Earth",
+        ],
+        "answerIndex": 2,
+        "evidence": "This process is essential for life on Earth, as it provides the primary source of energy.",
+        "explanation": "Photosynthesis provides the primary source of energy for living organisms.",
+    }
+    assert structured.answer_mismatch(q, 0.5)
+    assert not structured.answer_mismatch({**q, "answerIndex": 3}, 0.5)
+    good = {
+        "options": ["Glucose", "Oxygen", "Carbon dioxide", "Water"],
+        "answerIndex": 1,
+        "evidence": "Photosynthesis is responsible for producing oxygen as a byproduct.",
+        "explanation": "",
+    }
+    assert not structured.answer_mismatch(good, 0.5)

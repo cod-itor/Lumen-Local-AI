@@ -74,6 +74,12 @@ public class AiServiceClient {
         return getJson("/evals/suites/" + id, Duration.ofSeconds(10));
     }
 
+    /** POST /guard/check: input guardrails for non-chat text (learning goal, image prompt). */
+    public JsonNode guardCheck(String text, String kind, String profile) {
+        ObjectNode body = json.createObjectNode().put("text", text).put("kind", kind).put("profile", profile);
+        return postJson("/guard/check", body, Duration.ofSeconds(15));
+    }
+
     public JsonNode catalog() {
         return getJson("/models/catalog", Duration.ofSeconds(5));
     }

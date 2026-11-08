@@ -319,3 +319,28 @@ export interface EvalRunDto {
   createdAt: string; finishedAt: string | null;
 }
 export interface EvalRunDetailDto extends EvalRunDto { results: EvalResultDto[]; }
+
+// ---------------------------------------------------------------- learning (API_CONTRACT §4.9)
+export type LearningPathState = "INTERVIEWING" | "PLANNING" | "AWAITING_APPROVAL" | "ACTIVE" | "COMPLETED";
+export type LearningNextAction = "ASK" | "PLAN" | "APPROVE" | "STUDY" | "NONE";
+export type ContentStatus = "EMPTY" | "READY" | "FAILED";
+export type StepStatus = "LOCKED" | "CURRENT" | "DONE";
+export type InterviewTopic = "level" | "outcome" | "time" | "focus" | "style";
+export interface InterviewItem { topic: InterviewTopic; question: string; options: string[]; answer: string | null; }
+export interface PlanStepDto { title: string; summary: string; objectives: string[]; }
+export interface PlanDto { title: string; level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED"; steps: PlanStepDto[]; }
+export interface LearningStepDto {
+  id: UUID; position: number; title: string; summary: string; objectives: string[];
+  content: string | null; contentStatus: ContentStatus; status: StepStatus; bestScore: number | null;
+}
+export interface LearningPathDto {
+  id: UUID; goal: string; state: LearningPathState; nextAction: LearningNextAction;
+  interview: InterviewItem[]; plan: PlanDto | null; steps: LearningStepDto[];
+  progress: { done: number; total: number }; createdAt: Instant; updatedAt: Instant;
+}
+export interface QuizDto { id: UUID; stepId: UUID; questions: { index: number; question: string; options: string[] }[]; createdAt: Instant; }
+export interface QuizResultDto {
+  quizId: UUID; score: number; passed: boolean;
+  results: { index: number; selected: number | null; correctIndex: number; correct: boolean; explanation: string; evidence: string }[];
+  step: LearningStepDto; nextStep: LearningStepDto | null;
+}
