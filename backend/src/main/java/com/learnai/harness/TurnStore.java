@@ -14,6 +14,7 @@ import com.learnai.entity.enums.Task;
 import com.learnai.entity.enums.TitleSource;
 import com.learnai.entity.enums.TurnStatus;
 import com.learnai.exception.ApiException;
+import com.learnai.harness.task.TaskHandler;
 import com.learnai.mapper.MessageMapper;
 import com.learnai.repository.ChatRepository;
 import com.learnai.repository.HarnessTurnRepository;
@@ -116,6 +117,39 @@ public class TurnStore {
             throw new ApiException(HttpStatus.CONFLICT, "CONFLICT", "Another request for this item is still running.");
         }
         return new Created(t.getId(), user.getId());
+    }
+
+    /** Any task except MESSAGE: no user message; target and lock come from the task handler. */
+    @Transactional
+    public Created createTaskTurn(UUID userId, HarnessTurnRequest r, ModelProvider p, Duration ttl,
+                                  TaskHandler.Target target) {
+        HarnessTurn t = HarnessTurn.builder()
+                .userId(userId).chatId(target.chatId()).task(r.task()).targetType(target.type())
+                .targetId(target.id()).lockKey(target.lockKey())
+                .providerId(p.getId()).providerKind(p.getKind()).model(p.getModel())
+                .generation(ProviderKindSide.of(p.getKind())).status(TurnStatus.PREPARING)
+                .request(json.valueToTree(r)).expiresAt(Instant.now().plus(ttl)).build();
+        try {
+            t = turns.saveAndFlush(t);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "CONFLICT", "Another request for this item is still running.");
+        }
+        return new Created(t.getId(), null);
+    }
+
+    /**
+     * Apply a non-MESSAGE result and end the turn COMPLETED, under the turn's row lock.
+     * @return the handler's data (wrapped), or null when the turn was no longer FINALIZING
+     */
+    @Transactional
+    public java.util.Optional<Object> applyTask(UUID turnId, TaskHandler handler, JsonNode finalizeResponse) {
+        HarnessTurn t = turns.findForUpdate(turnId).orElseThrow();
+        if (t.getStatus() != TurnStatus.FINALIZING) return null;
+        Object data = handler.apply(t, finalizeResponse);
+        t.setStatus(TurnStatus.COMPLETED);
+        t.setCompletedAt(Instant.now());
+        turns.save(t);
+        return java.util.Optional.ofNullable(data);
     }
 
     private Message messageOf(Chat chat, UUID id, MessageRole role, String field) {

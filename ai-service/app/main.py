@@ -30,6 +30,9 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await db.open_pool(s.database_url)
     if s.ai_profile == "full":
         asyncio.create_task(ollama_runtime.warm_up())  # noqa: RUF006
+    from app.evals import fixtures
+
+    asyncio.create_task(fixtures.warm_up())  # noqa: RUF006
     try:
         yield
     finally:

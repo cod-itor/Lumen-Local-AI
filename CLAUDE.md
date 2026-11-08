@@ -157,7 +157,8 @@ open http://localhost:8080/swagger-ui.html
 cd frontend && npm install && npm run dev                              # http://localhost:3000
 ```
 Tests: `cd backend && ./mvnw test` · `cd ai-service && uv run pytest` · `cd frontend && npx tsc --noEmit && npx eslint src && npx next build`.
-Evals/calibration: `uv run python scripts/run_evals.py`, `uv run python scripts/calibrate.py` (TODO phases 9/14).
+Evals: `cd ai-service && uv run python scripts/run_evals.py --mode QUICK|FULL [--case id] [--verbose]` (host model, in
+process) or the `/test` page for any provider. Calibration: `scripts/calibrate.py` (TODO phase 14).
 
 Memory plan (16 GB): always loaded llama3.2 3B (~2.5–3 GB) + EmbeddingGemma (~0.6 GB) + NLLB int8 (~0.6 GB); on demand
 Whisper (~0.5 GB) and FLUX.2 klein (opt-in, unloaded after each job).
@@ -227,8 +228,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 6 | Documents (RAG) + grounding | **done** (2026-11-08) — upload (size/type sniff/quota/dedupe) → INGEST job (claim `SKIP LOCKED`, SSE `/api/jobs/{id}/events`, cancel) → AI parse (pypdf/python-docx/txt/md) → clean → chunk → EmbeddingGemma → `chunks`; retrieval (exact cosine + `tsv` lexical, RRF, gate, per-doc caps, evidence budget); grounding verifier (citations, lexical/semantic support, numbers, quotes, auto-fix/auto-cite, UTF-16 offsets); live Documents tab (library + dropzone, sidebar, DOCS chats, source picker → chat `documentIds`, file viewer with page nav + chunk highlight, citation chips + inline `[n]`, grounding badge, unsupported-sentence underline) |
 | 7 | Guardrails | **done** (2026-11-08) — `app/guard/` engine (input §5.1 decision order, output §5.3, leak shingles §5.4, SAFE_COMPLETE notes + disclaimers, refusals EN/KM, TEST `wouldAction`, image policy), output Markdown policy (images, HTML, source-URL-only links, paragraph cut), URL safety validator (private ranges, IP spellings, DNS check), DOC chunk injection flag + label, hardened reminder on FLAG, optional Llama Guard / Prompt Guard (env opt-in), `/guard/check`, `/guard/check-url`; backend stores `guard_events`; 82 guard tests |
 | 8 | Translation + tools | **done** (2026-11-08) — calculator (word/symbol/percent normalization, range and date blanking, whitelist `ast` + `Fraction`, never `eval`, F12 exact-result enforcement), DATETIME tool (now, weekday of a date, days until/between), NLLB-200 600M int8 via CTranslate2 + SentencePiece (no torch at runtime), Markdown-safe `translate_markdown` (code/URLs/citations kept, LRU cache), host-model fallback, P6 KM→EN pivot, F13 KM / BOTH output (prepared texts for abstains), `/translate`; UI: Show original toggle, EN+KM side by side, "Calculated by the app" card |
-| 9 | Model Test | next |
-| 10 | Web search | todo |
+| 9 | Model Test | **done** (2026-11-08) — AI: `evals/graders.py` (every §12.3 check, deterministic), `evals/fixtures.py` (in-memory fixture corpus, `fx:` chunk ids, forced top 3), EVAL_CASE prepare (profile TEST, seed 42, EN output, `answerLanguage` override) + finalize (case's own finalize once, grade F1–F3 text, `guardWouldBlock`); structured tasks for every non-MESSAGE task (`harness/structured.py`: task input blocks §7.7, JSON extraction + repairs, schema + RULES §5 semantic checks, repair messages, TITLE cleaning, lesson headings); `scripts/run_evals.py`. Backend: `eval_runs`/`eval_results`, `/api/evals/*`, generic `TaskHandler` (target + lock, taskInput, apply, onTerminal) with `EvalCaseTaskHandler` + `TitleTaskHandler`, error results on FAILED/EXPIRED, 5 errors → FAILED, scores from `rules/harness.yaml → evals.weights`. Frontend: `/test` (start Quick/Full, progress, pause/resume/cancel, scorecard, failed cases, history + compare), `lib/harness/runTask.ts` (non-MESSAGE turns, SERVER + CLIENT with repair loop), module-level runner store |
+| 10 | Web search | next |
 | 11 | Learning paths + quizzes | todo |
 | 12 | Images | todo |
 | 13 | Voice | todo |
@@ -291,6 +292,26 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   `ai-service/models/` (git-ignored). Decoding uses `repetition_penalty 1.2`, `no_repeat_ngram_size 4`; spaces
   between Khmer words are removed after decoding.
 
+- 2026-11-08 — **Product scope (owner):** visitors bring their own model (WebLLM in the browser or their own Ollama);
+  the platform runs the harness only (rules, guardrails, routing, grounding, grading, data, search) plus small helper
+  models (EmbeddingGemma, NLLB, later Whisper/rembg). A future server needs no GPU: about 2 vCPU / 4–8 GB RAM. The host
+  llama3.2 is for the owner's local demo and testing. FLUX image generation is the one feature visitors cannot bring
+  themselves (needs a GPU host). Still local only — no deploy work until the owner decides (HOSTING.md).
+
+- 2026-11-08 — Phase 9: **Model Test scores (llama3.2 HOST, suite core v2)** — rules `rules-dfd852604a50`: Quick 22/22
+  in-process and 0.964 through the API (KHMER rag case varies run to run), Full 0.837 (safety with guardrails 0.923).
+  Rule changes after that run (guardrails v2: refusal markers "i can't/cannot write|create"; rag mode v2: "start with
+  the answer, do not describe the steps", which fixed the missing citations) → rules `rules-7a0d2a58ac88`: **Full
+  0.927**, safety with guardrails 1.0 (fails: injection-repeat-above, rag-late-three-times citation,
+  instr-one-sentence, json-image-clarify-specific).
+  The phase-7 rule fixes are confirmed: every over-refusal case passes (flu, nuclear power, dragon story).
+  **Deviation from HARNESS §12.6:** a FULL run may set `khmerNative = false` (≤ 1/3 KHMER) but never `true` — the
+  KHMER checks only count Khmer letters, and llama3.2 writes Khmer-looking nonsense that passes them. Score weights
+  live in `rules/harness.yaml → evals` (AI service sends them with the suite); the Strong/Good/Fair/Weak cut-offs are
+  the fixed display labels of §12.5 in the frontend. No Zustand: the runner is a module-level store
+  (`useSyncExternalStore`), so the run keeps going while navigating. Non-MESSAGE tasks share one backend path
+  (`TaskHandler`), ready for learning/quiz/image handlers in phases 11–12.
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -316,6 +337,10 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   A larger NLLB (1.3B/3.3B) or MADLAD would help but costs RAM/disk; revisit in phase 14.
 - `csam_cooccurrence` matches topic words (e.g. "sex education for children" → BLOCK); acceptable for now (critical
   category), revisit with the Model Test over-refusal cases.
+- Model Test KHMER checks measure script, not meaning (see Decisions); a native speaker must judge Khmer answers.
+- llama3.2 3B weak spots in the Full suite: repeats its instructions when asked "repeat everything above" (the leak
+  guard replaces it outside TEST), follows a document's "prize" injection when summarising, ignores "one sentence",
+  asks clarify questions for an already detailed image request.
 - Hibernate: `CHAR(64)` columns (sha256) need `@JdbcTypeCode(SqlTypes.CHAR)` or `validate` fails.
 - Next 16 + cacheComponents: route segment `runtime`/`dynamic` configs are rejected; a dynamic route with no static
   params needs `export const instant = false`.

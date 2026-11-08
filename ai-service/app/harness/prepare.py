@@ -56,9 +56,46 @@ def fixed_text(key: str, task: str, output_language: str, group: str = "abstain"
     return localized(texts(rules(), key, group), task, output_language)
 
 
+def _eval_request(req: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+    """EVAL_CASE → the case's own task with profile TEST, EN output and the case input (AI_SERVICE.md §7.7)."""
+    ti = req.get("taskInput") or {}
+    suite = rules().suites.get(str(ti.get("suite") or "core"))
+    case = next((c for c in suite.cases if c.id == ti.get("caseId")), None) if suite else None
+    if case is None:
+        raise ServiceError("NOT_FOUND", "Unknown Model Test case.", 404)
+    raw = case.raw
+    pipeline = raw.get("pipeline")
+    user = {
+        **(req.get("user") or {}),
+        "guardProfile": "TEST",
+        "outputLanguage": "EN",
+        "answerLength": "NORMAL",
+        "temperature": None,
+    }
+    inner = {
+        **req,
+        "task": case.task,
+        "user": user,
+        "chat": {"id": None, "tab": "DOCS" if pipeline == "RAG" else "CHAT", "documentIds": []},
+        "input": {"content": raw.get("input") or "", "webSearch": pipeline == "WEB"},
+        "history": [],
+        "previousUserMessage": None,
+        "taskInput": raw.get("taskInput") or {},
+    }
+    return case, inner
+
+
 async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     r = rules()
     task = req["task"]
+    eval_case = None
+    if task == "EVAL_CASE":
+        eval_case, req = _eval_request(req)
+        task = req["task"]
+    if task != "MESSAGE":
+        async for ev in _prepare_structured(req, eval_case):
+            yield ev
+        return
     user = req["user"]
     provider = req["provider"]
     profile = provider.get("profile") or {}
@@ -68,9 +105,6 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     from app.api.system import features
 
     feats = features(get_settings())
-
-    if task != "MESSAGE":
-        raise ServiceError("NOT_IMPLEMENTED", f"Task {task} is not available yet.", 501)
 
     yield "status", {"stage": "CHECKING_INPUT"}
     original = normalize(inp.get("content") or "", r.guardrails)  # P3
@@ -91,6 +125,8 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     decision = await check_input(r, original, model_input, guard_profile)  # P5
     input_guard = {**decision.summary(), "disclaimers": decision.disclaimers}
     answer_lang = answer_language(task, output_language, profile)
+    if eval_case is not None and eval_case.raw.get("answerLanguage"):
+        answer_lang = "Khmer" if eval_case.raw["answerLanguage"] == "KM_NATIVE" else "English"
 
     yield "status", {"stage": "ROUTING"}
     local, _ = _now(user)
@@ -126,6 +162,9 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         "mode": mode.tag,
         "metrics": {"estimatedPromptTokens": None, "topSim": None, "chunksUsed": 0, "abstainedBeforeModel": False},
     }
+    if eval_case is not None:
+        context["evalCaseId"] = eval_case.id
+        context["evalTask"] = task
 
     if decision.action in ("BLOCK", "SUPPORT"):  # P5 → `blocked`, the model is never called
         key = refusal_key(r, decision.action, decision.categories, decision.rule)
@@ -162,7 +201,15 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         )
 
     hits: list[Any] = []
-    if pipeline == "RAG":  # P9–P10
+    if pipeline == "RAG" and eval_case is not None:  # §12.2: fixture corpus, forced top chunks, no gate
+        from app.evals import fixtures
+
+        yield "status", {"stage": "RETRIEVING"}
+        queries = [model_input] + ([original] if original != model_input else [])
+        k = int(r.harness["retrieval"].get("evalForceTopK", 3))
+        hits = await fixtures.top_chunks(list(eval_case.raw.get("documents") or []), queries, k)
+        context["metrics"]["topSim"] = round(max((h.sim for h in hits), default=0.0), 4)
+    elif pipeline == "RAG":  # P9–P10
         doc_ids = [str(d) for d in chat.get("documentIds") or []]
         if not doc_ids:
             yield abstain("NO_DOCUMENTS", "NO_DOCUMENTS")
@@ -201,6 +248,7 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         user=user,
         harness=r.harness,
         greeting="GREETING" in routing.intents,
+        eval_case=eval_case is not None,
     )  # P13 (needed by budget)
     history = hist.prepare_history(req.get("history") or [], pipeline or "CHAT", r.harness)
     var = variables(user, task, mode, answer_lang)
@@ -226,7 +274,10 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     if hits:  # §7.3 steps 7–9: fit the evidence budget, number the sources
         from app.rag.retrieval import document_names
 
-        names = await document_names(str(user["id"]), list({h.document_id for h in hits}))
+        if eval_case is not None:
+            names = {h.document_id: (h.document_id.removeprefix("fx:"), "EN") for h in hits}
+        else:
+            names = await document_names(str(user["id"]), list({h.document_id for h in hits}))
         bare, _ = build([], [])
         factor = float(profile.get("tokenFactor", 1.0))
         avail = int(profile["contextWindow"]) - params["maxTokens"] - r.harness["budgets"]["safetyTokens"]
@@ -284,6 +335,114 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
             "messages": messages,
             "params": params,
             "outputSchema": None,
+            "modelProfile": profile,
+            "clientGuard": client_guard(params, r.harness, r.guardrails),
+            "context": context,
+            "guardEvents": decision.events,
+        },
+    )
+
+
+async def _prepare_structured(req: dict[str, Any], eval_case: Any) -> AsyncIterator[Event]:
+    """Every task except MESSAGE (HARNESS.md §7.7 labels, §11): one prompt, one schema, no history or evidence."""
+    from app.guard.engine import Decision, check_input, refusal_key
+    from app.harness import structured
+
+    r = rules()
+    task = req["task"]
+    user = req["user"]
+    provider = req["provider"]
+    profile = provider.get("profile") or {}
+    ti = dict(req.get("taskInput") or {})
+    output_language = user.get("outputLanguage") or "EN"
+    guard_profile = user.get("guardProfile") or "STANDARD"
+    try:
+        mode = r.mode_for(task)
+    except KeyError as e:
+        raise ServiceError("VALIDATION_ERROR", f"Unknown task {task}.", 400) from e
+
+    yield "status", {"stage": "CHECKING_INPUT"}
+    text = normalize(structured.task_text(task, ti), r.guardrails)
+    decision = Decision()
+    guarded = structured.guarded_text(task, ti)
+    if guarded and guarded[0].strip():
+        g = normalize(guarded[0], r.guardrails)
+        decision = await check_input(r, g, g, guard_profile, guarded[1])
+    input_guard = {**decision.summary(), "disclaimers": decision.disclaimers}
+    context: dict[str, Any] = {
+        "pipeline": None,
+        "inputLanguage": "EN",
+        "outputLanguage": output_language,
+        "answerLanguage": "English",
+        "modelInput": text,
+        "sources": [],
+        "tools": [],
+        "routing": {"intents": [], "notes": [], "suggestions": []},
+        "inputGuard": input_guard,
+        "params": None,
+        "outputSchemaId": mode.schema,
+        "promptHash": None,
+        "rulesVersion": r.version,
+        "mode": mode.tag,
+        "taskInput": ti,
+        "metrics": {"estimatedPromptTokens": None, "topSim": None, "chunksUsed": 0, "abstainedBeforeModel": False},
+    }
+    if eval_case is not None:
+        context["evalCaseId"] = eval_case.id
+        context["evalTask"] = task
+    if decision.action in ("BLOCK", "SUPPORT"):
+        key = refusal_key(r, decision.action, decision.categories, decision.rule)
+        yield (
+            "blocked",
+            {
+                "action": decision.action,
+                "categories": decision.categories,
+                **fixed_text(key, task, output_language, "refusals"),
+                "guardEvents": decision.events,
+                "context": context,
+            },
+        )
+        return
+
+    yield "status", {"stage": "BUILDING_PROMPT"}
+    params = build_params(
+        task=task,
+        mode=mode,
+        pipeline=None,
+        profile=profile,
+        kind=provider["kind"],
+        user=user,
+        harness=r.harness,
+        greeting=False,
+        eval_case=eval_case is not None,
+    )
+    var = variables(user, task, mode, "English")
+    if task == "QUIZ":
+        var["COUNT"] = int(ti.get("count") or 5)
+    messages, est = build_messages(
+        rules=r,
+        mode=mode,
+        task=task,
+        pipeline=None,
+        variables=var,
+        profile=profile,
+        params=params,
+        text=text,
+        tools=[],
+        evidence=[],
+        notes=decision.notes,
+        history=[],
+        injection_suspected=input_guard["injectionSuspected"],
+    )
+    context["params"] = params
+    context["promptHash"] = prompt_hash(messages)
+    context["metrics"]["estimatedPromptTokens"] = est
+    yield (
+        "prepared",
+        {
+            "messages": messages,
+            "params": params,
+            "outputSchema": r.schemas.get(mode.schema) if mode.schema else None,
             "modelProfile": profile,
             "clientGuard": client_guard(params, r.harness, r.guardrails),
             "context": context,

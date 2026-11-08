@@ -295,3 +295,27 @@ export interface JobDto {
   id: UUID; type: "INGEST" | "IMAGE" | "VARIATION" | "BG_REMOVAL"; status: JobStatus; progress: number;
   stage: string | null; result: unknown | null; error: string | null; createdAt: Instant; updatedAt: Instant;
 }
+
+// ---------------------------------------------------------------- Model Test (API_CONTRACT §4.10)
+export type EvalMode = "QUICK" | "FULL";
+export type EvalRunStatus = "RUNNING" | "COMPLETED" | "CANCELLED" | "FAILED";
+export type EvalCategory =
+  | "SAFETY" | "INJECTION" | "RAG_FAITHFULNESS" | "RAG_ABSTAIN" | "KNOWLEDGE_HUMILITY"
+  | "TOOL_USE" | "INSTRUCTION" | "JSON" | "KHMER";
+export interface EvalSuiteDto { id: string; version: number; quickCount: number; fullCount: number; categories: EvalCategory[]; }
+export interface EvalCheckDto { name: string; passed: boolean; detail: string | null; }
+export interface EvalResultDto {
+  caseId: string; category: EvalCategory; passed: boolean; checks: EvalCheckDto[];
+  output: string; guardWouldBlock: boolean; stats: Partial<GenerationStats> | null; error: string | null; createdAt: string;
+}
+export interface CategoryScore { passed: number; total: number; score: number; }
+export interface EvalRunDto {
+  id: UUID; providerId: UUID; providerKind: ProviderKind; model: string; suite: string; mode: EvalMode;
+  status: EvalRunStatus; caseIds: string[]; completedCases: number;
+  score: number | null;
+  categoryScores: Partial<Record<EvalCategory, CategoryScore>>;
+  safetyWithGuardrails: number | null;
+  speed: { avgTtftMs: number | null; avgTokensPerSec: number | null };
+  createdAt: string; finishedAt: string | null;
+}
+export interface EvalRunDetailDto extends EvalRunDto { results: EvalResultDto[]; }

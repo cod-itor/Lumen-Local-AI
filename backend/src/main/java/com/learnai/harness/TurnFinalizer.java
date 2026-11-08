@@ -9,6 +9,9 @@ import com.learnai.entity.HarnessTurn;
 import com.learnai.entity.ModelProvider;
 import com.learnai.entity.enums.GenerationSide;
 import com.learnai.entity.enums.MessageStatus;
+import com.learnai.entity.enums.Task;
+import com.learnai.harness.task.TaskHandler;
+import com.learnai.harness.task.TaskHandlers;
 import com.learnai.entity.enums.TurnStatus;
 import com.learnai.repository.HarnessTurnRepository;
 import com.learnai.repository.ModelProviderRepository;
@@ -55,6 +58,7 @@ public class TurnFinalizer {
     private final TurnOutcomeService outcomes;
     private final AppProperties props;
     private final ObjectMapper json;
+    private final TaskHandlers handlers;
 
     public Outcome finalizeAndApply(UUID turnId, TurnStatus from, JsonNode output, SseWriter writer) {
         if (!store.transition(turnId, TurnStatus.FINALIZING, from)) return new Lost();
@@ -70,7 +74,9 @@ public class TurnFinalizer {
             req.set("provider", p == null ? json.createObjectNode().put("kind", t.getProviderKind().name())
                     .put("model", t.getModel()) : ctx.provider(p));
             req.set("context", t.getPrepareContext());
-            req.putNull("taskInput");
+            var handler = handlers.get(t.getTask());
+            if (handler.isPresent()) req.set("taskInput", handler.get().taskInput(t));
+            else req.putNull("taskInput");
             req.set("output", output);
             resp = ai.finalizeTurn(req);
         } catch (AiServiceException e) {
@@ -113,6 +119,7 @@ public class TurnFinalizer {
             outcomes.onTerminal(id);
             return new Terminal(result(t, TurnStatus.FAILED, null, FAILED_NOTICE, null));
         }
+        if (t.getTask() != Task.MESSAGE) return applyTask(t, resp, status);
         MessageStatus ms;
         TurnStatus ts;
         String guardAction = null;
@@ -143,6 +150,27 @@ public class TurnFinalizer {
                 output.path("stats"), resp.path("finishReason").asString(finish)), null);
         if (msg == null) return new Lost();
         return new Terminal(result(t, ts, msg, null, guardAction));
+    }
+
+    private Outcome applyTask(HarnessTurn t, JsonNode resp, String status) {
+        UUID id = t.getId();
+        if ("BLOCKED".equals(status) || "SUPPORT".equals(status)) {
+            if (!store.transition(id, TurnStatus.BLOCKED, TurnStatus.FINALIZING)) return new Lost();
+            return new Terminal(result(t, TurnStatus.BLOCKED, null, resp.path("content").asString(""),
+                    "SUPPORT".equals(status) ? "SUPPORT" : "REPLACE"));
+        }
+        TaskHandler handler = handlers.get(t.getTask()).orElseThrow();
+        java.util.Optional<Object> data;
+        try {
+            data = store.applyTask(id, handler, resp);
+        } catch (TaskHandler.Discard d) {
+            log.info("turn {} result discarded: {}", id, d.getMessage());
+            if (store.transition(id, TurnStatus.CANCELLED, TurnStatus.FINALIZING)) outcomes.onTerminal(id);
+            return new Terminal(result(t, TurnStatus.CANCELLED, null, null, null));
+        }
+        if (data == null) return new Lost();
+        return new Terminal(new TurnResult(id, t.getTask(), TurnStatus.COMPLETED, null, data.orElse(null), null,
+                null));
     }
 
     private JsonNode guardSummary(JsonNode g) {

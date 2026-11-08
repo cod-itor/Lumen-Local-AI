@@ -3,14 +3,18 @@ package com.learnai.harness;
 import com.learnai.entity.GuardEvent;
 import com.learnai.entity.HarnessTurn;
 import com.learnai.entity.TurnMetrics;
+import com.learnai.harness.task.TaskHandlers;
 import com.learnai.repository.GuardEventRepository;
 import com.learnai.repository.HarnessTurnRepository;
 import com.learnai.repository.TurnMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
 
@@ -25,6 +29,8 @@ public class TurnOutcomeService {
     private final HarnessTurnRepository turns;
     private final TurnMetricsRepository metrics;
     private final GuardEventRepository guardEvents;
+    private final TaskHandlers handlers;
+    private final PlatformTransactionManager txManager;
 
     /** Store the AI service's `guardEvents[]` (prepare or finalize) for this turn (GUARDRAILS.md §11). */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -56,10 +62,23 @@ public class TurnOutcomeService {
     }
 
     /** FAILED / EXPIRED / CANCELLED. MESSAGE turns have no side effects beyond metrics. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTerminal(UUID turnId) {
         try {
-            write(turnId, null, null, null);
+            TransactionTemplate own = new TransactionTemplate(txManager);
+            own.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            own.executeWithoutResult(s -> {
+                HarnessTurn t = turns.findById(turnId).orElse(null);
+                if (t != null && t.getStatus().isTerminal()) {
+                    handlers.get(t.getTask()).ifPresent(h -> h.onTerminal(t, t.getStatus()));
+                }
+            });
+        } catch (RuntimeException e) {
+            log.warn("task side effects failed for turn {}", turnId, e);
+        }
+        try {
+            TransactionTemplate own = new TransactionTemplate(txManager);
+            own.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            own.executeWithoutResult(s -> write(turnId, null, null, null));
         } catch (RuntimeException e) {
             log.warn("onTerminal failed for turn {}", turnId, e);
         }

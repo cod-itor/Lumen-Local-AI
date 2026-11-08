@@ -28,8 +28,11 @@ async def suite(suite_id: str) -> dict:
     s = state.rules().suites.get(suite_id)
     if s is None:
         raise ServiceError("NOT_FOUND", "Unknown suite.", 404)
+    ev = state.rules().harness.get("evals") or {}
     return {
         "id": s.id,
         "version": s.version,
         "cases": [{"id": c.id, "category": c.category, "quick": c.quick, "task": c.task} for c in s.cases],
+        "weights": ev.get("weights") or {},
+        "maxErrorResults": int(ev.get("maxErrorResults") or 5),
     }

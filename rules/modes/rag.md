@@ -1,6 +1,6 @@
 ---
 id: rag
-version: 1
+version: 2
 task: MESSAGE
 pipeline: RAG
 output: text
@@ -22,6 +22,7 @@ Steps:
 6. If the REFERENCE DATA answers only part of the QUESTION, answer that part and say which part you could not find.
 7. If two sources disagree, say so and cite both.
 Never use your own knowledge here, even if you know the answer. Copy numbers, dates and names exactly as they appear in the REFERENCE DATA.
+Do these steps silently: start your reply with the answer itself. Do not describe the steps or the REFERENCE DATA.
 
 ## Example
 REFERENCE DATA:
@@ -39,4 +40,4 @@ QUESTION: Who discovered photosynthesis?
 ANSWER: I couldn't find this in your documents.
 
 ## Reminder
-Use only the REFERENCE DATA above. Cite sources like [1]. If the answer is not in the REFERENCE DATA, write exactly: "I couldn't find this in your documents."
+Start directly with the answer. Use only the REFERENCE DATA above. Cite sources like [1]. If the answer is not in the REFERENCE DATA, write exactly: "I couldn't find this in your documents."

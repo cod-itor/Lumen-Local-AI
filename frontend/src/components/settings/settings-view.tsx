@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Cpu, Info, Laptop, LogOut, Sparkles, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Cpu, Gauge, Info, Laptop, LogOut, Sparkles, UserRound } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { Glow, Reveal } from "@/components/landing/motion";
 import { Logo } from "@/components/landing/top-nav";
@@ -109,6 +109,19 @@ export function SettingsView({ content, user }: { content: Localized<AiSettingsC
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-[15px] font-medium text-foreground">{m.providers.title}</span>
                 <span className="text-[13px] text-muted-foreground">{m.providers.description}</span>
+              </span>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </Link>
+            <Link
+              href="/test"
+              className="glass flex items-center gap-3 rounded-2xl p-4 transition-colors hover:bg-foreground/5"
+            >
+              <span className="flex size-9 items-center justify-center rounded-xl bg-foreground/8 text-foreground">
+                <Gauge className="size-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[15px] font-medium text-foreground">{m.evals.title}</span>
+                <span className="line-clamp-2 text-[13px] text-muted-foreground">{m.evals.description}</span>
               </span>
               <ArrowRight className="size-4 text-muted-foreground" />
             </Link>

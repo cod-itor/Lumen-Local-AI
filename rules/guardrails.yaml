@@ -1,7 +1,7 @@
 # rules/guardrails.yaml — safety policy and detectors (GUARDRAILS.md).
 # Loaded by the AI service. Regexes are Python `re` with flags IGNORECASE | UNICODE.
 # Khmer texts marked "# KM: review" must be checked by a native speaker before launch.
-version: 1
+version: 2
 
 # ---------------------------------------------------------------- profiles
 profiles:
@@ -314,6 +314,10 @@ refusal_markers:
   - "i can't provide"
   - "i cannot provide"
   - "i can't do that"
+  - "i can't write"
+  - "i cannot write"
+  - "i can't create"
+  - "i cannot create"
   - "i won't"
   - "i will not"
   - "i'm not able to"

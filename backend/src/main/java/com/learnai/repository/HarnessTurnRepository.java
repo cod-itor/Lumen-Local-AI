@@ -51,4 +51,10 @@ public interface HarnessTurnRepository extends JpaRepository<HarnessTurn, UUID> 
     @Query(value = "UPDATE harness_turns SET prepared_messages = NULL WHERE prepared_messages IS NOT NULL "
             + "AND created_at < :cutoff", nativeQuery = true)
     int purgePreparedMessages(Instant cutoff);
+
+    @Query(value = """
+            SELECT id FROM harness_turns WHERE lock_key = :lockKey
+               AND status IN ('PREPARING', 'AWAITING_APPROVAL', 'READY', 'GENERATING', 'FINALIZING')""",
+            nativeQuery = true)
+    List<UUID> findOpenByLockKey(String lockKey);
 }

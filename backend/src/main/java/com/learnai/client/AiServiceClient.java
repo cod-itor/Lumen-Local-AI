@@ -66,6 +66,14 @@ public class AiServiceClient {
         return postJson("/models/profile", body, Duration.ofSeconds(5));
     }
 
+    public JsonNode suites() {
+        return getJson("/evals/suites", Duration.ofSeconds(10));
+    }
+
+    public JsonNode suite(String id) {
+        return getJson("/evals/suites/" + id, Duration.ofSeconds(10));
+    }
+
     public JsonNode catalog() {
         return getJson("/models/catalog", Duration.ofSeconds(5));
     }

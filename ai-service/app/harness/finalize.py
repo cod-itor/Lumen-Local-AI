@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.harness import structured
 from app.harness.loops import cut_loop, detect_loop
 from app.harness.normalize import normalize
 from app.harness.reasoning import strip_reasoning
@@ -13,6 +14,15 @@ from app.state import rules
 
 def _close_fence(text: str) -> str:
     return text + "\n```" if text.count("```") % 2 == 1 else text
+
+
+def _metrics(level: str | None, ratio: float | None, guard_action: str, attempt: int) -> dict[str, Any]:
+    return {
+        "groundingLevel": level,
+        "supportedRatio": ratio,
+        "guardOutputAction": guard_action,
+        "jsonAttempts": attempt,
+    }
 
 
 def _khmer_ratio(text: str) -> float:
@@ -35,7 +45,70 @@ async def _to_khmer(r: Any, text: str, status: str, pipeline: str | None, contex
     return await translate_markdown(text, "EN", "KM")
 
 
+def _clean(r: Any, raw: str, finish: str) -> str:
+    """F1–F3: reasoning removed, normalized, fence closed, loop tail cut (the text Model Test grades)."""
+    text = strip_reasoning(raw or "")
+    text = _close_fence(normalize(text, r.guardrails))
+    if finish == "LOOP_STOP" or detect_loop(text, r.harness["loopDetection"]):
+        text = cut_loop(text, r.harness["loopDetection"])
+    return text
+
+
 async def finalize(req: dict[str, Any]) -> dict[str, Any]:
+    if req.get("task") == "EVAL_CASE":
+        return await _finalize_eval(req)
+    return await _finalize(req)
+
+
+async def _finalize_eval(req: dict[str, Any]) -> dict[str, Any]:
+    """HARNESS.md §12.2 step 4: run the case's own finalize once (no retries), then grade the F1–F3 text."""
+    from app.evals import graders
+    from app.harness.prepare import variables
+    from app.rules.loader import system_message
+
+    r = rules()
+    context = req.get("context") or {}
+    inner_task = context.get("evalTask") or "MESSAGE"
+    case_id = context.get("evalCaseId")
+    case = next((c for s in r.suites.values() for c in s.cases if c.id == case_id), None)
+    if case is None:
+        from app.errors import ServiceError
+
+        raise ServiceError("NOT_FOUND", "Unknown Model Test case.", 404)
+    output = req.get("output") or {}
+    user = {**(req.get("user") or {}), "guardProfile": "TEST", "outputLanguage": "EN"}
+    max_attempts = int(r.harness["generation"]["jsonMaxAttempts"])
+    res = await _finalize({**req, "task": inner_task, "user": user, "attempt": max_attempts})
+    graded = _clean(r, output.get("content") or "", output.get("finishReason") or "STOP")
+    mode = r.mode_for(inner_task, context.get("pipeline"))
+    values = variables(user, inner_task, mode, context.get("answerLanguage") or "English")
+    checks = graders.grade(
+        r,
+        case,
+        graded,
+        sources=context.get("sources") or [],
+        instructions_text=system_message(r.system, mode, values, False),
+        user_text=context.get("modelInput") or "",
+        abstain_text=mode.abstain_text,
+        task_input=context.get("taskInput") or case.raw.get("taskInput") or {},
+        today=str(values["TODAY"]),
+        weekday=str(values["WEEKDAY"]),
+    )
+    in_would = (context.get("inputGuard") or {}).get("wouldAction")
+    out_would = (res.get("metrics") or {}).get("guardOutputAction")
+    result = graders.result(case, graded, checks, graders.would_block(in_would, out_would), output.get("stats"))
+    return {
+        **res,
+        "status": "COMPLETED",
+        "content": graded,
+        "errors": [],
+        "repairMessages": [],
+        "attemptsLeft": None,
+        "evalResult": result,
+    }
+
+
+async def _finalize(req: dict[str, Any]) -> dict[str, Any]:
     r = rules()
     attempt = int(req.get("attempt") or 1)
     user = req.get("user") or {}
@@ -43,13 +116,9 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
     output = req.get("output") or {}
     finish = output.get("finishReason") or "STOP"
     guard_profile = user.get("guardProfile") or "STANDARD"
-    loop_cfg = r.harness["loopDetection"]
     max_attempts = int(r.harness["generation"]["jsonMaxAttempts"])
 
-    text = strip_reasoning(output.get("content") or "")  # F1
-    text = _close_fence(normalize(text, r.guardrails))  # F2 (+ neutralize fake control tokens/source headers)
-    if finish == "LOOP_STOP" or detect_loop(text, loop_cfg):  # F3
-        text = cut_loop(text, loop_cfg)
+    text = _clean(r, output.get("content") or "", finish)  # F1–F3
 
     base: dict[str, Any] = {
         "originalContent": None,
@@ -63,6 +132,18 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
         "attemptsLeft": None,
         "guard": {"action": "ALLOW", "categories": [], "profile": guard_profile, "wouldAction": None},
     }
+    task = req.get("task") or "MESSAGE"
+    if task == "TITLE":  # §11.1: never retried, never FAILED
+        title = structured.clean_title(text) if text.strip() else None
+        return {
+            **base,
+            "status": "COMPLETED",
+            "content": title or "",
+            "data": {"title": title},
+            "grounding": None,
+            "suggestions": [],
+            "metrics": _metrics(None, None, "ALLOW", attempt),
+        }
     if not text.strip():  # F4
         return {
             **base,
@@ -83,8 +164,32 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
             },
         }
 
+    if task != "MESSAGE" and task != "LEARN_STEP":  # F5 structured output (§9.1)
+        mode = r.mode_for(task)
+        data, errs = structured.validate(r, mode.schema or "", text, context.get("taskInput") or {})
+        if errs:
+            return {
+                **base,
+                "status": "SCHEMA_INVALID",
+                "content": text,
+                "errors": errs,
+                "repairMessages": structured.repair_messages(text, errs),
+                "attemptsLeft": max(0, max_attempts - attempt),
+                "grounding": None,
+                "suggestions": [],
+                "metrics": _metrics(None, None, "ALLOW", attempt),
+            }
+        return {
+            **base,
+            "status": "COMPLETED",
+            "content": text,
+            "data": data,
+            "grounding": None,
+            "suggestions": [],
+            "metrics": _metrics(None, None, "ALLOW", attempt),
+        }
+
     pipeline = context.get("pipeline")
-    task = req.get("task") or "MESSAGE"
     output_language = user.get("outputLanguage") or "EN"
 
     # F6 output guardrails + F7 leak check (GUARDRAILS.md §5.3–5.4)
@@ -162,7 +267,13 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
         else:  # F9 + F11
             from app.rag.retrieval import chunk_embeddings
 
-            embs = await chunk_embeddings([str(x["chunkId"]) for x in sources if x.get("chunkId")])
+            ids = [str(x["chunkId"]) for x in sources if x.get("chunkId")]
+            if any(i.startswith("fx:") for i in ids):
+                from app.evals.fixtures import embeddings as fixture_embeddings
+
+                embs = await fixture_embeddings(ids)
+            else:
+                embs = await chunk_embeddings(ids)
             text, report = await gv.verify(text, sources, embs, gcfg, abstain_text)
             report["removedUrls"] = removed_urls
             grounding = report
@@ -182,6 +293,21 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
         keys = list((context.get("inputGuard") or {}).get("disclaimers") or []) + out_guard.disclaimers
         if keys and not engine.profile_cfg(r, guard_profile).get("recordOnly"):
             text = engine.ensure_disclaimers(r, text, keys, "EN")
+
+    if task == "LEARN_STEP" and status == "COMPLETED":  # §11.3 required headings
+        missing = structured.missing_headings(text)
+        if missing:
+            return {
+                **base,
+                "status": "SCHEMA_INVALID",
+                "content": text,
+                "errors": [f"$: missing heading '{h}'" for h in missing],
+                "repairMessages": structured.repair_messages(text, missing, lesson=True),
+                "attemptsLeft": max(0, max_attempts - attempt),
+                "grounding": None,
+                "suggestions": [],
+                "metrics": _metrics(None, None, out_guard.action, attempt),
+            }
 
     original_content: str | None = None  # F13 language (MESSAGE only)
     translations: dict[str, str] = {}

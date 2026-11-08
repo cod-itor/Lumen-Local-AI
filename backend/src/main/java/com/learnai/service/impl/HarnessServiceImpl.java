@@ -21,6 +21,8 @@ import com.learnai.harness.TurnOutcomeService;
 import com.learnai.harness.TurnRegistry;
 import com.learnai.harness.TurnRunner;
 import com.learnai.harness.TurnStore;
+import com.learnai.harness.task.TaskHandler;
+import com.learnai.harness.task.TaskHandlers;
 import com.learnai.repository.HarnessTurnRepository;
 import com.learnai.repository.ModelProviderRepository;
 import com.learnai.service.HarnessService;
@@ -58,13 +60,13 @@ public class HarnessServiceImpl implements HarnessService {
     private final ObjectMapper json;
     private final ExecutorService turnExecutor;
     private final ScheduledExecutorService sseHeartbeat;
+    private final TaskHandlers handlers;
 
     @Override
     public SseEmitter startTurn(UUID userId, HarnessTurnRequest r) {
-        if (r.task() != Task.MESSAGE) {
-            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FEATURE_UNAVAILABLE",
-                    "This task is not available yet.");
-        }
+        TaskHandler handler = r.task() == Task.MESSAGE ? null : handlers.get(r.task()).orElseThrow(() ->
+                new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "FEATURE_UNAVAILABLE",
+                        "This task is not available yet."));
         ModelProvider p = providers.findByIdAndUserId(r.providerId(), userId)
                 .orElseThrow(() -> ApiException.notFound("provider"));
         if (p.getKind() == ProviderKind.REMOTE_URL && !props.harness().remoteUrlEnabled()) {
@@ -73,7 +75,8 @@ public class HarnessServiceImpl implements HarnessService {
         }
         UserSettings s = ctx.settings(userId);
         String outLang = r.outputLanguage() != null ? r.outputLanguage().name() : s.getOutputLanguage().name();
-        TurnStore.Created created = store.createMessageTurn(userId, r, p, ttl(), outLang);
+        TurnStore.Created created = handler == null ? store.createMessageTurn(userId, r, p, ttl(), outLang)
+                : store.createTaskTurn(userId, r, p, ttl(), handler.target(userId, r));
 
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
         SseWriter writer = new SseWriter(emitter, json, sseHeartbeat);

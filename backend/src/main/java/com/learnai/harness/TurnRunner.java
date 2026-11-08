@@ -14,6 +14,7 @@ import com.learnai.entity.enums.MessageStatus;
 import com.learnai.entity.enums.Tab;
 import com.learnai.entity.enums.Task;
 import com.learnai.entity.enums.TurnStatus;
+import com.learnai.harness.task.TaskHandlers;
 import com.learnai.mapper.MessageMapper;
 import com.learnai.repository.ChatRepository;
 import com.learnai.repository.HarnessTurnRepository;
@@ -55,6 +56,7 @@ public class TurnRunner {
     private final MessageMapper mapper;
     private final ObjectMapper json;
     private final AppProperties props;
+    private final TaskHandlers handlers;
 
     public void run(UUID turnId, TurnRegistry.Handle h) {
         SseWriter w = h.writer;
@@ -83,8 +85,13 @@ public class TurnRunner {
         started.put("expiresAt", t.getExpiresAt());
         w.send("turn", started);
 
-        Chat chat = chats.findById(t.getChatId()).orElseThrow();
-        ObjectNode req = prepareRequest(t, p, chat, user);
+        ObjectNode req;
+        if (t.getTask() == Task.MESSAGE) {
+            Chat chat = chats.findById(t.getChatId()).orElseThrow();
+            req = prepareRequest(t, p, chat, user);
+        } else {
+            req = taskRequest(t, p);
+        }
         for (AiEvent ev : ai.prepare(req).takeUntilOther(h.cancel.asMono()).toIterable()) {
             JsonNode d = ev.data();
             switch (ev.name()) {
@@ -93,11 +100,13 @@ public class TurnRunner {
                 case "tools" -> w.send("tools", d);
                 case "blocked" -> {
                     outcomes.saveGuardEvents(turnId, d.path("guardEvents"));
-                    prepareTimeAnswer(t, d, true, w);
+                    if (t.getTask() == Task.MESSAGE) prepareTimeAnswer(t, d, true, w);
+                    else taskBlocked(t, d, w);
                     return;
                 }
                 case "abstained" -> {
-                    prepareTimeAnswer(t, d, false, w);
+                    if (t.getTask() == Task.MESSAGE) prepareTimeAnswer(t, d, false, w);
+                    else failOpen(turnId, w, "INTERNAL_ERROR", "This task cannot abstain.", false);
                     return;
                 }
                 case "needs_approval" -> {
@@ -144,6 +153,35 @@ public class TurnRunner {
         req.put("previousUserMessage", hist.previousUserMessage());
         req.putNull("taskInput");
         return req;
+    }
+
+    private ObjectNode taskRequest(HarnessTurn t, ModelProvider p) {
+        ObjectNode req = json.createObjectNode().put("turnId", t.getId().toString()).put("task", t.getTask().name())
+                .put("attempt", (int) t.getAttempt());
+        req.set("user", ctx.user(t));
+        req.set("provider", ctx.provider(p));
+        req.putNull("chat");
+        req.putObject("input").put("content", "").put("webSearch", false).putNull("approvedQuery");
+        req.putArray("history");
+        req.putNull("previousUserMessage");
+        req.set("taskInput", handlers.get(t.getTask()).orElseThrow().taskInput(t));
+        return req;
+    }
+
+    /** A non-MESSAGE task blocked by input guardrails: nothing is stored, the client gets the refusal. */
+    private void taskBlocked(HarnessTurn t, JsonNode d, SseWriter w) {
+        store.savePrepared(t.getId(), d.path("context"), null);
+        if (!store.transition(t.getId(), TurnStatus.BLOCKED, TurnStatus.PREPARING)) {
+            cancelIfOpen(t.getId(), w);
+            return;
+        }
+        outcomes.writeMetrics(t.getId(), null, null, null);
+        Map<String, Object> ev = new LinkedHashMap<>();
+        ev.put("action", d.path("action").asString("BLOCK"));
+        ev.put("message", null);
+        ev.put("refusal", d.path("content").asString(""));
+        ev.put("categories", d.path("categories"));
+        w.finish("blocked", ev);
     }
 
     /** `blocked` / `abstained` decided at prepare time: saved through the MESSAGE handler (§7.3). */
