@@ -10,6 +10,7 @@ const DROP = new Set([
   "connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade",
   "proxy-authorization", "proxy-authenticate", "host", "content-length", "content-encoding",
 ]);
+const BACKEND_COOKIES = new Set(["access_token", "refresh_token", "session_hint"]);
 
 async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params;
@@ -17,7 +18,16 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[]
 
   const headers = new Headers();
   req.headers.forEach((value, key) => {
-    if (!DROP.has(key.toLowerCase())) headers.set(key, value);
+    const k = key.toLowerCase();
+    if (DROP.has(k)) return;
+    if (k === "cookie") {
+      // Browsers share localhost cookies across ports, so other local apps' cookies arrive here too and can push the
+      // request past the backend's header limit. Forward only the cookies the backend reads.
+      const kept = value.split(";").map((c) => c.trim()).filter((c) => BACKEND_COOKIES.has(c.split("=")[0]));
+      if (kept.length) headers.set("cookie", kept.join("; "));
+      return;
+    }
+    headers.set(key, value);
   });
 
   const init: RequestInit & { duplex?: "half" } = { method: req.method, headers, redirect: "manual", cache: "no-store" };

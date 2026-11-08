@@ -393,6 +393,9 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Safari cannot reach `localhost` Ollama from an HTTPS site; Chrome shows a Local Network Access prompt (`loopback-network`).
 - Firefox lacks WebGPU `shader-f16` → use q4f32 WebLLM builds.
 - Next.js rewrites buffer SSE → use the catch-all Route Handler proxy `src/app/api/[...path]/route.ts`.
+- Browsers send every `localhost` cookie to every port, so other local apps' cookies reach Lumen. Tomcat rejects
+  request headers over 8 KB (400 "Request header is too large", shown as "Something went wrong"), so the proxy forwards
+  only `access_token`, `refresh_token` and `session_hint` to the backend.
 - Ollama default context is 4096 → always send `num_ctx`.
 - NLLB and rembg's default model are non-commercial; Khmer STT needs the fine-tuned Whisper; FLUX on Mac uses mflux.
 - `refresh_token` cookie is scoped to `/api/auth`, so page routing checks `session_hint`.
