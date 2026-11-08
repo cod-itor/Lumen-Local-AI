@@ -125,6 +125,9 @@ export const app: AppMessages = {
         QUOTE_NOT_IN_SOURCE: "សម្រង់នេះមិនមាននៅក្នុងប្រភពទេ។",
       },
       openSource: "បើកប្រភព {n}",
+      showOriginal: "បង្ហាញដើម (អង់គ្លេស)",
+      showTranslation: "បង្ហាញការបកប្រែ",
+      calculated: "គណនាដោយកម្មវិធី",
     },
     sources: {
       panel: "ប្រភព",

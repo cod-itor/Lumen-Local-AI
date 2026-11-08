@@ -75,8 +75,17 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     yield "status", {"stage": "CHECKING_INPUT"}
     original = normalize(inp.get("content") or "", r.guardrails)  # P3
     input_language = detect_language(original, r.harness)  # P4
-    model_input = original  # P6 (pivot: translation arrives in phase 8)
+    model_input = original
+    khmer_native = bool(profile.get("khmerNative"))
+    if input_language in ("KM", "MIXED") and not khmer_native:  # P6 pivot KM → EN
+        from app.models.translator import translate_markdown
+
+        yield "status", {"stage": "TRANSLATING_INPUT"}
+        pivot = await translate_markdown(original, "KM", "EN")
+        if pivot and pivot.strip():
+            model_input = normalize(pivot, r.guardrails)
     from app.guard.engine import check_input, refusal_key
+    from app.harness.tools import has_math, line, run_tools
 
     guard_profile = user.get("guardProfile") or "STANDARD"
     decision = await check_input(r, original, model_input, guard_profile)  # P5
@@ -94,6 +103,7 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         original=original,
         model_input=model_input,
         current_year=local.year,
+        math_detected=task == "MESSAGE" and has_math(original, model_input, r.harness["tools"]),
     )  # P7
     pipeline = routing.pipeline
     mode = r.mode_for(task, pipeline)
@@ -130,6 +140,12 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
             },
         )
         return
+
+    tool_results = run_tools(original, model_input, routing.intents, local, _now(user)[1], r.harness["tools"])  # P8
+    if tool_results:
+        context["tools"] = tool_results
+        yield "tools", tool_results
+    tool_lines = [line(t) for t in tool_results]
 
     def abstain(reason: str, key: str) -> Event:
         context["metrics"]["abstainedBeforeModel"] = True
@@ -199,7 +215,7 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
             profile=profile,
             params=params,
             text=model_input,
-            tools=[],
+            tools=tool_lines,
             evidence=evidence,
             notes=notes,
             history=hist_in,

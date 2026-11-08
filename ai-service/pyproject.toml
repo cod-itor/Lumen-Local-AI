@@ -18,6 +18,8 @@ dependencies = [
     "pypdf==6.21.2",
     "python-docx==1.2.0",
     "khmercut==0.2.0",
+    "ctranslate2==4.8.3",
+    "sentencepiece==0.2.2",
 ]
 
 [dependency-groups]

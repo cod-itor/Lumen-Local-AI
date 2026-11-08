@@ -15,6 +15,26 @@ def _close_fence(text: str) -> str:
     return text + "\n```" if text.count("```") % 2 == 1 else text
 
 
+def _khmer_ratio(text: str) -> float:
+    from app.harness.sentences import KHMER_RUN
+
+    letters = sum(1 for ch in text if ch.isalpha() or KHMER_RUN.fullmatch(ch))
+    return sum(len(x) for x in KHMER_RUN.findall(text)) / letters if letters else 0.0
+
+
+async def _to_khmer(r: Any, text: str, status: str, pipeline: str | None, context: dict[str, Any]) -> str | None:
+    """Khmer display text: prepared texts for abstains, the model's own Khmer if native, else NLLB (Markdown-safe)."""
+    from app.guard import engine
+    from app.models.translator import translate_markdown
+
+    if status == "ABSTAINED" and pipeline in ("RAG", "WEB"):
+        return engine.texts(r, pipeline, "abstain")["KM"]
+    if context.get("answerLanguage") == "Khmer":
+        if _khmer_ratio(text) >= float(r.harness.get("language", {}).get("khmerNativeOutputMinRatio", 0.3)):
+            return text
+    return await translate_markdown(text, "EN", "KM")
+
+
 async def finalize(req: dict[str, Any]) -> dict[str, Any]:
     r = rules()
     attempt = int(req.get("attempt") or 1)
@@ -149,15 +169,29 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
             if grounding["level"] == "UNGROUNDED":
                 policy = (gcfg.get("onUngrounded") or {}).get(guard_profile, "WARN")
                 if policy == "REPLACE":
-                    text = f"{abstain_text} The answer could not be checked against your sources."
+                    text = engine.texts(r, "UNGROUNDED_REPLACED", "abstain")["EN"]
                     grounding = {**grounding, "sentences": []}
             text = text.strip()
             gv.set_offsets(text, grounding)
 
+    if status == "COMPLETED" and task == "MESSAGE":  # F12 tool enforcement
+        from app.harness.tools import enforce_calculator
+
+        text = enforce_calculator(text, context.get("tools") or [])
     if status == "COMPLETED":  # §5.5 SAFE_COMPLETE disclaimers (input categories + output categories)
         keys = list((context.get("inputGuard") or {}).get("disclaimers") or []) + out_guard.disclaimers
         if keys and not engine.profile_cfg(r, guard_profile).get("recordOnly"):
             text = engine.ensure_disclaimers(r, text, keys, "EN")
+
+    original_content: str | None = None  # F13 language (MESSAGE only)
+    translations: dict[str, str] = {}
+    if task == "MESSAGE" and output_language in ("KM", "BOTH"):
+        km = await _to_khmer(r, text.strip(), status, pipeline, context)
+        if km is not None and output_language == "KM":
+            original_content, text = text.strip(), km
+        elif km is not None:
+            translations = {"KM": km}
+    base["originalContent"], base["translations"] = original_content, translations
 
     suggestions = list((context.get("routing") or {}).get("suggestions") or []) + extra_suggestions  # F14
     provider = req.get("provider") or {}

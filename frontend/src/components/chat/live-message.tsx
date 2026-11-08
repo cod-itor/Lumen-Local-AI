@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Icon } from "@/components/icon";
@@ -45,16 +46,21 @@ export function LiveAssistantMessage({
     if (src) onCite(src);
   } : undefined;
   const level = meta.grounding?.level;
+  const [showOriginal, setShowOriginal] = useState(false);
+  // Offsets point into originalContent when the answer was translated (FRONTEND.md §6.2).
+  const base = message.originalContent ?? message.content;
+  const shown = showOriginal && message.originalContent ? message.originalContent : message.content;
   const unsupported: Unsupported[] =
-    meta.pipeline === "RAG" && meta.grounding
+    meta.pipeline === "RAG" && meta.grounding && shown === base
       ? meta.grounding.sentences
           .filter((s) => !s.supported && s.end > s.start)
           .map((s) => ({
-            text: matchable(message.content.slice(s.start, s.end)),
+            text: matchable(base.slice(s.start, s.end)),
             title: live.issues[s.issue ?? "LOW_SUPPORT"],
           }))
           .filter((u) => u.text.length >= 12)
       : [];
+  const km = meta.outputLanguage === "BOTH" ? message.translations?.KM : undefined;
 
   return (
     <motion.div variants={riseItem} initial="hidden" animate="show" className="flex w-full flex-col items-start gap-[12px]">
@@ -65,8 +71,40 @@ export function LiveAssistantMessage({
           (status === "BLOCKED" || support) && "rounded-[18px] border border-border bg-surface-muted/60 px-4 py-3",
         )}
       >
-        <Markdown text={message.content} onCite={cite} unsupported={unsupported} />
+        {km ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Markdown text={shown} onCite={cite} unsupported={unsupported} />
+            <div lang="km" className="border-border max-sm:border-t max-sm:pt-4 sm:border-l sm:pl-5">
+              <Markdown text={km} onCite={cite} />
+            </div>
+          </div>
+        ) : (
+          <div lang={shown === message.content && meta.outputLanguage === "KM" ? "km" : undefined}>
+            <Markdown text={shown} onCite={cite} unsupported={unsupported} />
+          </div>
+        )}
       </div>
+
+      {message.originalContent && (
+        <button
+          type="button"
+          onClick={() => setShowOriginal((v) => !v)}
+          className="-mt-1 text-[12px] font-medium text-subtle underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {showOriginal ? live.showTranslation : live.showOriginal}
+        </button>
+      )}
+
+      {meta.tools.length > 0 && (
+        <div className="flex w-full max-w-[420px] flex-col gap-1 rounded-[14px] border border-border px-3.5 py-2.5">
+          <span className="text-[11.5px] font-semibold tracking-[0.2px] text-subtle">{live.calculated}</span>
+          {meta.tools.map((tool, i) => (
+            <span key={i} className="font-mono text-[12.5px] leading-[18px] text-foreground-secondary">
+              {tool.tool === "CALCULATOR" ? `${tool.input} = ${tool.output}` : `${tool.input}: ${tool.output}`}
+            </span>
+          ))}
+        </div>
+      )}
 
       {docSources.length > 0 && onCite && (
         <div className="flex flex-wrap gap-2">
@@ -134,7 +172,7 @@ export function LiveAssistantMessage({
             </button>
           </div>
         )}
-        <button type="button" onClick={() => copy(message.content)} aria-label={copied ? m.common.copied : m.common.copy} className={btn}>
+        <button type="button" onClick={() => copy(shown)} aria-label={copied ? m.common.copied : m.common.copy} className={btn}>
           <Icon name={copied ? "chat-check" : "chat-copy"} size={copied ? 12 : 15} />
         </button>
         {!support && status !== "BLOCKED" && (

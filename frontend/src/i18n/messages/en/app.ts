@@ -123,6 +123,9 @@ export const app = {
         QUOTE_NOT_IN_SOURCE: "This quote isn't in the sources.",
       },
       openSource: "Open source {n}",
+      showOriginal: "Show original (English)",
+      showTranslation: "Show translation",
+      calculated: "Calculated by the app",
     },
     sources: {
       panel: "Sources",

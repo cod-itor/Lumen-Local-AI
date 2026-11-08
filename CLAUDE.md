@@ -226,8 +226,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 5 | Client providers (WebLLM, local Ollama) | **done** (2026-11-08) — provider create/update/delete/test/test-result API; `lib/providers/*` (WebLLM worker engine, visitor Ollama, WebGPU f16 build pick, registry, connection test), client guard + reasoning strip, CLIENT turns in `useHarnessTurn` (load before turn, `prepared` → generate → `complete`, 422 repair loop, CLIENT_ERROR cancel), `/settings/models` page (add browser model / My Ollama guide, default, test, remove, remove downloaded files), CSP + security headers |
 | 6 | Documents (RAG) + grounding | **done** (2026-11-08) — upload (size/type sniff/quota/dedupe) → INGEST job (claim `SKIP LOCKED`, SSE `/api/jobs/{id}/events`, cancel) → AI parse (pypdf/python-docx/txt/md) → clean → chunk → EmbeddingGemma → `chunks`; retrieval (exact cosine + `tsv` lexical, RRF, gate, per-doc caps, evidence budget); grounding verifier (citations, lexical/semantic support, numbers, quotes, auto-fix/auto-cite, UTF-16 offsets); live Documents tab (library + dropzone, sidebar, DOCS chats, source picker → chat `documentIds`, file viewer with page nav + chunk highlight, citation chips + inline `[n]`, grounding badge, unsupported-sentence underline) |
 | 7 | Guardrails | **done** (2026-11-08) — `app/guard/` engine (input §5.1 decision order, output §5.3, leak shingles §5.4, SAFE_COMPLETE notes + disclaimers, refusals EN/KM, TEST `wouldAction`, image policy), output Markdown policy (images, HTML, source-URL-only links, paragraph cut), URL safety validator (private ranges, IP spellings, DNS check), DOC chunk injection flag + label, hardened reminder on FLAG, optional Llama Guard / Prompt Guard (env opt-in), `/guard/check`, `/guard/check-url`; backend stores `guard_events`; 82 guard tests |
-| 8 | Translation + tools | next |
-| 9 | Model Test | todo |
+| 8 | Translation + tools | **done** (2026-11-08) — calculator (word/symbol/percent normalization, range and date blanking, whitelist `ast` + `Fraction`, never `eval`, F12 exact-result enforcement), DATETIME tool (now, weekday of a date, days until/between), NLLB-200 600M int8 via CTranslate2 + SentencePiece (no torch at runtime), Markdown-safe `translate_markdown` (code/URLs/citations kept, LRU cache), host-model fallback, P6 KM→EN pivot, F13 KM / BOTH output (prepared texts for abstains), `/translate`; UI: Show original toggle, EN+KM side by side, "Calculated by the app" card |
+| 9 | Model Test | next |
 | 10 | Web search | todo |
 | 11 | Learning paths + quizzes | todo |
 | 12 | Images | todo |
@@ -285,6 +285,12 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   The URL validator checks scheme/host/ports/DNS now; IP pinning + manual redirects are built with the web fetcher
   (phase 10). Guard events are written by the backend from `guardEvents[]` of prepare and finalize.
 
+- 2026-11-08 — Phase 8: NLLB was converted from Meta's **official** `facebook/nllb-200-distilled-600M` (owner's choice)
+  with `scripts/download_models.py --translation` (temporary venv: torch 2.14.1, transformers 4.57.6, ctranslate2
+  4.8.3 — deleted after). Runtime deps: `ctranslate2==4.8.3`, `sentencepiece==0.2.2` (pulls numpy). Model: 604 MB in
+  `ai-service/models/` (git-ignored). Decoding uses `repetition_penalty 1.2`, `no_repeat_ngram_size 4`; spaces
+  between Khmer words are removed after decoding.
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -306,6 +312,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   copies the raw `.ts` to `static/media` (unused, harmless).
 - llama3.2 3B sometimes abstains when a DOC source carries the "instruction-like text" label even if the answer
   is in it (it never followed the injected instruction in tests) — revisit in calibration (phase 14).
+- NLLB 600M handles everyday Khmer well but misses technical terms (e.g. "រស្មីសំយោគ" photosynthesis → "sound").
+  A larger NLLB (1.3B/3.3B) or MADLAD would help but costs RAM/disk; revisit in phase 14.
 - `csam_cooccurrence` matches topic words (e.g. "sex education for children" → BLOCK); acceptable for now (critical
   category), revisit with the Model Test over-refusal cases.
 - Hibernate: `CHAR(64)` columns (sha256) need `@JdbcTypeCode(SqlTypes.CHAR)` or `validate` fails.
