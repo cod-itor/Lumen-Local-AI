@@ -1,0 +1,10 @@
+# Self-hosted web search for the WEB pipeline (AI_SERVICE.md §7.5).
+# Bound to 127.0.0.1 only; the secret below is fine for local use.
+use_default_settings: true
+server:
+  secret_key: "lumen-local-searxng-secret"
+  limiter: false
+  public_instance: false
+search:
+  formats: [html, json]
+  safe_search: 1

@@ -1,0 +1,23 @@
+{
+  "$id": "image_clarify",
+  "title": "ImageClarify",
+  "type": "object",
+  "properties": {
+    "questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "enum": ["subject", "style", "setting", "colors", "mood", "composition"] },
+          "question": { "type": "string" },
+          "options": { "type": "array", "minItems": 3, "maxItems": 4, "items": { "type": "string" } }
+        },
+        "required": ["id", "question", "options"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["questions"],
+  "additionalProperties": false
+}

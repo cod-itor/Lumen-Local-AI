@@ -1,0 +1,170 @@
+# rules/harness.yaml — numeric settings and patterns for the harness (HARNESS.md).
+# Values marked [CALIBRATE] must be re-tuned with scripts/calibrate.py (HARNESS.md §13.2).
+version: 2
+
+tokenEstimate:
+  asciiCharsPerToken: 3.6
+  khmerTokensPerChar: 0.8
+  otherTokensPerChar: 0.6
+  perMessageOverhead: 4
+
+budgets:
+  safetyTokens: 64
+  systemMaxShare: 0.40
+  userCoreMaxShare: 0.35
+  evidenceMaxShare: 0.75
+  evidenceMaxTokens: 2400
+  dropExampleAtContextWindow: 2048
+  historyMaxMessages: { CHAT: 12, RAG: 4, WEB: 4 }
+  historyMessageMaxChars: 1200
+
+answerLength:     # MESSAGE task only; other tasks always use their mode's values (HARNESS.md §7.6)
+  SHORT:    { wordsFactor: 0.4, maxTokensCap: 256 }
+  NORMAL:   { wordsFactor: 1.0, maxTokensCap: null }
+  DETAILED: { wordsFactor: 1.8, maxTokensCap: 1100 }
+
+temperatureCaps:
+  grounded: 0.3        # RAG, WEB
+  json: 0.3            # structured tasks
+  strictProfile: 0.5
+
+language:
+  khmerRanges: ["ក-៿", "᧠-᧿"]
+  kmThreshold: 0.5
+  mixedThreshold: 0.15
+  minLettersForDetection: 3
+  khmerNativeOutputMinRatio: 0.3
+
+router:
+  notesMax: 2
+  recentYearWindow: 1          # a year >= (current year - 1) counts as CURRENT_INFO
+  intents:
+    DATETIME:
+      - '\bwhat(''s| is)? (the )?(date|day|time|year|month)( today| now| is it| it is)?\b'
+      - '\b(today''s|current) (date|day|time)\b'
+      - '\bwhat day (of the week )?(is|was|will be)\b'
+      - '\bhow many days (until|till|to|before|between|from)\b'
+      - 'ថ្ងៃនេះ.*ថ្ងៃអ្វី'
+      - 'ម៉ោងប៉ុន្មានហើយ'
+    CURRENT_INFO:
+      - '\b(latest|newest|recent|recently|breaking|tonight|yesterday|tomorrow|this (week|month|year)|right now|currently|current|today)\b'
+      - '\b(news|price|prices|cost of|exchange rate|weather|forecast|score|scores|stock price|election results?|schedule|release date)\b'
+      - 'ព័ត៌មាន|តម្លៃ|អាកាសធាតុ|ថ្ងៃនេះ'
+    IMAGE_REQUEST:
+      - '\b(draw|paint|sketch|illustrate|generate|create|make|design)\b.{0,30}\b(image|picture|photo|drawing|illustration|logo|poster|wallpaper|artwork|sticker|icon)\b'
+      - '^\s*(an? )?(image|picture|photo|drawing) of\b'
+      - 'គូររូប'
+    LEARNING_REQUEST:
+      - '\b(teach me|i want to learn|i''d like to learn|help me learn|learning (plan|path)|study plan|how (do|can) i (start )?learn(ing)?)\b'
+      - 'ខ្ញុំចង់រៀន'
+    DOC_REFERENCE:
+      - '\b(my|this|the|uploaded|attached) (document|doc|pdf|file|notes|slides|textbook)\b'
+      - 'ឯកសារ'
+    GREETING:
+      - '^\s*(hi|hello|hey|yo|thanks|thank you|thx|good (morning|afternoon|evening|night)|bye|goodbye)[\s!.,?]*$'
+      - '^\s*(សួស្តី|ជំរាបសួរ|អរគុណ)[\s!.,?]*$'
+  notes:
+    current_info: "NOTE: This question may need up-to-date information that you may not have. If so, say so and suggest turning on web search."
+    image_request: "NOTE: The user wants an image. You cannot create images in this chat. Tell them to use the Image tab. You may describe what the image could show."
+    doc_reference: "NOTE: The user mentions a document, but no documents are attached to this chat. Tell them to open the Documents tab to ask about their files."
+  notePriority: [doc_reference, image_request, current_info]
+  greetingMaxTokens: 120
+
+tools:
+  calculator:
+    maxExpressions: 3
+    minExpressionChars: 3
+    maxExpressionChars: 100
+    maxExponent: 64
+    maxMagnitude: 1.0e60
+    significantDigits: 10
+  datetime:
+    dateFormats: ["D MONTH YYYY", "MONTH D, YYYY", "YYYY-MM-DD", "DD/MM/YYYY"]
+
+retrieval:
+  vectorCandidates: 20
+  lexicalCandidates: 20
+  rrfK: 60
+  minTopSimilarity: 0.35       # [CALIBRATE] below this and no lexical hit → abstain without calling the model
+  minChunkSimilarity: 0.30     # [CALIBRATE]
+  lexicalRankKeep: 3
+  maxChunks: 5
+  maxChunksPerDocument: 4
+  dedupeOverlap: 0.5
+  evalForceTopK: 3
+  pronouns: [it, this, that, they, them, these, those, he, she, his, her, its]
+  followUpMaxWords: 3
+  previousMessageChars: 150
+
+web:
+  maxResults: 8
+  safesearch: { STANDARD: 1, STRICT: 2, TEST: 1 }
+  maxPagesToFetch: 5
+  maxPerDomain: 2
+  fetchTimeoutSeconds: 8
+  maxPageBytes: 2000000
+  maxRedirects: 3
+  allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain"]
+  skipExtensions: [".zip", ".exe", ".dmg", ".apk", ".mp4", ".mp3", ".iso"]
+  minPageChars: 200
+  chunkTokens: 300
+  maxChunks: 5
+  maxChunksPerPage: 2
+  cacheHours: 24
+  queryMaxWords: 20
+  queryMaxChars: 200
+  fillerPrefixes: ["please", "can you", "could you", "would you", "tell me", "show me", "find", "search for", "look up", "i want to know", "do you know"]
+
+chunking:
+  targetTokens: 400
+  overlapTokens: 60
+  minChunkTokens: 40
+  khmerSentenceEnds: ["។", "៕", "?", "!"]
+
+grounding:
+  lexicalSupport: 0.55         # [CALIBRATE]
+  semanticSupport: 0.62        # [CALIBRATE]
+  sourceWindowSentences: 3
+  groundedRatio: 0.9
+  partialRatio: 0.5
+  minFactualWords: 4
+  minFactualKhmerChars: 12
+  quoteMinWords: 5
+  autoCite: true
+  autoFixCitations: true
+  onUngrounded: { STANDARD: WARN, STRICT: REPLACE, TEST: RECORD }
+  guardianModel: null              # e.g. "granite3-guardian:2b" (host full profile only; HARNESS.md §10.5)
+  numberWords: { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 }
+  metaPatterns:
+    - '^here (is|are)\b'
+    - '^in summary\b'
+    - '^overall\b'
+    - '^i hope\b'
+    - '^let me know\b'
+    - '^according to the (documents?|sources?)( provided)?[,:]?$'
+  specificFactPatterns:
+    - '\b(1[0-9]{3}|20[0-9]{2})\b'
+    - '\b\d+(\.\d+)?\s?%'
+    - '(\$|€|£|៛)\s?\d|\b\d[\d,.]*\s?(usd|khr|riel|dollars?)\b'
+    - '\b\d{1,3}(,\d{3})+\b|\b\d{4,}\b'
+    - '\b\d{1,2} (january|february|march|april|may|june|july|august|september|october|november|december)\b'
+    - '\b(january|february|march|april|may|june|july|august|september|october|november|december) \d{1,2}\b'
+
+loopDetection:
+  windowChars: 400
+  minRepeatLen: 20
+  maxRepeatLen: 120
+  repeatLenStep: 10
+  maxRepeats: 3
+  checkEveryChars: 200
+  sameLineRepeats: 3
+  sameLineMinChars: 10
+
+generation:
+  repeatPenaltyGrounded: 1.05      # RAG/WEB (others use models.yaml repeatPenalty, default 1.1)
+  minP: 0.05                       # Ollama only
+  standardStops: ["\nUser:", "\nUSER MESSAGE:", "\nQUESTION:", "<<<SOURCE", "\nREFERENCE DATA"]
+  maxOutputCharsPerToken: 6
+  evalSeed: 42
+  jsonMaxAttempts: 3               # total attempts for invalid OR empty output (TITLE and EVAL_CASE never retry)
+  serverParallelTurns: 2

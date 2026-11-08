@@ -1,0 +1,26 @@
+{
+  "$id": "learning_plan",
+  "title": "LearningPlan",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "level": { "type": "string", "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+    "steps": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "objectives": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } }
+        },
+        "required": ["title", "summary", "objectives"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["title", "level", "steps"],
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+# Local development services. Ollama, the AI service, the backend and the
+# frontend run natively on the Mac (Ollama + AI service need the Apple GPU).
+#   docker compose up -d postgres searxng
+name: lumen
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learnai
+      POSTGRES_USER: learnai
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-learnai-local}
+    ports:
+      # 5432 is taken by another PostgreSQL on this Mac
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learnai -d learnai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8888:8080"
+    volumes:
+      - ./infra/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: http://localhost:8888/
+
+volumes:
+  pgdata:

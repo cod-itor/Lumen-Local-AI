@@ -1,0 +1,10 @@
+{
+  "$id": "image_prompt",
+  "title": "ImagePrompt",
+  "type": "object",
+  "properties": {
+    "prompt": { "type": "string" }
+  },
+  "required": ["prompt"],
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "$id": "learning_question",
+  "title": "LearningQuestion",
+  "type": "object",
+  "properties": {
+    "done": { "type": "boolean" },
+    "topic": { "type": "string", "enum": ["level", "outcome", "time", "focus", "style", "none"] },
+    "question": { "type": "string" },
+    "options": { "type": "array", "maxItems": 4, "items": { "type": "string" } }
+  },
+  "required": ["done", "topic", "question", "options"],
+  "additionalProperties": false
+}
