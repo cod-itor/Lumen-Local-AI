@@ -1,7 +1,9 @@
 package com.learnai.harness;
 
+import com.learnai.entity.GuardEvent;
 import com.learnai.entity.HarnessTurn;
 import com.learnai.entity.TurnMetrics;
+import com.learnai.repository.GuardEventRepository;
 import com.learnai.repository.HarnessTurnRepository;
 import com.learnai.repository.TurnMetricsRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.util.UUID;
 
@@ -21,6 +24,36 @@ public class TurnOutcomeService {
 
     private final HarnessTurnRepository turns;
     private final TurnMetricsRepository metrics;
+    private final GuardEventRepository guardEvents;
+
+    /** Store the AI service's `guardEvents[]` (prepare or finalize) for this turn (GUARDRAILS.md §11). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveGuardEvents(UUID turnId, JsonNode events) {
+        if (events == null || !events.isArray() || events.isEmpty()) return;
+        try {
+            HarnessTurn t = turns.findById(turnId).orElse(null);
+            if (t == null) return;
+            for (JsonNode e : events) {
+                guardEvents.save(GuardEvent.builder()
+                        .userId(t.getUserId()).turnId(turnId)
+                        .stage(cut(e.path("stage").asString("INPUT"), 6))
+                        .action(cut(e.path("action").asString("BLOCK"), 14))
+                        .categories(e.path("categories").isArray() ? e.get("categories")
+                                : JsonNodeFactory.instance.arrayNode())
+                        .rule(cut(e.path("rule").asString("classifier"), 80))
+                        .excerpt(cut(e.path("excerpt").asString(""), 300))
+                        .providerKind(t.getProviderKind().name()).model(cut(t.getModel(), 100))
+                        .profile(cut(e.path("profile").asString("STANDARD"), 8))
+                        .build());
+            }
+        } catch (RuntimeException ex) {
+            log.warn("guard events failed for turn {}", turnId, ex);
+        }
+    }
+
+    private static String cut(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max);
+    }
 
     /** FAILED / EXPIRED / CANCELLED. MESSAGE turns have no side effects beyond metrics. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)

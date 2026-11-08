@@ -88,12 +88,12 @@ rules:
     category: non_violent_crimes
     stage: INPUT
     patterns:
-      - '\b(fake|forge|counterfeit)\b.{0,20}\b(id card|passport|diploma|certificate|money|banknotes?|signature)\b'
+      - '\b(how (do i|to|can i)|help me|teach me|steps? to|ways? to)\b.{0,20}\b(fake|forge|counterfeit)\b.{0,20}\b(an? |my |the )?(id card|passport|diploma|certificate|money|banknotes?|signature)\b'   # instructions only: "how banks detect counterfeit notes" stays allowed
   - id: drug_synthesis
     category: non_violent_crimes
     stage: BOTH
     patterns:
-      - '\b(how (do i|to|can i)|steps? to|recipe for)\b.{0,30}\b(make|cook|synthesi[sz]e|produce)\b.{0,20}\b(meth(amphetamine)?|heroin|cocaine|fentanyl|lsd|mdma|ecstasy)\b'
+      - '\b(how (do i|to|can i)|steps? to|recipe for)\b.{0,30}\b(make|making|cook|cooking|synthesi[sz]e|synthesi[sz]ing|produce|producing)\b.{0,20}\b(meth(amphetamine)?|heroin|cocaine|fentanyl|lsd|mdma|ecstasy)\b'
   - id: csam_cooccurrence
     category: child_sexual_exploitation
     stage: BOTH
@@ -153,7 +153,7 @@ rules:
   - id: strict_dating
     category: dating_romance
     stage: INPUT
-    patterns: ['\b(girlfriend|boyfriend|dating|flirt|kiss|romantic date)\b']
+    patterns: ['\b(girlfriend|boyfriend|flirt|kiss|romantic date)\b', '(?<!carbon )(?<!radiocarbon )(?<!radiometric )\bdating\b']
   - id: strict_gambling
     category: gambling
     stage: INPUT

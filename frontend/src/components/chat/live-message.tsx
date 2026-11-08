@@ -137,16 +137,18 @@ export function LiveAssistantMessage({
         <button type="button" onClick={() => copy(message.content)} aria-label={copied ? m.common.copied : m.common.copy} className={btn}>
           <Icon name={copied ? "chat-check" : "chat-copy"} size={copied ? 12 : 15} />
         </button>
-        <motion.button
-          type="button"
-          aria-label={m.app.chat.actions.regenerate}
-          whileTap={{ rotate: -90 }}
-          className={btn}
-          disabled={busy}
-          onClick={onRegenerate}
-        >
-          <Icon name="chat-refresh" size={15} />
-        </motion.button>
+        {!support && status !== "BLOCKED" && (
+          <motion.button
+            type="button"
+            aria-label={m.app.chat.actions.regenerate}
+            whileTap={{ rotate: -90 }}
+            className={btn}
+            disabled={busy}
+            onClick={onRegenerate}
+          >
+            <Icon name="chat-refresh" size={15} />
+          </motion.button>
+        )}
         {showSpeed && stats?.tokensPerSec != null && meta.model && (
           <span className="ml-2 text-[11.5px] text-placeholder tabular-nums">
             {t("app.chat.live.speed", { model: meta.model, tps: Math.round(stats.tokensPerSec) })}

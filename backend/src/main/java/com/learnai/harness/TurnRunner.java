@@ -92,6 +92,7 @@ public class TurnRunner {
                 case "sources" -> w.send("sources", publicSources(d));
                 case "tools" -> w.send("tools", d);
                 case "blocked" -> {
+                    outcomes.saveGuardEvents(turnId, d.path("guardEvents"));
                     prepareTimeAnswer(t, d, true, w);
                     return;
                 }
@@ -110,6 +111,7 @@ public class TurnRunner {
                     return;
                 }
                 case "prepared" -> {
+                    outcomes.saveGuardEvents(turnId, d.path("guardEvents"));
                     prepared(t, p, d, h, w);
                     return;
                 }

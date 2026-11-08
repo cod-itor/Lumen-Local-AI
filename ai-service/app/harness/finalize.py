@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from app.harness.loops import cut_loop, detect_loop
@@ -11,24 +10,9 @@ from app.harness.reasoning import strip_reasoning
 from app.harness.router import suggestion
 from app.state import rules
 
-_MD_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
-_HTML_TAG = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(\s[^<>]*)?/?>")
-
 
 def _close_fence(text: str) -> str:
     return text + "\n```" if text.count("```") % 2 == 1 else text
-
-
-def _markdown_policy(text: str, cfg: dict[str, Any]) -> tuple[str, int]:
-    if cfg.get("removeImages", True):
-        text = _MD_IMAGE.sub("", text)
-    if cfg.get("stripHtml", True):
-        # leave fenced code alone
-        parts = text.split("```")
-        for i in range(0, len(parts), 2):
-            parts[i] = _HTML_TAG.sub("", parts[i])
-        text = "```".join(parts)
-    return text, 0
 
 
 async def finalize(req: dict[str, Any]) -> dict[str, Any]:
@@ -43,7 +27,7 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
     max_attempts = int(r.harness["generation"]["jsonMaxAttempts"])
 
     text = strip_reasoning(output.get("content") or "")  # F1
-    text = _close_fence(normalize(text))  # F2
+    text = _close_fence(normalize(text, r.guardrails))  # F2 (+ neutralize fake control tokens/source headers)
     if finish == "LOOP_STOP" or detect_loop(text, loop_cfg):  # F3
         text = cut_loop(text, loop_cfg)
 
@@ -79,11 +63,58 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
             },
         }
 
-    text, removed_urls = _markdown_policy(text, r.guardrails.get("output") or {})  # F8
-    text = text[: int((r.guardrails.get("output") or {}).get("maxChars", 12000))]
-
     pipeline = context.get("pipeline")
     task = req.get("task") or "MESSAGE"
+    output_language = user.get("outputLanguage") or "EN"
+
+    # F6 output guardrails + F7 leak check (GUARDRAILS.md §5.3–5.4)
+    from app.guard import engine
+    from app.harness.prepare import variables
+    from app.rules.loader import system_message
+
+    mode = r.mode_for(task, pipeline)
+    values = variables(user, task, mode, context.get("answerLanguage") or "English")
+    secret = system_message(r.system, mode, values, False)
+    out_guard = await engine.check_output(
+        r,
+        text,
+        english=None,
+        question=context.get("modelInput") or "",
+        profile=guard_profile,
+        instructions_text=secret,
+        user_text=context.get("modelInput") or "",
+        abstain_text=mode.abstain_text,
+    )
+    base["guardEvents"] = out_guard.events
+    in_guard = context.get("inputGuard") or {}
+    base["guard"] = {  # GuardSummary: the output decision when it acted, else the input one (e.g. SAFE_COMPLETE)
+        "action": out_guard.action if out_guard.action != "ALLOW" else in_guard.get("action", "ALLOW"),
+        "categories": out_guard.categories or in_guard.get("categories", []),
+        "profile": guard_profile,
+        "wouldAction": out_guard.would_action or in_guard.get("wouldAction"),
+    }
+    if out_guard.action in ("REPLACE", "SUPPORT"):
+        key = engine.refusal_key(r, out_guard.action, out_guard.categories, out_guard.rule)
+        fixed = engine.localized(engine.texts(r, key), task, output_language)
+        return {
+            **base,
+            **fixed,
+            "status": "SUPPORT" if out_guard.action == "SUPPORT" else "BLOCKED",
+            "grounding": None,
+            "suggestions": [],
+            "metrics": {
+                "groundingLevel": None,
+                "supportedRatio": None,
+                "guardOutputAction": out_guard.action,
+                "jsonAttempts": attempt,
+            },
+        }
+
+    # F8 Markdown policy: images, HTML, links only to this turn's source URLs, length
+    from app.guard import markdown_policy
+
+    source_urls = [str(x.get("url")) for x in context.get("sources") or [] if x.get("url")]
+    text, removed_urls = markdown_policy.apply(text, source_urls, r.guardrails.get("output") or {})
     status = "COMPLETED"
     has_specific = False
     if pipeline == "CHAT":  # F11 (CHAT)
@@ -123,6 +154,11 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
             text = text.strip()
             gv.set_offsets(text, grounding)
 
+    if status == "COMPLETED":  # §5.5 SAFE_COMPLETE disclaimers (input categories + output categories)
+        keys = list((context.get("inputGuard") or {}).get("disclaimers") or []) + out_guard.disclaimers
+        if keys and not engine.profile_cfg(r, guard_profile).get("recordOnly"):
+            text = engine.ensure_disclaimers(r, text, keys, "EN")
+
     suggestions = list((context.get("routing") or {}).get("suggestions") or []) + extra_suggestions  # F14
     provider = req.get("provider") or {}
     from app.api.system import features
@@ -147,7 +183,7 @@ async def finalize(req: dict[str, Any]) -> dict[str, Any]:
         "metrics": {
             "groundingLevel": grounding["level"],
             "supportedRatio": grounding["supportedRatio"],
-            "guardOutputAction": "ALLOW",
+            "guardOutputAction": out_guard.would_action or out_guard.action,
             "jsonAttempts": attempt,
         },
     }

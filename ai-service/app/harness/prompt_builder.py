@@ -87,6 +87,9 @@ def build_messages(
     from app.rules.render import render
 
     reminder = render(mode.reminder, variables) if mode.reminder else None
+    if injection_suspected:  # GUARDRAILS.md §3 FLAG: the Reminder is always appended, plus the hardened line
+        hardened = (rules.guardrails.get("injection") or {}).get("hardenedReminder")
+        reminder = "\n".join(x for x in (reminder, hardened) if x) or None
 
     def user_msg(t: str) -> str:
         return final_user_message(

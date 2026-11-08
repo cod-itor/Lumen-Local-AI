@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app import db, state
-from app.api import evals, harness, models, rag, system
+from app.api import evals, guard, harness, models, rag, system
 from app.config import get_settings
 from app.errors import install_error_handlers
 from app.models import ollama_runtime
@@ -45,3 +45,4 @@ app.include_router(models.router)
 app.include_router(evals.router)
 app.include_router(harness.router)
 app.include_router(rag.router)
+app.include_router(guard.router)

@@ -65,8 +65,22 @@ async def ingest(req: dict[str, Any]) -> AsyncIterator[Event]:
         yield "progress", {"stage": "EMBEDDING", "current": min(total, i + BATCH), "total": total}
 
     yield "progress", {"stage": "SAVING", "current": 0, "total": total}
+    from app.guard.engine import untrusted_score
+
+    threshold = float(r.guardrails["classifiers"]["injection"]["threshold"])  # GUARDRAILS.md §5.2
     rows = [
-        (user_uuid, doc_uuid, c.ordinal, c.page, c.start, c.end, c.text, detect_language(c.text, r.harness), Vector(v))
+        (
+            user_uuid,
+            doc_uuid,
+            c.ordinal,
+            c.page,
+            c.start,
+            c.end,
+            c.text,
+            detect_language(c.text, r.harness),
+            untrusted_score(r, c.text) >= threshold,
+            Vector(v),
+        )
         for c, v in zip(chunks, vectors, strict=True)
     ]
     async with db.pool().connection() as conn, conn.transaction():
@@ -76,7 +90,7 @@ async def ingest(req: dict[str, Any]) -> AsyncIterator[Event]:
                 await cur.executemany(
                     "INSERT INTO chunks (user_id, document_id, source, ordinal, page, start_char, end_char, text, "
                     "language, injection_suspected, embedding) "
-                    "VALUES (%s, %s, 'DOC', %s, %s, %s, %s, %s, %s, false, %s)",
+                    "VALUES (%s, %s, 'DOC', %s, %s, %s, %s, %s, %s, %s, %s)",
                     rows[i : i + 100],
                 )
     yield "done", {"pages": len(pages) if paginated else None, "chunkCount": len(chunks), "language": language}

@@ -24,15 +24,39 @@ def test_language():
 
 def test_router_notes_and_suggestions():
     r = rules()
-    out = route(r, task="MESSAGE", tab="CHAT", web_search=False, web_enabled=True,
-                original="What is the latest news about AI?", model_input="", current_year=2026)
+    out = route(
+        r,
+        task="MESSAGE",
+        tab="CHAT",
+        web_search=False,
+        web_enabled=True,
+        original="What is the latest news about AI?",
+        model_input="",
+        current_year=2026,
+    )
     assert out.pipeline == "CHAT" and "CURRENT_INFO" in out.intents
     assert out.notes and out.suggestions[0]["type"] == "TURN_ON_WEB_SEARCH"
-    g = route(r, task="MESSAGE", tab="CHAT", web_search=False, web_enabled=True, original="hello!",
-              model_input="", current_year=2026)
+    g = route(
+        r,
+        task="MESSAGE",
+        tab="CHAT",
+        web_search=False,
+        web_enabled=True,
+        original="hello!",
+        model_input="",
+        current_year=2026,
+    )
     assert g.intents == ["GREETING"] and g.notes == []
-    d = route(r, task="MESSAGE", tab="DOCS", web_search=False, web_enabled=True, original="hi",
-              model_input="", current_year=2026)
+    d = route(
+        r,
+        task="MESSAGE",
+        tab="DOCS",
+        web_search=False,
+        web_enabled=True,
+        original="hi",
+        model_input="",
+        current_year=2026,
+    )
     assert d.pipeline == "RAG"
 
 

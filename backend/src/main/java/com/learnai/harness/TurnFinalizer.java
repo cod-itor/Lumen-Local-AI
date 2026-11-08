@@ -80,6 +80,7 @@ public class TurnFinalizer {
             return fail(turnId, "INTERNAL_ERROR", "Something went wrong while saving the answer.", true);
         }
 
+        outcomes.saveGuardEvents(turnId, resp.path("guardEvents"));
         try {
             Outcome o = apply(t, resp, output, finish);
             if (o instanceof Terminal) outcomes.writeMetrics(turnId, resp.path("metrics"), output.path("stats"), finish);

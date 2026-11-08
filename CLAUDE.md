@@ -225,8 +225,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 4 | Frontend wiring | **done** (2026-11-08) — `/api/*` streaming proxy, `proxy.ts` route guard, login/signup live, session provider (user, chat list, providers), live chat thread (SSE turn, Stop, regenerate, versions, suggestions, markdown), new chat flow |
 | 5 | Client providers (WebLLM, local Ollama) | **done** (2026-11-08) — provider create/update/delete/test/test-result API; `lib/providers/*` (WebLLM worker engine, visitor Ollama, WebGPU f16 build pick, registry, connection test), client guard + reasoning strip, CLIENT turns in `useHarnessTurn` (load before turn, `prepared` → generate → `complete`, 422 repair loop, CLIENT_ERROR cancel), `/settings/models` page (add browser model / My Ollama guide, default, test, remove, remove downloaded files), CSP + security headers |
 | 6 | Documents (RAG) + grounding | **done** (2026-11-08) — upload (size/type sniff/quota/dedupe) → INGEST job (claim `SKIP LOCKED`, SSE `/api/jobs/{id}/events`, cancel) → AI parse (pypdf/python-docx/txt/md) → clean → chunk → EmbeddingGemma → `chunks`; retrieval (exact cosine + `tsv` lexical, RRF, gate, per-doc caps, evidence budget); grounding verifier (citations, lexical/semantic support, numbers, quotes, auto-fix/auto-cite, UTF-16 offsets); live Documents tab (library + dropzone, sidebar, DOCS chats, source picker → chat `documentIds`, file viewer with page nav + chunk highlight, citation chips + inline `[n]`, grounding badge, unsupported-sentence underline) |
-| 7 | Guardrails | next |
-| 8 | Translation + tools | todo |
+| 7 | Guardrails | **done** (2026-11-08) — `app/guard/` engine (input §5.1 decision order, output §5.3, leak shingles §5.4, SAFE_COMPLETE notes + disclaimers, refusals EN/KM, TEST `wouldAction`, image policy), output Markdown policy (images, HTML, source-URL-only links, paragraph cut), URL safety validator (private ranges, IP spellings, DNS check), DOC chunk injection flag + label, hardened reminder on FLAG, optional Llama Guard / Prompt Guard (env opt-in), `/guard/check`, `/guard/check-url`; backend stores `guard_events`; 82 guard tests |
+| 8 | Translation + tools | next |
 | 9 | Model Test | todo |
 | 10 | Web search | todo |
 | 11 | Learning paths + quizzes | todo |
@@ -277,6 +277,14 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   NLLB pivot for Khmer documents arrive in phases 7/8. The first DOCS message creates the chat with the picked
   `documentIds`; `/documents/[id]?chat=` opens a specific DOCS chat.
 
+- 2026-11-08 — Phase 7: classifiers stay **off** in the local demo (no transformers/torch, no llama-guard pull);
+  STRICT then uses regex rules only. Turn on with `GUARD_CONTENT_CLASSIFIER=true` (+ `ollama pull llama-guard3:1b`)
+  or `GUARD_INJECTION_CLASSIFIER=true` (needs transformers + HF token). Rule fixes found by the rule tests (Model Test
+  to confirm in phase 9): `drug_synthesis` also matches "making/cooking…", `fraud_cheating_systems` needs an
+  instruction phrase ("how banks detect counterfeit notes" stays allowed), `strict_dating` ignores "carbon dating".
+  The URL validator checks scheme/host/ports/DNS now; IP pinning + manual redirects are built with the web fetcher
+  (phase 10). Guard events are written by the backend from `guardEvents[]` of prepare and finalize.
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -296,6 +304,10 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
 - Turbopack bundles `new Worker(new URL('./webllm.worker.ts', import.meta.url))` into its own worker chunk; it also
   copies the raw `.ts` to `static/media` (unused, harmless).
+- llama3.2 3B sometimes abstains when a DOC source carries the "instruction-like text" label even if the answer
+  is in it (it never followed the injected instruction in tests) — revisit in calibration (phase 14).
+- `csam_cooccurrence` matches topic words (e.g. "sex education for children" → BLOCK); acceptable for now (critical
+  category), revisit with the Model Test over-refusal cases.
 - Hibernate: `CHAR(64)` columns (sha256) need `@JdbcTypeCode(SqlTypes.CHAR)` or `validate` fails.
 - Next 16 + cacheComponents: route segment `runtime`/`dynamic` configs are rejected; a dynamic route with no static
   params needs `export const instant = false`.
