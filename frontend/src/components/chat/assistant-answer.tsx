@@ -155,7 +155,7 @@ function Inline({ segments, ...cite }: { segments: InlineSegment[] } & CiteHandl
 }
 
 /** Figma "Code Block": label header with copy, mono body. */
-function CodeBlock({ label, code }: { label: string; code: string }) {
+export function CodeBlock({ label, code }: { label: string; code: string }) {
   const [copied, copy] = useCopy();
   const m = useMessages();
   return (
@@ -222,7 +222,7 @@ function MessageActions({ text }: { text: string }) {
   );
 }
 
-function useCopy() {
+export function useCopy() {
   const [copied, setCopied] = useState(false);
   const copy = (text: string) => {
     void navigator.clipboard?.writeText(text).catch(() => {});

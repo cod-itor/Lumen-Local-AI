@@ -2,17 +2,43 @@
 
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Composer } from "@/components/app/composer";
 import { useLocale, useMessages } from "@/i18n/provider";
+import { api, ApiError } from "@/lib/api";
+import { setPendingPrompt } from "@/lib/harness/pending";
+import { useSession } from "@/lib/session";
 import type { Suggestion } from "@/types";
+import type { ChatDto } from "@/types/api";
 
 /** Figma "01 · Chat · New": centered title, composer, suggestion chips. */
 export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
   const router = useRouter();
   const m = useMessages().app.chat;
   const locale = useLocale();
-  // Static prototype: any prompt opens the sample answer (02 · Chat · Answer).
-  const open = () => router.push("/chat/photosynthesis");
+  const session = useSession();
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  // New chat = POST /api/chats, then the chat page sends the first message (FRONTEND.md §7.2).
+  const open = async (text: string, webSearch = false) => {
+    if (creating) return;
+    if (!session.provider) {
+      setError(m.live.noModel);
+      return;
+    }
+    setCreating(true);
+    setError(null);
+    try {
+      const chat = await api.post<ChatDto>("/api/chats", { tab: "CHAT" });
+      session.touchChat(chat);
+      setPendingPrompt(chat.id, text, webSearch);
+      router.push(`/chat/${chat.id}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : m.live.loadFailed);
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="flex h-full flex-col items-center pt-[238px] max-[860px]:pt-[18vh]">
@@ -20,7 +46,8 @@ export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
         {m.heading}
       </h1>
       <div className="mt-[22px] w-full max-w-[calc(var(--chat-width)+20px)]">
-        <Composer onSubmit={open} />
+        <Composer defaultSearchOn={false} busy={creating} onSubmit={(text, o) => void open(text, o.webSearch)} />
+        {error && <p className="mt-3 text-center text-[13px] text-muted-foreground">{error}</p>}
       </div>
       <motion.ul
         initial="hidden"
@@ -35,7 +62,7 @@ export function NewChat({ suggestions }: { suggestions: Suggestion[] }) {
           >
             <button
               type="button"
-              onClick={open}
+              onClick={() => void open(s.label[locale])}
               className="rounded-full border border-border px-[14px] py-2 text-[13px] font-medium whitespace-nowrap text-foreground transition-colors hover:bg-accent"
             >
               {s.label[locale]}

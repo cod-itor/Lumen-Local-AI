@@ -94,7 +94,7 @@ AIProjectRepo/                 (git root; remote github.com/cod-itor/Lumen-Local
 │   ├── models.yaml            model profiles + WebLLM catalog + Ollama suggestions
 │   ├── knowledge/             (reserved)
 │   └── evals/                 suites/core.yaml (48 cases, 22 quick) + fixtures/
-├── frontend/                  Next.js 16 app (built UI; being wired to the API)
+├── frontend/                  Next.js 16 app (wired to the API from phase 4)
 ├── backend/                   Spring Boot 4.1 monolith — package com.learnai (BACKEND.md §2) [phase 1+]
 ├── ai-service/                Python FastAPI — package app (AI_SERVICE.md §3) [phase 2+]
 └── storage/                   shared files (git-ignored)
@@ -105,7 +105,8 @@ AIProjectRepo/                 (git root; remote github.com/cod-itor/Lumen-Local
 - Next.js 16.x (App Router, Turbopack, `cacheComponents`), React 19, TypeScript strict, Tailwind v4, shadcn (base-nova /
   Base UI), motion, next-themes (dark default), react-hook-form + zod. **npm** (not pnpm).
 - i18n: own store (`src/i18n/` — `useMessages`, `useLocale`, `setLocale`, `Localized<T>`), EN + KM. Not next-intl.
-- Data today: `src/mocks/*` behind `src/services/*` (server-only). Wiring replaces services with `lib/api.ts` calls.
+- Live data: `lib/api.ts` (fetch + refresh-once), `lib/sse.ts`, `lib/session.tsx` (me/chats/providers), `lib/harness/useHarnessTurn.ts`.
+  Chat pages use the live API; documents/image/learn still read `src/mocks/*` until their phases.
 - Routes: `/` landing · `/(auth)/login|signup|verify|forgot-password|reset-password` · `/(app)/chat[/id]`,
   `/documents[/id]`, `/image[/id]`, `/learn` · `/settings` · `/coming-soon`.
 - Next 16: `middleware.ts` is `proxy.ts`. Read `frontend/node_modules/next/dist/docs/` before using Next APIs (see frontend/AGENTS.md).
@@ -221,8 +222,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 1 | Database + backend auth | **done** (2026-11-08) — Flyway V1, register/login/refresh(rotation+reuse)/logout/me, settings, delete account, CSRF origin check, rate limits, Swagger; `AuthFlowIntegrationTest` (Testcontainers) |
 | 2 | AI service skeleton + rules loader | **done** (2026-11-08) — FastAPI app, X-Internal-Token, rules loader with all RULES.md §2 checks, `/health` `/capabilities` `/status` `/rules/reload` `/models/catalog` `/models/profile` `/evals/suites`, `validate_rules.py`, pytest |
 | 3 | Harness CHAT (HOST) | **done** (2026-11-08) — AI: normalize, language, router (intents/notes/suggestions), history 4–6, budget + exact prompt layout, params, client guard, Ollama runtime (slots + `queued`, reasoning/stop/loop/guard stops), finalize F1–F4/F8/F11(CHAT)/F14; backend: providers (auto HOST), chats/messages API, `POST /api/harness/turns` SSE, complete/cancel/get, TurnRunner on virtual threads, conditional status changes, MESSAGE handler (AUTO title, preview), turn_metrics, housekeeping. DOCS tab abstains (`NO_DOCUMENTS`) until phase 6 |
-| 4 | Frontend wiring | next |
-| 5 | Client providers (WebLLM, local Ollama) | todo |
+| 4 | Frontend wiring | **done** (2026-11-08) — `/api/*` streaming proxy, `proxy.ts` route guard, login/signup live, session provider (user, chat list, providers), live chat thread (SSE turn, Stop, regenerate, versions, suggestions, markdown), new chat flow |
+| 5 | Client providers (WebLLM, local Ollama) | next |
 | 6 | Documents (RAG) + grounding | todo |
 | 7 | Guardrails | todo |
 | 8 | Translation + tools | todo |
@@ -260,6 +261,11 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   Not-yet-built parts answer honestly: input guard = ALLOW (phase 7), no pivot translation/tools (phase 8), RAG/WEB →
   `NOT_IMPLEMENTED` (phases 6/10), non-MESSAGE tasks → 503 `FEATURE_UNAVAILABLE`.
 
+- 2026-11-08 — Phase 4: signup goes straight into the app (no OTP step in the local demo); the Composer's web search is
+  off by default until phase 10; `/chat/[id]` uses `export const instant = false` (cacheComponents). Markdown =
+  react-markdown 10 + remark-gfm 4 with `skipHtml` and no images. `npm audit --omit=dev` is clean; the remaining advisories
+  are dev-only (shadcn CLI deps).
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -277,6 +283,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Spring Boot 4 uses Jackson 3 (`tools.jackson.*`); `@SpringBootTest` needs `@AutoConfigureMockMvc`.
   Jackson 3: `asString()` not `asText()`, `deepCopy()` returns `JsonNode` (cast), SSE from Spring is `event:x` (no space).
 - Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
+- Next 16 + cacheComponents: route segment `runtime`/`dynamic` configs are rejected; a dynamic route with no static
+  params needs `export const instant = false`.
 
 ## 12. Glossary
 

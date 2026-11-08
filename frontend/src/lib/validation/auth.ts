@@ -37,7 +37,7 @@ const email = z
 const newPassword = z
   .string()
   .min(1, e("auth.errors.passwordCreate"))
-  .max(128, e("auth.errors.passwordTooLong"))
+  .max(72, e("auth.errors.passwordTooLong"))
   .refine(
     (v) => PASSWORD_RULES.slice(0, 3).every((r) => r.test(v)),
     e("auth.errors.passwordWeak"),
@@ -49,7 +49,7 @@ const mismatch = { message: e("auth.errors.passwordMismatch"), path: ["confirmPa
 
 export const loginSchema = z.object({
   email,
-  password: z.string().min(1, e("auth.errors.passwordRequired")).max(128, e("auth.errors.passwordTooLong")),
+  password: z.string().min(1, e("auth.errors.passwordRequired")).max(72, e("auth.errors.passwordTooLong")),
   remember: z.boolean(),
 });
 

@@ -7,10 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { loginAction } from "@/app/(auth)/actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { useMessages } from "@/i18n/provider";
+import { nextPath, signIn } from "@/lib/auth-client";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { AuthFieldError, IconInput, PasswordInput, SubmitButton } from "./fields";
@@ -33,7 +33,7 @@ export function LoginForm() {
   const onSubmit = (values: LoginInput) => {
     setMessage(null);
     startTransition(async () => {
-      const res = await loginAction(values);
+      const res = await signIn(values.email.trim(), values.password);
       if (!res.ok) {
         applyFieldErrors(form, res);
         setMessage(res.message ?? null);
@@ -41,7 +41,7 @@ export function LoginForm() {
         return;
       }
       setDone(true);
-      router.push("/chat");
+      router.push(nextPath());
     });
   };
 

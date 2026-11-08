@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { Square } from "lucide-react";
 import { Icon } from "@/components/icon";
 import { useMessages } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,9 @@ export function Composer({
   onVoiceChange,
   attachIcon = "plus",
   attachLabel: attachLabelProp,
+  busy = false,
+  onStop,
+  onSearchChange,
 }: {
   placeholder?: string;
   className?: string;
@@ -35,7 +39,11 @@ export function Composer({
   defaultSearchOn?: boolean;
   /** Extra chips after the Search chip (e.g. attached file). */
   leading?: React.ReactNode;
-  onSubmit?: (text: string) => void;
+  onSubmit?: (text: string, options: { webSearch: boolean }) => void;
+  /** A reply is being generated: Enter does nothing and the send button becomes Stop. */
+  busy?: boolean;
+  onStop?: () => void;
+  onSearchChange?: (on: boolean) => void;
   /** Start in voice (listening) mode. */
   defaultVoiceOn?: boolean;
   /** Text revealed word by word while listening (static prototype; defaults to a sample transcript). */
@@ -84,8 +92,8 @@ export function Composer({
   const submit = () => {
     const text = [value.trim(), listening ? interim : ""].filter(Boolean).join(" ");
     if (listening) setVoice(false);
-    if (!text) return;
-    onSubmit?.(text);
+    if (!text || busy) return;
+    onSubmit?.(text, { webSearch: showSearch && searchOn });
     setValue("");
   };
 
@@ -156,7 +164,12 @@ export function Composer({
             type="button"
             whileTap={{ scale: 0.96 }}
             aria-pressed={searchOn}
-            onClick={() => setSearchOn((v) => !v)}
+            onClick={() =>
+              setSearchOn((v) => {
+                onSearchChange?.(!v);
+                return !v;
+              })
+            }
             className={cn(
               "flex items-center justify-center gap-[6px] rounded-full px-3 py-[7px] text-[12.5px] font-medium transition-[background,color,box-shadow] duration-200",
               searchOn
@@ -189,14 +202,29 @@ export function Composer({
         >
           <Icon name="mic" size={17} />
         </motion.button>
-        <motion.button
-          type="submit"
-          aria-label={m.send}
-          whileTap={{ scale: 0.92 }}
-          className="bg-primary-fill flex size-9 items-center justify-center rounded-[18px] transition-opacity disabled:opacity-60"
-        >
-          <Icon name="up" size={17} />
-        </motion.button>
+        {busy ? (
+          <motion.button
+            type="button"
+            aria-label={m.stop}
+            whileTap={{ scale: 0.92 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStop?.();
+            }}
+            className="bg-primary-fill flex size-9 items-center justify-center rounded-[18px]"
+          >
+            <Square size={13} fill="currentColor" strokeWidth={0} />
+          </motion.button>
+        ) : (
+          <motion.button
+            type="submit"
+            aria-label={m.send}
+            whileTap={{ scale: 0.92 }}
+            className="bg-primary-fill flex size-9 items-center justify-center rounded-[18px] transition-opacity disabled:opacity-60"
+          >
+            <Icon name="up" size={17} />
+          </motion.button>
+        )}
       </div>
     </form>
   );

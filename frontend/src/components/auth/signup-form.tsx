@@ -6,9 +6,9 @@ import { Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { signupAction } from "@/app/(auth)/actions";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { useMessages } from "@/i18n/provider";
+import { nextPath, signUp } from "@/lib/auth-client";
 import { signupSchema, type SignupInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { useAuthFlow } from "./auth-flow";
@@ -34,7 +34,7 @@ export function SignupForm() {
   const onSubmit = (values: SignupInput) => {
     setMessage(null);
     startTransition(async () => {
-      const res = await signupAction(values);
+      const res = await signUp(values.name.trim(), values.email.trim(), values.password);
       if (!res.ok) {
         applyFieldErrors(form, res);
         setMessage(res.message ?? null);
@@ -42,8 +42,9 @@ export function SignupForm() {
         return;
       }
       setDone(true);
+      // Local demo: no e-mail verification step; the account is ready at once.
       setFlow({ email: values.email, name: values.name, purpose: "signup", resetToken: null });
-      router.push("/verify");
+      router.push(nextPath());
     });
   };
 

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LOCALE_LABEL, LOCALES, isLocale } from "@/i18n/config";
 import { setLocale, useLocale, useLocalized, useMessages } from "@/i18n/provider";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import type { ModelStatus, User } from "@/types";
 import { ResizeHandle, useResizableWidth } from "./resize-handle";
@@ -328,6 +329,7 @@ function ModelStatusCard({ status }: { status: ModelStatus }) {
 function AccountRow({ user }: { user: User }) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const { logout } = useSession();
   const { setMobileNavOpen, setChatWidthOpen } = useShell();
   const messages = useMessages();
   const m = messages.app.sidebar.account;
@@ -386,8 +388,7 @@ function AccountRow({ user }: { user: User }) {
             {m.settingsAndModels}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {/* UI only for now: clear the session here once auth is wired up. */}
-          <DropdownMenuItem onClick={() => router.push("/login")}>
+          <DropdownMenuItem onClick={() => void logout()}>
             <LogOut />
             {m.logOut}
           </DropdownMenuItem>

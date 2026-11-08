@@ -99,7 +99,7 @@ export const auth = {
     emailInvalid: "Enter a valid email address",
     passwordRequired: "Enter your password",
     passwordCreate: "Create a password",
-    passwordTooLong: "Use 128 characters or fewer",
+    passwordTooLong: "Use 72 characters or fewer",
     passwordWeak: "Use 8+ characters with upper & lowercase letters and a number",
     passwordMismatch: "Passwords don’t match",
     confirmRequired: "Confirm your password",
@@ -110,6 +110,8 @@ export const auth = {
     wrongCredentials: "Incorrect email or password. Try again or reset your password.",
     emailTaken: "An account with this email already exists",
     invalidRequest: "Something went wrong. Please try again.",
+    rateLimited: "Too many attempts. Please wait a moment and try again.",
+    serverDown: "Can't reach Lumen right now. Check that the app is running.",
   },
 };
 
