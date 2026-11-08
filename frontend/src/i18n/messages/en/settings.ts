@@ -38,6 +38,8 @@ export const settings = {
     appliesTo: "Applies to: {target}",
   },
   privacy: {
+    askBeforeSearch: "Ask before searching the web",
+    askBeforeSearchDetail: "Show the search words first, so you can change or cancel them before anything goes online.",
     title: "What leaves your device",
     description: "Where each feature runs, and exactly what (if anything) goes online.",
     feature: "Feature",

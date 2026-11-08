@@ -190,6 +190,10 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         context["metrics"]["abstainedBeforeModel"] = True
         if pipeline == "RAG":
             context["routing"]["suggestions"].append(suggestion("UPLOAD_DOCUMENT"))
+        if pipeline == "WEB":  # §7.4 step 9: web search is already on
+            context["routing"]["suggestions"] = [
+                x for x in context["routing"]["suggestions"] if x.get("type") != "TURN_ON_WEB_SEARCH"
+            ]
         return (
             "abstained",
             {
@@ -201,6 +205,7 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         )
 
     hits: list[Any] = []
+    web: Any = None
     if pipeline == "RAG" and eval_case is not None:  # §12.2: fixture corpus, forced top chunks, no gate
         from app.evals import fixtures
 
@@ -235,8 +240,50 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         if not hits:
             yield abstain("NO_EVIDENCE", "RAG")
             return
-    elif pipeline == "WEB":
-        raise ServiceError("NOT_IMPLEMENTED", "The WEB pipeline is not available yet.", 501)
+    elif pipeline == "WEB":  # P11 (HARNESS.md §7.4, §3.4)
+        from app.web.evidence import build_query, gather, search_results
+
+        approved = (inp.get("approvedQuery") or "").strip()
+        query = approved or build_query(model_input, req.get("previousUserMessage"), r)
+        if approved and approved != model_input:  # an edited query is user text: check it again
+            q_decision = await check_input(r, approved, approved, guard_profile)
+            if q_decision.action in ("BLOCK", "SUPPORT"):
+                key = refusal_key(r, q_decision.action, q_decision.categories, q_decision.rule)
+                yield (
+                    "blocked",
+                    {
+                        "action": q_decision.action,
+                        "categories": q_decision.categories,
+                        **fixed_text(key, task, output_language, "refusals"),
+                        "guardEvents": q_decision.events,
+                        "context": context,
+                    },
+                )
+                return
+        if not feats["webSearch"]:
+            yield abstain("WEB_UNAVAILABLE", "WEB_UNAVAILABLE")
+            return
+        if user.get("askBeforeSearch") and not approved and eval_case is None:
+            context["webQuery"] = query
+            yield "needs_approval", {"query": query, "context": context}
+            return
+        yield "status", {"stage": "SEARCHING"}
+        safesearch = int((r.harness["web"].get("safesearch") or {}).get(guard_profile, 1))
+        try:
+            found = await search_results(query, safesearch, r)
+        except ServiceError as e:
+            if e.code != "WEB_UNAVAILABLE":
+                raise
+            yield abstain("WEB_UNAVAILABLE", "WEB_UNAVAILABLE")
+            return
+        yield "status", {"stage": "READING"}
+        web = await gather(query, found, r)
+        context["webQuery"] = query
+        context["metrics"]["topSim"] = round(max((c.sim for c in web.chunks), default=0.0), 4)
+        context["webSkipped"] = web.skipped_injection
+        if not web.chunks:
+            yield abstain("NO_WEB_RESULTS", "WEB")
+            return
 
     yield "status", {"stage": "BUILDING_PROMPT"}
     params = build_params(
@@ -271,6 +318,29 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         )
 
     evidence: list[str] = []
+    if pipeline == "WEB":  # §7.4 step 8 + §7.7 source headers
+        sources_w: list[dict[str, Any]] = []
+        for c in web.chunks:
+            n = len(sources_w) + 1
+            header = f"<<<SOURCE {n} | {c.site_name} | {c.published_at or 'date unknown'}>>>"
+            evidence.append(f"{header}\n{c.text}\n<<<END SOURCE {n}>>>")
+            sources_w.append(
+                {
+                    "n": n,
+                    "kind": "WEB",
+                    "title": c.title or c.site_name,
+                    "siteName": c.site_name,
+                    "url": c.url,
+                    "publishedAt": c.published_at,
+                    "chunkId": c.id,
+                    "snippet": c.text[:300],
+                    "score": round(c.sim, 4),
+                    "text": c.text,
+                }
+            )
+        context["sources"] = sources_w
+        context["metrics"]["chunksUsed"] = len(sources_w)
+        yield "sources", sources_w
     if hits:  # §7.3 steps 7–9: fit the evidence budget, number the sources
         from app.rag.retrieval import document_names
 

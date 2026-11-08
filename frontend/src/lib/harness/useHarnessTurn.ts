@@ -7,6 +7,7 @@ import { describeProviderError, type ClientModelProvider, type GenerateDone, typ
 import { postSse } from "@/lib/sse";
 import type {
   AbstainedEvent,
+  ApprovalEvent,
   BlockedEvent,
   ChatMessage,
   CompleteTurnRequest,
@@ -52,7 +53,11 @@ export type TurnUi = {
   turnId: string | null;
   /** WebLLM download/load progress (0–1). */
   modelProgress: { p: number; text: string } | null;
+  /** Web search waits for the user to approve or edit the query (HARNESS.md §7.4). */
+  approval: { turnId: string; query: string } | null;
 };
+
+export type ApprovalDecision = { decision: "APPROVE" } | { decision: "EDIT"; content: string };
 
 export type TurnHandlers = {
   onUserMessage?: (m: MessageDto) => void;
@@ -65,11 +70,11 @@ export type TurnHandlers = {
 };
 
 const IDLE: TurnUi = {
-  phase: "idle", stage: null, stageDetail: null, retryReason: null, text: "", turnId: null, modelProgress: null,
+  phase: "idle", stage: null, stageDetail: null, retryReason: null, text: "", turnId: null, modelProgress: null, approval: null,
 };
 const TERMINAL = new Set(["COMPLETED", "BLOCKED", "ABSTAINED", "CANCELLED", "EXPIRED", "FAILED"]);
 
-type Mode = "none" | "loading" | "stream" | "client";
+type Mode = "none" | "loading" | "stream" | "client" | "approval";
 
 const isAbort = (e: unknown) => e instanceof DOMException && e.name === "AbortError";
 
@@ -91,6 +96,7 @@ export function useHarnessTurn() {
   const modeRef = useRef<Mode>("none");
   const stopRef = useRef(false);
   const runningRef = useRef(false);
+  const approvalRef = useRef<((d: ApprovalDecision | null) => void) | null>(null);
 
   const start = useCallback(async (req: HarnessTurnRequest, h: TurnHandlers = {}, provider?: ProviderDto | null) => {
     if (runningRef.current) return;
@@ -241,7 +247,13 @@ export function useHarnessTurn() {
       modeRef.current = "stream";
       setUi({ ...IDLE, phase: "running" });
       let terminal = false;
-      const events = await postSse("/api/harness/turns", req, abort.signal);
+      let url = "/api/harness/turns";
+      let body: unknown = req;
+      // One stream, or two when web search waits for approval (the second continues from SEARCHING).
+      for (;;) {
+      terminal = false;
+      let approval: { turnId: string; query: string } | null = null;
+      const events = await postSse(url, body, abort.signal);
       for await (const { event, data } of events) {
         switch (event) {
           case "turn": {
@@ -308,13 +320,36 @@ export function useHarnessTurn() {
             await clientGenerate(client, prep, [], prep.attempt);
             break;
           }
-          case "approval":
+          case "approval": {
             terminal = true;
+            const d = data as ApprovalEvent;
+            approval = { turnId: d.turnId, query: d.content };
             break;
+          }
         }
         if (terminal) break;
       }
-      if (!terminal) await recover(turnIdRef.current, h, fail);
+      if (!terminal) {
+        await recover(turnIdRef.current, h, fail);
+        break;
+      }
+      if (!approval) break;
+      const asked: { turnId: string; query: string } = approval;
+      modeRef.current = "approval";
+      setUi((u) => ({ ...u, approval: asked, stage: null, text: "" }));
+      const decision = stopRef.current
+        ? null
+        : await new Promise<ApprovalDecision | null>((resolve) => (approvalRef.current = resolve));
+      approvalRef.current = null;
+      setUi((u) => ({ ...u, approval: null, stage: decision ? "SEARCHING" : u.stage }));
+      if (!decision) {
+        await cancelTurn();
+        break;
+      }
+      modeRef.current = "stream";
+      url = `/api/harness/turns/${asked.turnId}/approval`;
+      body = decision;
+      }
     } catch (e) {
       if (isAbort(e)) {
         if (turnIdRef.current) await recover(turnIdRef.current, h, fail, true);
@@ -336,6 +371,10 @@ export function useHarnessTurn() {
   const stop = useCallback(async () => {
     stopRef.current = true;
     const mode = modeRef.current;
+    if (mode === "approval") {
+      approvalRef.current?.(null);
+      return;
+    }
     if (mode === "loading") {
       // The model keeps loading in the background for next time; only the wait ends.
       abortRef.current?.abort();
@@ -357,7 +396,10 @@ export function useHarnessTurn() {
     }, 5000);
   }, []);
 
-  return { ui, start, stop, busy: ui.phase !== "idle" };
+  /** Answer a pending web search approval (no-op when none is pending). */
+  const respond = useCallback((d: ApprovalDecision) => approvalRef.current?.(d), []);
+
+  return { ui, start, stop, respond, busy: ui.phase !== "idle" };
 }
 
 /** Stream closed without a terminal event (API_CONTRACT §5): ask the server what happened. */

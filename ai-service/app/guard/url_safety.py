@@ -109,3 +109,77 @@ async def check_url(url: str, purpose: str = "WEB") -> UrlCheck:
     if not all(is_public(a) for a in addrs):
         return UrlCheck(False, "PRIVATE_ADDRESS", res.host, res.port, addrs)
     return UrlCheck(True, None, res.host, res.port, addrs)
+
+
+# ---------------------------------------------------------------- pinned-IP client (AI_SERVICE.md §8.5)
+
+
+class UrlBlocked(Exception):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+@dataclass
+class Fetched:
+    url: str
+    status: int
+    content_type: str
+    charset: str | None
+    body: bytes
+
+
+_REDIRECTS = (301, 302, 303, 307, 308)
+
+
+async def safe_get(
+    url: str,
+    *,
+    purpose: str = "WEB",
+    headers: dict[str, str] | None = None,
+    max_bytes: int = 2_000_000,
+    time_limit: float = 8.0,
+    max_redirects: int = 3,
+) -> Fetched:
+    """GET that validates every hop (steps 1–3), connects to the validated IP with the original Host/SNI (step 4),
+    follows at most `max_redirects` redirects by hand (step 5) and enforces time and size limits (step 6)."""
+    from urllib.parse import urljoin, urlunsplit
+
+    import httpx
+
+    async def run() -> Fetched:
+        current = url
+        async with httpx.AsyncClient(follow_redirects=False, timeout=httpx.Timeout(time_limit, connect=5.0)) as client:
+            for _hop in range(max_redirects + 1):
+                chk = await check_url(current, purpose)
+                if not chk.ok:
+                    raise UrlBlocked(chk.reason or "URL_NOT_ALLOWED")
+                p = urlsplit(current)
+                ip = chk.addresses[0]
+                ip_host = f"[{ip}]" if ":" in ip else ip
+                netloc = ip_host + (f":{p.port}" if p.port else "")
+                target = urlunsplit((p.scheme.lower(), netloc, p.path or "/", p.query, ""))
+                host_header = (p.hostname or "") + (f":{p.port}" if p.port else "")
+                req_headers = {**(headers or {}), "Host": host_header}
+                async with client.stream(
+                    "GET", target, headers=req_headers, extensions={"sni_hostname": p.hostname or ""}
+                ) as resp:
+                    if resp.status_code in _REDIRECTS and resp.headers.get("location"):
+                        current = urljoin(current, resp.headers["location"])
+                        continue
+                    ctype = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                    declared = resp.headers.get("content-length")
+                    if declared and declared.isdigit() and int(declared) > max_bytes:
+                        raise UrlBlocked("TOO_LARGE")
+                    buf = bytearray()
+                    async for part in resp.aiter_bytes():
+                        buf += part
+                        if len(buf) > max_bytes:
+                            raise UrlBlocked("TOO_LARGE")
+                    return Fetched(current, resp.status_code, ctype, resp.charset_encoding, bytes(buf))
+            raise UrlBlocked("TOO_MANY_REDIRECTS")
+
+    try:
+        return await asyncio.wait_for(run(), time_limit)
+    except TimeoutError as e:
+        raise UrlBlocked("TIMEOUT") from e

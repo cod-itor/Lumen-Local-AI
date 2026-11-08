@@ -40,6 +40,8 @@ export const settings: SettingsMessages = {
     appliesTo: "អនុវត្តចំពោះ៖ {target}",
   },
   privacy: {
+    askBeforeSearch: "សួរមុនពេលស្វែងរកលើអ៊ីនធឺណិត",
+    askBeforeSearchDetail: "បង្ហាញពាក្យស្វែងរកជាមុន ដើម្បីឱ្យអ្នកអាចកែ ឬបោះបង់ មុនពេលអ្វីៗត្រូវផ្ញើទៅអ៊ីនធឺណិត។",
     title: "អ្វីដែលចេញពីឧបករណ៍របស់អ្នក",
     description: "មុខងារនីមួយៗដំណើរការនៅឯណា និងអ្វីខ្លះ (បើមាន) ដែលទៅលើអ៊ីនធឺណិត។",
     feature: "មុខងារ",

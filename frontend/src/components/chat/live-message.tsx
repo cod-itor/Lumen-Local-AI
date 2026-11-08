@@ -23,7 +23,10 @@ export function LiveAssistantMessage({
   busy,
   showSpeed,
   onCite,
+  onWebSearch,
 }: {
+  /** Re-ask the question this message answered with web search on (TURN_ON/VERIFY_WITH_WEB_SEARCH). */
+  onWebSearch?: () => void;
   /** Opens a cited source (Documents: the file viewer at the passage). */
   onCite?: (source: SourceDto) => void;
   message: MessageDto;
@@ -41,6 +44,8 @@ export function LiveAssistantMessage({
   const support = meta.guard?.action === "SUPPORT";
   const stats = meta.stats;
   const docSources = meta.sources.filter((s) => s.kind === "DOC");
+  const webSources = meta.sources.filter((s) => s.kind === "WEB" && s.url && /^https?:\/\//i.test(s.url));
+  const grounded = meta.pipeline === "RAG" || meta.pipeline === "WEB";
   const cite = onCite && docSources.length ? (n: number) => {
     const src = meta.sources.find((s) => s.n === n);
     if (src) onCite(src);
@@ -51,7 +56,7 @@ export function LiveAssistantMessage({
   const base = message.originalContent ?? message.content;
   const shown = showOriginal && message.originalContent ? message.originalContent : message.content;
   const unsupported: Unsupported[] =
-    meta.pipeline === "RAG" && meta.grounding && shown === base
+    grounded && meta.grounding && shown === base
       ? meta.grounding.sentences
           .filter((s) => !s.supported && s.end > s.start)
           .map((s) => ({
@@ -128,7 +133,29 @@ export function LiveAssistantMessage({
         </div>
       )}
 
-      {meta.pipeline === "RAG" && (level === "GROUNDED" || level === "PARTIAL" || level === "UNGROUNDED") && (
+      {webSources.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {webSources.map((src) => (
+            <a
+              key={src.n}
+              href={src.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={src.snippet}
+              className="flex max-w-full items-center gap-[6px] rounded-full border-[1.5px] border-border px-3 py-[6px] text-foreground transition-colors hover:bg-accent"
+            >
+              <span className="text-[11px] font-semibold text-muted-foreground">{src.n}</span>
+              <Icon name="globe" size={13} />
+              <span className="max-w-[220px] truncate text-[12px] font-medium whitespace-nowrap">
+                {src.siteName || src.title}
+                {src.publishedAt && ` · ${src.publishedAt.slice(0, 10)}`}
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {grounded && (level === "GROUNDED" || level === "PARTIAL" || level === "UNGROUNDED") && (
         <span
           className={cn(
             "flex items-center gap-[6px] text-[12px] font-medium",
@@ -147,10 +174,22 @@ export function LiveAssistantMessage({
 
       {status === "STOPPED" && <Badge>{live.stopped}</Badge>}
       {meta.grounding?.hasSpecificFacts && meta.pipeline === "CHAT" && (
-        <p className="text-[12px] text-subtle">{live.specificFacts}</p>
+        <p className="flex flex-wrap items-center gap-2 text-[12px] text-subtle">
+          {live.specificFacts}
+          {onWebSearch && !meta.suggestions.some((x) => x.type === "VERIFY_WITH_WEB_SEARCH") && (
+            <button
+              type="button"
+              onClick={onWebSearch}
+              disabled={busy}
+              className="font-medium text-foreground underline underline-offset-2 disabled:opacity-40"
+            >
+              {live.checkWithWeb}
+            </button>
+          )}
+        </p>
       )}
 
-      {meta.suggestions.length > 0 && <Suggestions items={meta.suggestions} />}
+      {meta.suggestions.length > 0 && <Suggestions items={meta.suggestions} onWebSearch={busy ? undefined : onWebSearch} />}
 
       <div className="flex items-center gap-[2px]">
         {version.count > 1 && (
@@ -223,13 +262,22 @@ const SUGGESTION_HREF: Partial<Record<SuggestionDto["type"], (s: SuggestionDto) 
   UPLOAD_DOCUMENT: () => "/documents",
 };
 
-function Suggestions({ items }: { items: SuggestionDto[] }) {
+const WEB_SUGGESTIONS = new Set<SuggestionDto["type"]>(["TURN_ON_WEB_SEARCH", "VERIFY_WITH_WEB_SEARCH"]);
+
+function Suggestions({ items, onWebSearch }: { items: SuggestionDto[]; onWebSearch?: () => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((s) => {
         const href = SUGGESTION_HREF[s.type]?.(s);
         const cls =
           "rounded-full border border-border px-3 py-[6px] text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent";
+        if (WEB_SUGGESTIONS.has(s.type) && onWebSearch) {
+          return (
+            <button key={s.type} type="button" onClick={onWebSearch} className={cls}>
+              {s.label}
+            </button>
+          );
+        }
         return href ? (
           <Link key={s.type} href={href} className={cls}>
             {s.label}

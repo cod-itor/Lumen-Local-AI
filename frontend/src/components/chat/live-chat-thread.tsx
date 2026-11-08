@@ -14,6 +14,7 @@ import { useSession } from "@/lib/session";
 import type { ChatDto, ChatMessagesResponse, HarnessTurnRequest, MessageDto, SourceDto } from "@/types/api";
 import { riseItem } from "./assistant-answer";
 import { LiveAssistantMessage, StreamingReply } from "./live-message";
+import { SearchApproval } from "./search-approval";
 
 type Loaded = { messages: MessageDto[]; leaf: string | null };
 
@@ -44,7 +45,7 @@ export function LiveChatThread({
   const [pendingUser, setPendingUser] = useState<string | null>(null);
   const [failure, setFailure] = useState<TurnFailure | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { ui, start, stop, busy } = useHarnessTurn();
+  const { ui, start, stop, respond, busy } = useHarnessTurn();
   const scrollRef = useRef<HTMLDivElement>(null);
   const showSpeed = session.me?.settings.showSpeedStats ?? true;
 
@@ -115,6 +116,13 @@ export function LiveChatThread({
     });
   }, [chatId, load, run]);
 
+  const webAllowed = composer?.showSearch !== false && (session.provider?.features.webSearch ?? true);
+  /** TURN_ON / VERIFY_WITH_WEB_SEARCH: ask the same question again with web search (FRONTEND.md §6.3). */
+  const reAskWithWeb = (answer: MessageDto) => {
+    const question = data?.messages.find((x) => x.id === answer.parentId);
+    if (question) void run({ content: question.content, webSearch: true }, question.content);
+  };
+
   const path = useMemo(() => (data ? activePath(data.messages, data.leaf) : []), [data]);
   const last = path[path.length - 1];
   const unanswered = last?.role === "USER" ? last : null;
@@ -178,11 +186,16 @@ export function LiveChatThread({
                 version={versionOf(data?.messages ?? [], msg)}
                 onVersion={(d) => void switchVersion(msg, d)}
                 onRegenerate={() => void run({ regenerateOf: msg.id }, null)}
+                onWebSearch={webAllowed && msg.parentId ? () => void reAskWithWeb(msg) : undefined}
               />
             ),
           )}
           {pendingUser && <UserBubble text={pendingUser} />}
-          {busy && <StreamingReply text={ui.text} stageLabel={stageLabel} />}
+          {ui.approval ? (
+            <SearchApproval query={ui.approval.query} onDecide={respond} onCancel={() => void stop()} />
+          ) : (
+            busy && <StreamingReply text={ui.text} stageLabel={stageLabel} />
+          )}
           {ui.phase === "loadingModel" && (
             <div className="-mt-4 flex w-full max-w-[360px] flex-col gap-1.5">
               <span className="h-1 w-full overflow-hidden rounded-full bg-foreground/10">

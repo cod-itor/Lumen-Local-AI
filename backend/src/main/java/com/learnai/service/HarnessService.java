@@ -1,5 +1,6 @@
 package com.learnai.service;
 
+import com.learnai.dto.request.ApprovalRequest;
 import com.learnai.dto.request.CancelTurnRequest;
 import com.learnai.dto.request.CompleteTurnRequest;
 import com.learnai.dto.request.HarnessTurnRequest;
@@ -12,6 +13,8 @@ import java.util.UUID;
 
 public interface HarnessService {
     SseEmitter startTurn(UUID userId, HarnessTurnRequest request);
+
+    SseEmitter approve(UUID userId, UUID turnId, ApprovalRequest request);
 
     TurnResult complete(UUID userId, UUID turnId, CompleteTurnRequest request);
 

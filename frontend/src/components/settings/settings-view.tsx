@@ -19,6 +19,7 @@ import { CopyCommand } from "./copy-command";
 import { SettingsIcon } from "./icons";
 import { ModelRoles, StatePill } from "./model-roles";
 import { RuntimeStatus } from "./runtime-status";
+import { AskBeforeSearch } from "./ask-before-search";
 import { SettingsNav, type SettingsNavItem } from "./settings-nav";
 
 const NAV_IDS = [
@@ -229,6 +230,7 @@ export function SettingsView({ content, user }: { content: Localized<AiSettingsC
 
           {/* 6. Privacy */}
           <Section id="privacy" title={s.privacy.title} description={s.privacy.description}>
+            <AskBeforeSearch />
             <Reveal className="glass overflow-hidden rounded-3xl">
               <table className="w-full text-left text-[14px]">
                 <thead className="hidden bg-foreground/5 text-[12px] tracking-wide text-muted-foreground uppercase sm:table-header-group">

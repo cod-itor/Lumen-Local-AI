@@ -211,6 +211,20 @@ public class TurnStore {
         return true;
     }
 
+    /** AWAITING_APPROVAL → PREPARING with the approved query stored in the request (BACKEND.md §7.8). */
+    @Transactional
+    public boolean approve(UUID id, String approvedQuery, Duration ttl) {
+        HarnessTurn t = turns.findForUpdate(id).orElseThrow();
+        if (t.getStatus() != TurnStatus.AWAITING_APPROVAL) return false;
+        ObjectNode req = t.getRequest() instanceof ObjectNode o ? o.deepCopy() : json.createObjectNode();
+        req.put("approvedQuery", approvedQuery);
+        t.setRequest(req);
+        t.setStatus(TurnStatus.PREPARING);
+        t.setExpiresAt(Instant.now().plus(ttl));
+        turns.save(t);
+        return true;
+    }
+
     /** FINALIZING → READY/GENERATING with attempt + 1 (HARNESS.md §8.5). */
     @Transactional
     public boolean retry(UUID id, int attempt, GenerationSide side, Duration ttl) {

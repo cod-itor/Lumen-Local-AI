@@ -33,10 +33,27 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     from app.evals import fixtures
 
     asyncio.create_task(fixtures.warm_up())  # noqa: RUF006
+    purger = asyncio.create_task(_purge_web_cache())
     try:
         yield
     finally:
+        purger.cancel()
         await db.close_pool()
+
+
+async def _purge_web_cache() -> None:
+    """Every hour: delete WEB chunks older than the cache window (AI_SERVICE.md §7.5)."""
+    from app.web.evidence import purge_old
+
+    while True:
+        try:
+            hours = int(state.rules().harness["web"]["cacheHours"])
+            n = await purge_old(hours)
+            if n:
+                log.info("purged %d old web chunks", n)
+        except Exception as e:  # noqa: BLE001 — never let the purge loop die
+            log.warning("web cache purge failed: %s", e)
+        await asyncio.sleep(3600)
 
 
 app = FastAPI(

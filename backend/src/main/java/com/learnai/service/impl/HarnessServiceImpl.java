@@ -1,6 +1,7 @@
 package com.learnai.service.impl;
 
 import com.learnai.config.AppProperties;
+import com.learnai.dto.request.ApprovalRequest;
 import com.learnai.dto.request.CancelTurnRequest;
 import com.learnai.dto.request.CompleteTurnRequest;
 import com.learnai.dto.request.HarnessTurnRequest;
@@ -83,6 +84,38 @@ public class HarnessServiceImpl implements HarnessService {
         TurnRegistry.Handle h = registry.register(created.turnId(), writer);
         writer.onDisconnect(h::requestCancel);
         turnExecutor.submit(() -> runner.run(created.turnId(), h));
+        return emitter;
+    }
+
+    @Override
+    public SseEmitter approve(UUID userId, UUID turnId, ApprovalRequest r) {
+        HarnessTurn t = turns.findByIdAndUserId(turnId, userId).orElseThrow(this::turnNotFound);
+        if (t.getStatus() == TurnStatus.AWAITING_APPROVAL && t.getExpiresAt().isBefore(Instant.now())) {
+            if (store.transition(turnId, TurnStatus.EXPIRED, TurnStatus.AWAITING_APPROVAL)) outcomes.onTerminal(turnId);
+            throw new ApiException(HttpStatus.GONE, "TURN_EXPIRED", "This request expired. Please try again.");
+        }
+        if (t.getStatus().isTerminal()) throw alreadyCompleted();
+        if (t.getStatus() != TurnStatus.AWAITING_APPROVAL) {
+            throw new ApiException(HttpStatus.CONFLICT, "CONFLICT", "This request is not waiting for approval.");
+        }
+        String query;
+        if ("EDIT".equals(r.decision())) {
+            query = r.content() == null ? "" : r.content().strip();
+            if (query.isEmpty() || query.length() > 200) {
+                throw ApiException.validation("content", "Enter a search of 1–200 characters.");
+            }
+        } else {
+            query = t.getPrepareContext() == null ? "" : t.getPrepareContext().path("webQuery").asString("");
+            if (query.isBlank()) query = t.getRequest().path("approvedQuery").asString("");
+        }
+        if (!store.approve(turnId, query, ttl())) {
+            throw new ApiException(HttpStatus.CONFLICT, "CONFLICT", "This request is not waiting for approval.");
+        }
+        SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
+        SseWriter writer = new SseWriter(emitter, json, sseHeartbeat);
+        TurnRegistry.Handle h = registry.register(turnId, writer);
+        writer.onDisconnect(h::requestCancel);
+        turnExecutor.submit(() -> runner.run(turnId, h));
         return emitter;
     }
 

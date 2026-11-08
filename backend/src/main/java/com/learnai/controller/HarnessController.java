@@ -1,5 +1,6 @@
 package com.learnai.controller;
 
+import com.learnai.dto.request.ApprovalRequest;
 import com.learnai.dto.request.CancelTurnRequest;
 import com.learnai.dto.request.CompleteTurnRequest;
 import com.learnai.dto.request.HarnessTurnRequest;
@@ -44,6 +45,17 @@ public class HarnessController {
                 .header("Cache-Control", "no-cache, no-transform")
                 .header("X-Accel-Buffering", "no")
                 .body(harness.startTurn(user.id(), request));
+    }
+
+    @Operation(summary = "Approve or edit the web search query (SSE stream continues from SEARCHING)")
+    @RateLimit("harness.create")
+    @PostMapping(path = "/{id}/approval", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<SseEmitter> approve(@AuthenticationPrincipal CurrentUser user, @PathVariable UUID id,
+                                              @Valid @RequestBody ApprovalRequest request) {
+        return ResponseEntity.ok().contentType(SSE)
+                .header("Cache-Control", "no-cache, no-transform")
+                .header("X-Accel-Buffering", "no")
+                .body(harness.approve(user.id(), id, request));
     }
 
     @RateLimit("harness.complete")

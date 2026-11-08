@@ -229,8 +229,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 7 | Guardrails | **done** (2026-11-08) — `app/guard/` engine (input §5.1 decision order, output §5.3, leak shingles §5.4, SAFE_COMPLETE notes + disclaimers, refusals EN/KM, TEST `wouldAction`, image policy), output Markdown policy (images, HTML, source-URL-only links, paragraph cut), URL safety validator (private ranges, IP spellings, DNS check), DOC chunk injection flag + label, hardened reminder on FLAG, optional Llama Guard / Prompt Guard (env opt-in), `/guard/check`, `/guard/check-url`; backend stores `guard_events`; 82 guard tests |
 | 8 | Translation + tools | **done** (2026-11-08) — calculator (word/symbol/percent normalization, range and date blanking, whitelist `ast` + `Fraction`, never `eval`, F12 exact-result enforcement), DATETIME tool (now, weekday of a date, days until/between), NLLB-200 600M int8 via CTranslate2 + SentencePiece (no torch at runtime), Markdown-safe `translate_markdown` (code/URLs/citations kept, LRU cache), host-model fallback, P6 KM→EN pivot, F13 KM / BOTH output (prepared texts for abstains), `/translate`; UI: Show original toggle, EN+KM side by side, "Calculated by the app" card |
 | 9 | Model Test | **done** (2026-11-08) — AI: `evals/graders.py` (every §12.3 check, deterministic), `evals/fixtures.py` (in-memory fixture corpus, `fx:` chunk ids, forced top 3), EVAL_CASE prepare (profile TEST, seed 42, EN output, `answerLanguage` override) + finalize (case's own finalize once, grade F1–F3 text, `guardWouldBlock`); structured tasks for every non-MESSAGE task (`harness/structured.py`: task input blocks §7.7, JSON extraction + repairs, schema + RULES §5 semantic checks, repair messages, TITLE cleaning, lesson headings); `scripts/run_evals.py`. Backend: `eval_runs`/`eval_results`, `/api/evals/*`, generic `TaskHandler` (target + lock, taskInput, apply, onTerminal) with `EvalCaseTaskHandler` + `TitleTaskHandler`, error results on FAILED/EXPIRED, 5 errors → FAILED, scores from `rules/harness.yaml → evals.weights`. Frontend: `/test` (start Quick/Full, progress, pause/resume/cancel, scorecard, failed cases, history + compare), `lib/harness/runTask.ts` (non-MESSAGE turns, SERVER + CLIENT with repair loop), module-level runner store |
-| 10 | Web search | next |
-| 11 | Learning paths + quizzes | todo |
+| 10 | Web search | **done** (2026-11-08) — AI: `web/searxng.py` (JSON API, `WEB_UNAVAILABLE`), `guard/url_safety.safe_get` (every hop checked, connect to the validated IP with original Host + SNI, ≤ 3 manual redirects, size/time limits), `web/extract.py` (trafilatura, precision, tables kept), `web/evidence.py` (query rule §7.4.1, filter + per-domain cap, parallel fetch, chunk 300 tokens, embed, 24 h cache in `chunks` `source=WEB`, best 2 per page / 5 overall, injection-flagged chunks dropped), WEB prepare (edited query re-checked by the input guard, `needs_approval`, SEARCHING → READING, abstain `NO_WEB_RESULTS` / `WEB_UNAVAILABLE`), hourly purge; WEB grounding reuses F9–F11. Backend: `POST /api/harness/turns/{id}/approval` (APPROVE / EDIT 1–200 chars, AWAITING_APPROVAL → PREPARING, query stored in the request, same TurnRunner). Frontend: approval wait in `useHarnessTurn` (`respond`, Stop cancels), `SearchApproval` card, WEB source chips (links, `noopener noreferrer`), WEB grounding badge, TURN_ON/VERIFY_WITH_WEB_SEARCH re-ask, "Ask before searching" switch in Settings → Privacy |
+| 11 | Learning paths + quizzes | next |
 | 12 | Images | todo |
 | 13 | Voice | todo |
 | 14 | Calibration + polish | todo |
@@ -311,6 +311,15 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   the fixed display labels of §12.5 in the frontend. No Zustand: the runner is a module-level store
   (`useSyncExternalStore`), so the run keeps going while navigating. Non-MESSAGE tasks share one backend path
   (`TaskHandler`), ready for learning/quiz/image handlers in phases 11–12.
+
+- 2026-11-08 — Phase 10: `trafilatura==2.3.1` (author Adrien Barbaresi) extracts pages. uv `exclude-newer =
+  "2026-10-25"` in `ai-service/pyproject.toml` enforces the 2-week supply-chain rule for every Python dep (re-lock
+  moved a few too-new deps back). SearXNG image pinned to `2026.10.24-ef0ec03da` (was `:latest`). web mode v2 ("start
+  with the answer"). The prepare stream sends SEARCHING before the SearXNG call and READING before fetching. The
+  "n results skipped" note is not shown (MessageMeta has no field for it); the count is kept in `prepare_context.webSkipped`.
+  Model Test after the rule change, rules `rules-0a0cb21637a4`: **Full 0.927**, safety with guardrails 1.0 (same fails as phase 9;
+  suite core has no WEB cases). Live check: "Who designed the Independence Monument" → Vann Molyvann [3], GROUNDED;
+  APPROVE and EDIT approval flows both verified through the public API.
 
 ## 11. Known issues / gotchas
 
