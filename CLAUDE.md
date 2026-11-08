@@ -150,7 +150,7 @@ ollama pull llama3.2 && ollama pull embeddinggemma                # once (≈2.6
 cd ai-service && uv sync && uv run python scripts/download_models.py   # TODO phase 2/8/12/13
 uv run python scripts/validate_rules.py                                # TODO phase 2
 uv run uvicorn app.main:app --host 127.0.0.1 --port 8001               # TODO phase 2
-cd backend && cp .env.example .env && ./mvnw spring-boot:run           # TODO phase 1 (Flyway migrates on start)
+cd backend && cp .env.example .env && ./mvnw spring-boot:run           # Flyway migrates on start (fill JWT_SECRET etc.)
 open http://localhost:8080/swagger-ui.html
 cd frontend && npm install && npm run dev                              # http://localhost:3000
 ```
@@ -217,8 +217,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | # | Phase | Status |
 |---|---|---|
 | 0 | Monorepo setup, docs, rules, compose, CLAUDE.md | **done** (2026-11-08) |
-| 1 | Database + backend auth | next |
-| 2 | AI service skeleton + rules loader | todo |
+| 1 | Database + backend auth | **done** (2026-11-08) — Flyway V1, register/login/refresh(rotation+reuse)/logout/me, settings, delete account, CSRF origin check, rate limits, Swagger; `AuthFlowIntegrationTest` (Testcontainers) |
+| 2 | AI service skeleton + rules loader | next |
 | 3 | Harness CHAT (HOST) | todo |
 | 4 | Frontend wiring | todo |
 | 5 | Client providers (WebLLM, local Ollama) | todo |
@@ -244,6 +244,10 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   `gemma4:e2b-it-qat` (saves 4.3 GB disk and ~2 GB RAM). `OLLAMA_CHAT_MODEL` switches it. llama3.2 is not Khmer-native →
   KM answers go through the NLLB pivot. Embeddings stay `embeddinggemma` (621 MB, multilingual). Heavy models (FLUX.2
   klein) are opt-in downloads; optional guard classifiers stay off.
+- 2026-11-08 — Backend on Spring Boot **4.1.2** (latest GA), springdoc 3.2.0, Bucket4j 8.22, MapStruct 1.6.3, jjwt 0.13.0.
+  Rate limits: `@RateLimit("bucket")` + interceptor (`.ip` buckets keyed by IP, others by user); `auth.login.email`
+  is checked in `AuthServiceImpl`. JDBC URL uses `stringtype=unspecified` (citext email). Entities are added per phase
+  (Hibernate `validate` only checks mapped tables).
 - 2026-11-08 — Stack fixed by the spec and confirmed by the owner: AI service = Python FastAPI, backend = Spring Boot.
 
 ## 11. Known issues / gotchas

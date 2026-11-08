@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: learnai-backend
+  config:
+    import: optional:file:.env[.properties]
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_MB:25}MB
+      max-request-size: ${MAX_UPLOAD_MB:25}MB
+  mvc:
+    async:
+      request-timeout: 20m
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+springdoc:
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:true}
+  swagger-ui:
+    path: /swagger-ui.html
+management:
+  endpoints.web.exposure.include: health
+app:
+  public-url: ${PUBLIC_URL:http://localhost:3000}
+  jwt:
+    secret: ${JWT_SECRET}
+    access-minutes: ${JWT_ACCESS_MINUTES:30}
+    refresh-days: ${JWT_REFRESH_DAYS:14}
+  ai-service:
+    url: ${AI_SERVICE_URL:http://localhost:8001}
+    ws-url: ${AI_SERVICE_WS_URL:ws://localhost:8001}
+    token: ${AI_SERVICE_TOKEN}
+    connect-timeout-ms: 5000
+    prepare-timeout-s: 60
+    generate-idle-timeout-s: 60
+    finalize-timeout-s: 60
+    job-timeout-s: 900
+  storage-dir: ${STORAGE_DIR:../storage}
+  max-upload-mb: ${MAX_UPLOAD_MB:25}
+  user-storage-quota-mb: ${USER_STORAGE_QUOTA_MB:500}
+  harness:
+    turn-ttl-minutes: ${HARNESS_TURN_TTL_MINUTES:10}
+    max-completion-kb: ${HARNESS_MAX_COMPLETION_KB:32}
+    remote-url-enabled: ${HARNESS_REMOTE_URL_ENABLED:false}
+    force-strict-profile: ${FORCE_STRICT_PROFILE:false}
+    provider-key-secret: ${PROVIDER_KEY_SECRET:}
+  admin-emails: ${ADMIN_EMAILS:}
