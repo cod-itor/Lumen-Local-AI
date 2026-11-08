@@ -53,7 +53,13 @@ export const app: AppMessages = {
     stopVoice: "បញ្ឈប់ការបញ្ចូលសំឡេង",
     send: "ផ្ញើ",
     stop: "ឈប់សរសេរ",
-    sampleTranscript: "ពន្យល់ ពីវដ្តទឹក ឱ្យងាយ យល់",
+    voiceConnecting: "កំពុងបើកមីក្រូហ្វូន…",
+    voiceErrors: {
+      PERMISSION: "សូមអនុញ្ញាតឱ្យប្រើមីក្រូហ្វូន ដើម្បីប្រើសំឡេង។",
+      VOICE_BUSY: "សំឡេងកំពុងរវល់ សូមសាកម្ដងទៀតបន្តិចទៀត។",
+      FEATURE_UNAVAILABLE: "មិនទាន់បានដំឡើងការបញ្ចូលសំឡេងទេ។",
+      FAILED: "ការបញ្ចូលសំឡេងបានឈប់។ សូមសាកម្ដងទៀត។",
+    },
   },
   chat: {
     title: "ជជែក",

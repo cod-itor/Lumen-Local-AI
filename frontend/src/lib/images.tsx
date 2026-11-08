@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, apiFetch } from "@/lib/api";
 import { readSse } from "@/lib/sse";
-import type { ImageSessionDto, JobDto, PageResponse, SystemStatusDto } from "@/types/api";
+import { useStatus } from "@/lib/status";
+import type { ImageSessionDto, JobDto, PageResponse } from "@/types/api";
 
 /** Image sessions (sidebar Recents) + the AI features that decide what the Image tab offers. */
 type ImagesCtx = {
@@ -20,8 +21,11 @@ const Ctx = createContext<ImagesCtx | null>(null);
 export function ImagesProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<ImageSessionDto[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [features, setFeatures] = useState<ImagesCtx["features"]>(null);
-  const [statusTick, setStatusTick] = useState(0);
+  const status = useStatus();
+  const features = useMemo(
+    () => (status.features ? { images: status.features.images, bgRemoval: status.features.bgRemoval } : null),
+    [status.features],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -35,17 +39,6 @@ export function ImagesProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    api
-      .get<SystemStatusDto>("/api/system/status")
-      .then((s) => alive && setFeatures({ images: s.ai.features.images, bgRemoval: s.ai.features.bgRemoval }))
-      .catch(() => alive && setFeatures({ images: false, bgRemoval: false }));
-    return () => {
-      alive = false;
-    };
-  }, [statusTick]);
-
   const upsert = useCallback((s: ImageSessionDto) => {
     setSessions((list) => [s, ...list.filter((x) => x.id !== s.id)]);
   }, []);
@@ -56,8 +49,8 @@ export function ImagesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ sessions, loaded, features, upsert, remove, refreshStatus: () => setStatusTick((n) => n + 1) }),
-    [sessions, loaded, features, upsert, remove],
+    () => ({ sessions, loaded, features, upsert, remove, refreshStatus: status.refresh }),
+    [sessions, loaded, features, upsert, remove, status.refresh],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

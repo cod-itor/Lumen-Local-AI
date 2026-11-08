@@ -42,6 +42,8 @@ UVG=(); $IMAGES && UVG=(--group images)
 (cd ai-service && uv sync --frozen ${UVG[@]+"${UVG[@]}"} && uv run ${UVG[@]+"${UVG[@]}"} python scripts/validate_rules.py >/dev/null)
 say "Khmer translation model (one-time ~3 GB download, keeps 0.6 GB)"
 (cd ai-service && uv run python scripts/download_models.py --translation)
+say "Voice models: Whisper small EN (0.5 GB) + Khmer Whisper (one-time ~3 GB download, keeps ~0.3 GB)"
+(cd ai-service && uv run python scripts/download_models.py --voice)
 say "Background removal model (isnet-general-use, 170 MB)"
 (cd ai-service && uv run python scripts/download_models.py --background)
 if $IMAGES; then

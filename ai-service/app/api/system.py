@@ -28,7 +28,7 @@ def features(s: Settings) -> dict[str, bool]:
         "hostChat": pick(s.feature_host_chat, full),
         "images": pick(s.feature_images, full) and _module_available(image_lib) and _image_model_ready(s),
         "bgRemoval": pick(s.feature_bg_removal, True) and _module_available("rembg"),
-        "voice": pick(s.feature_voice, True) and _module_available("faster_whisper"),
+        "voice": pick(s.feature_voice, True) and _module_available("faster_whisper") and _voice_model_ready(s),
         "tts": pick(s.feature_tts, False),
         "translation": pick(s.feature_translation, True) and (s.translation_model_dir / "model.bin").is_file(),
         "webSearch": pick(s.feature_web_search, True),
@@ -40,6 +40,10 @@ def _image_model_ready(s: Settings) -> bool:
     if s.image_backend != "mflux":
         return True  # diffusers downloads into the Hugging Face cache on first use
     return (s.image_model_dir / "transformer").is_dir() or any(s.image_model_dir.glob("*.safetensors"))
+
+
+def _voice_model_ready(s: Settings) -> bool:
+    return (s.models_dir / f"faster-whisper-{s.whisper_en_model}" / "model.bin").is_file()
 
 
 def _module_available(name: str) -> bool:

@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { Square } from "lucide-react";
 import { Icon } from "@/components/icon";
 import { useMessages } from "@/i18n/provider";
+import { useOptionalStatus } from "@/lib/status";
 import { cn } from "@/lib/utils";
+import { useVoice } from "@/lib/voice/use-voice";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -13,9 +15,9 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * Figma "Composer": glass input with tools row (+, Search chip, mic, send).
  * Static for now: `onSubmit` receives the text; wire it to the API later.
  *
- * Voice mode (mic button): shows a "Recording" row with live level bars and the
- * interim transcript; clicking the mic again (or Escape) drops the transcript
- * into the input. Wire real speech recognition through `onVoiceChange` later.
+ * Voice mode (mic button, FRONTEND.md §10): streams the microphone to the voice relay; the "Recording" row shows
+ * live level bars and the partial transcript, each final sentence is appended to the input. Clicking the mic again
+ * (or Escape) stops. Outside the app shell (landing page) the mic is decorative; it is hidden when voice is off.
  */
 export function Composer({
   placeholder: placeholderProp,
@@ -24,8 +26,6 @@ export function Composer({
   defaultSearchOn = true,
   leading,
   onSubmit,
-  defaultVoiceOn = false,
-  voiceTranscript: voiceTranscriptProp,
   onVoiceChange,
   attachIcon = "plus",
   attachLabel: attachLabelProp,
@@ -45,10 +45,6 @@ export function Composer({
   busy?: boolean;
   onStop?: () => void;
   onSearchChange?: (on: boolean) => void;
-  /** Start in voice (listening) mode. */
-  defaultVoiceOn?: boolean;
-  /** Text revealed word by word while listening (static prototype; defaults to a sample transcript). */
-  voiceTranscript?: string;
   onVoiceChange?: (listening: boolean) => void;
   /** Icon name in /public/icons for the attach button (Documents: "doc-clip", Image: "img-imgplus"). */
   attachIcon?: string;
@@ -59,42 +55,32 @@ export function Composer({
   const m = useMessages().app.composer;
   const placeholder = placeholderProp ?? m.placeholder;
   const attachLabel = attachLabelProp ?? m.addAttachment;
-  const voiceTranscript = voiceTranscriptProp ?? m.sampleTranscript;
   const [value, setValue] = useState("");
   const [searchOn, setSearchOn] = useState(defaultSearchOn);
-  const [listening, setListening] = useState(defaultVoiceOn);
-  const [heard, setHeard] = useState(defaultVoiceOn ? 5 : 0);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const status = useOptionalStatus();
+  const voiceShown = status === null || status.features?.voice === true;
+  const voice = useVoice((text) => setValue((v) => (v ? `${v} ${text}` : text)));
+  const listening = voice.state !== "idle";
+  const interim = voice.partial;
 
-  const words = voiceTranscript.split(/\s+/).filter(Boolean);
-  const interim = words.slice(0, heard).join(" ");
-
-  // Reveal the sample transcript one word at a time while listening.
   useEffect(() => {
-    if (!listening) return;
-    const t = setInterval(() => setHeard((n) => Math.min(n + 1, words.length)), 420);
-    return () => clearInterval(t);
-  }, [listening, words.length]);
-
-  const setVoice = (on: boolean) => {
-    setListening(on);
-    onVoiceChange?.(on);
-  };
+    onVoiceChange?.(listening);
+  }, [listening, onVoiceChange]);
 
   const startVoice = () => {
-    setHeard(0);
-    setVoice(true);
+    if (status === null) return; // static composer (landing page)
+    void voice.start();
   };
 
   const stopVoice = () => {
-    if (interim) setValue((v) => (v ? `${v} ${interim}` : interim));
-    setVoice(false);
+    voice.stop();
     ref.current?.focus();
   };
 
   const submit = () => {
     const text = [value.trim(), listening ? interim : ""].filter(Boolean).join(" ");
-    if (listening) setVoice(false);
+    if (listening) voice.stop();
     if (!text || busy) return;
     onSubmit?.(text, { webSearch: showSearch && searchOn });
     setValue("");
@@ -129,9 +115,9 @@ export function Composer({
             className="overflow-hidden"
           >
             <div role="status" aria-live="polite" className="flex items-center gap-[10px] pb-[10px]">
-              <LevelBars />
+              <LevelBars level={voice.level} />
               <span className="shrink-0 text-[13px] font-medium whitespace-nowrap text-muted-foreground">
-                {m.listening}
+                {voice.state === "connecting" ? m.voiceConnecting : m.listening}
               </span>
               <span className="min-w-0 truncate text-[13px] text-placeholder">{interim}</span>
             </div>
@@ -187,6 +173,12 @@ export function Composer({
         )}
         {leading}
         <div className="h-px min-w-px flex-1" />
+        {voice.error && (
+          <span role="alert" className="max-w-[45%] truncate text-[12px] text-destructive" title={m.voiceErrors[voice.error]}>
+            {m.voiceErrors[voice.error]}
+          </span>
+        )}
+        {voiceShown && (
         <motion.button
           type="button"
           aria-label={listening ? m.stopVoice : m.voiceInput}
@@ -206,6 +198,7 @@ export function Composer({
         >
           <Icon name="mic" size={17} />
         </motion.button>
+        )}
         {busy ? (
           <motion.button
             type="button"
@@ -237,15 +230,15 @@ export function Composer({
 /** Figma "Recording" level meter: 5 bars, 3px wide, 2px gap, up to 16px tall. */
 const BAR_HEIGHTS = [6, 12, 16, 10, 5];
 
-function LevelBars() {
-  const reduce = useReducedMotion();
+function LevelBars({ level }: { level: number }) {
+  const reduce = useReducedMotion() || level > 0;
   return (
     <span aria-hidden className="flex h-4 items-center gap-[2px]">
       {BAR_HEIGHTS.map((h, i) => (
         <motion.span
           key={i}
           className="h-4 w-[3px] origin-center rounded-[2px] bg-danger-strong"
-          style={{ scaleY: h / 16 }}
+          style={{ scaleY: level > 0 ? Math.min(1, 0.25 + level * 3 * (h / 16)) : h / 16 }}
           animate={reduce ? undefined : { scaleY: [h / 16, Math.max(4, 16 - h + 2) / 16, h / 16] }}
           transition={{
             duration: 0.7 + i * 0.09,

@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 import { DocumentsProvider } from "@/lib/documents";
 import { ImagesProvider } from "@/lib/images";
+import { StatusProvider } from "@/lib/status";
 import { initialsOf, modelLabel, SessionProvider, useSession } from "@/lib/session";
 import type { AppSection, ChatSummary, ModelStatus, User } from "@/types";
 import { ChatWidthDialog } from "./chat-width-dialog";
@@ -27,6 +28,7 @@ export type ShellData = {
 export function AppShell({ data, children }: { data: ShellData; children: React.ReactNode }) {
   return (
     <SessionProvider>
+      <StatusProvider>
       <DocumentsProvider>
         <ImagesProvider>
           <ShellProvider>
@@ -34,6 +36,7 @@ export function AppShell({ data, children }: { data: ShellData; children: React.
           </ShellProvider>
         </ImagesProvider>
       </DocumentsProvider>
+      </StatusProvider>
     </SessionProvider>
   );
 }

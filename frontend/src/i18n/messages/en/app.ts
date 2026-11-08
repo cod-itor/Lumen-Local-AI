@@ -51,7 +51,13 @@ export const app = {
     stopVoice: "Stop voice input",
     send: "Send",
     stop: "Stop generating",
-    sampleTranscript: "explain the water cycle in simple terms",
+    voiceConnecting: "Starting the microphone…",
+    voiceErrors: {
+      PERMISSION: "Allow microphone access to use voice.",
+      VOICE_BUSY: "Voice is busy, try again in a moment.",
+      FEATURE_UNAVAILABLE: "Voice input is not installed.",
+      FAILED: "Voice input stopped. Try again.",
+    },
   },
   chat: {
     title: "Chat",

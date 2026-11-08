@@ -60,6 +60,15 @@ public class AiServiceClient {
         return c;
     }
 
+    /** POST /voice/tts → WAV bytes (only called when features.tts is on). */
+    public byte[] tts(String text, String lang) {
+        ObjectNode body = json.createObjectNode().put("text", text).put("lang", lang);
+        return web.post().uri("/voice/tts").contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(json.writeValueAsString(body))
+                .retrieve().bodyToMono(byte[].class)
+                .timeout(Duration.ofSeconds(60)).onErrorMap(this::map).block();
+    }
+
     /** AI service /status (loaded models, queue). */
     public JsonNode status() {
         return getJson("/status", Duration.ofSeconds(4));
