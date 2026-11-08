@@ -63,4 +63,4 @@ async def generate(body: dict[str, Any] = Body(...)) -> EventSourceResponse:  # 
 async def harness_finalize(body: dict[str, Any] = Body(...)) -> dict[str, Any]:  # noqa: B008
     if not body.get("task") or "output" not in body:
         raise ServiceError("VALIDATION_ERROR", "task and output are required.", 400)
-    return finalize(body)
+    return await finalize(body)

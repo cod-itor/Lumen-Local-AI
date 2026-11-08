@@ -49,10 +49,104 @@ const components: Components = {
   },
 };
 
-export function Markdown({ text }: { text: string }) {
+/** A sentence the grounding verifier could not support (FRONTEND.md §6.2): matched by its leading text. */
+export type Unsupported = { text: string; title: string };
+
+type MdNode = { type: string; value?: string; children?: MdNode[]; data?: Record<string, unknown> };
+const CITE = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
+
+function citeNodes(value: string): MdNode[] {
+  const out: MdNode[] = [];
+  let last = 0;
+  for (const m of value.matchAll(CITE)) {
+    if (m.index > last) out.push({ type: "text", value: value.slice(last, m.index) });
+    const ns = m[1].replace(/\s+/g, "");
+    out.push({
+      type: "lumenCite",
+      data: { hName: "span", hProperties: { className: "lumen-cite", "data-n": ns } },
+      children: [{ type: "text", value: ns.replace(/,/g, ", ") }],
+    });
+    last = m.index + m[0].length;
+  }
+  if (last < value.length) out.push({ type: "text", value: value.slice(last) });
+  return out;
+}
+
+function splitText(value: string, targets: Unsupported[], cite: boolean): MdNode[] {
+  for (const t of targets) {
+    const i = t.text ? value.indexOf(t.text) : -1;
+    if (i < 0) continue;
+    const rest = targets.filter((x) => x !== t);
+    return [
+      ...(i > 0 ? splitText(value.slice(0, i), rest, cite) : []),
+      {
+        type: "lumenUnsupported",
+        data: { hName: "span", hProperties: { className: "lumen-unsupported", title: t.title } },
+        children: [{ type: "text", value: t.text }],
+      },
+      ...splitText(value.slice(i + t.text.length), rest, cite),
+    ];
+  }
+  return cite ? citeNodes(value) : [{ type: "text", value }];
+}
+
+/** remark plugin: `[n]` → citation chips, unsupported sentences → dotted underline. Code is left alone. */
+function remarkLumen(opts: { cite: boolean; unsupported: Unsupported[] }) {
+  const walk = (node: MdNode) => {
+    if (!node.children) return;
+    const next: MdNode[] = [];
+    for (const child of node.children) {
+      if (child.type === "text" && child.value) next.push(...splitText(child.value, opts.unsupported, opts.cite));
+      else {
+        if (child.type !== "code" && child.type !== "inlineCode") walk(child);
+        next.push(child);
+      }
+    }
+    node.children = next;
+  };
+  return () => (tree: MdNode) => walk(tree);
+}
+
+export function Markdown({
+  text,
+  onCite,
+  unsupported = [],
+}: {
+  text: string;
+  /** Turns `[n]` markers into buttons that open source n. */
+  onCite?: (n: number) => void;
+  unsupported?: Unsupported[];
+}) {
+  const plugins = onCite || unsupported.length ? [remarkGfm, remarkLumen({ cite: !!onCite, unsupported })] : [remarkGfm];
+  const comps: Components = {
+    ...components,
+    span: ({ className, children, ...rest }) => {
+      const props = rest as Record<string, unknown>;
+      if (className === "lumen-cite" && onCite) {
+        const first = Number(String(props["data-n"] ?? "").split(",")[0]);
+        return (
+          <button
+            type="button"
+            onClick={() => onCite(first)}
+            className="mx-[2px] inline-flex h-[18px] min-w-[18px] translate-y-[-1px] items-center justify-center rounded-full bg-brand-orange-soft px-[5px] align-middle text-[11px] font-semibold text-foreground transition-colors hover:bg-brand-orange/30"
+          >
+            {children}
+          </button>
+        );
+      }
+      if (className === "lumen-unsupported") {
+        return (
+          <span title={String(props.title ?? "")} className="underline decoration-brand-orange-strong decoration-dotted decoration-2 underline-offset-4">
+            {children}
+          </span>
+        );
+      }
+      return <span className={className}>{children}</span>;
+    },
+  };
   return (
     <div className="flex w-full flex-col gap-[14px]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={components}>
+      <ReactMarkdown remarkPlugins={plugins} skipHtml components={comps}>
         {text}
       </ReactMarkdown>
     </div>

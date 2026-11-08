@@ -1,45 +1,27 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
-import {
-  getDocumentThread,
-  getMaterial,
-  getMaterialPage,
-  getMaterials,
-} from "@/services/documents";
 
-/** Figma "05 · Documents · Material open" (Light 2:9252 / Dark 2:10833). */
-export default function MaterialOpenPage({ params }: PageProps<"/documents/[id]">) {
-  // URL data is read inside Suspense so navigations between materials stay instant.
+/** Document ids are only known at runtime, so this route renders on request. */
+export const instant = false;
+
+/** Figma "05 · Documents · Material open" (Light 2:9252 / Dark 2:10833) with live data. */
+export default function MaterialOpenPage({ params, searchParams }: PageProps<"/documents/[id]">) {
   return (
     <Suspense fallback={null}>
-      <MaterialOpen params={params} />
+      <MaterialOpen params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function MaterialOpen({ params }: { params: Promise<{ id: string }> }) {
+async function MaterialOpen({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/documents/[id]">["params"];
+  searchParams: PageProps<"/documents/[id]">["searchParams"];
+}) {
   const { id } = await params;
-  const [material, page, thread, materials] = await Promise.all([
-    getMaterial(id),
-    getMaterialPage(id),
-    getDocumentThread(id),
-    getMaterials(),
-  ]);
-  if (!material) notFound();
-
-  return (
-    <DocumentWorkspace
-      key={material.id}
-      material={material}
-      page={page}
-      thread={thread}
-      materials={materials}
-    />
-  );
-}
-
-export async function generateStaticParams() {
-  const materials = await getMaterials();
-  return materials.map((m) => ({ id: m.id }));
+  const { chat } = await searchParams;
+  const chatParam = typeof chat === "string" ? chat : null;
+  return <DocumentWorkspace key={`${id}:${chatParam ?? ""}`} documentId={id} chatParam={chatParam} />;
 }

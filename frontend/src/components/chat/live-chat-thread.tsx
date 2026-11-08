@@ -11,14 +11,29 @@ import { activePath, deepestLeaf, siblingsOf } from "@/lib/chat-tree";
 import { takePendingPrompt } from "@/lib/harness/pending";
 import { useHarnessTurn, type TurnFailure } from "@/lib/harness/useHarnessTurn";
 import { useSession } from "@/lib/session";
-import type { ChatDto, ChatMessagesResponse, HarnessTurnRequest, MessageDto } from "@/types/api";
+import type { ChatDto, ChatMessagesResponse, HarnessTurnRequest, MessageDto, SourceDto } from "@/types/api";
 import { riseItem } from "./assistant-answer";
 import { LiveAssistantMessage, StreamingReply } from "./live-message";
 
 type Loaded = { messages: MessageDto[]; leaf: string | null };
 
 /** The Chat tab with the real backend (FRONTEND.md §7.3): load the tree, show the active branch, run turns. */
-export function LiveChatThread({ chatId }: { chatId: string }) {
+export function LiveChatThread({
+  chatId,
+  composer,
+  header,
+  onCite,
+  onChat,
+}: {
+  chatId: string;
+  /** Composer overrides (Documents: placeholder, no Search chip, attach button, source picker chip). */
+  composer?: Partial<React.ComponentProps<typeof Composer>>;
+  /** Shown above the messages (Documents: the "Using n of m materials" pill). */
+  header?: React.ReactNode;
+  onCite?: (source: SourceDto) => void;
+  /** Called with the refreshed chat after each turn (defaults to the Chat-tab history). */
+  onChat?: (chat: ChatDto) => void;
+}) {
   const router = useRouter();
   const session = useSession();
   const m = useMessages();
@@ -83,10 +98,10 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
         provider,
       );
       setPendingUser(null);
-      api.get<ChatDto>(`/api/chats/${chatId}`).then(session.touchChat).catch(() => undefined);
+      api.get<ChatDto>(`/api/chats/${chatId}`).then(onChat ?? session.touchChat).catch(() => undefined);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [chatId, session.provider, start, load],
+    [chatId, session.provider, start, load, onChat],
   );
 
   // Load once, then send the prompt typed on /chat (if any).
@@ -147,6 +162,7 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
           className="mx-auto flex w-[min(var(--chat-width),calc(100%-108px))] flex-col gap-7 pt-3 pb-8 max-sm:w-[calc(100%-32px)]"
         >
+          {header}
           {path.map((msg) =>
             msg.role === "USER" ? (
               <Fragment key={msg.id}>
@@ -158,6 +174,7 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
                 message={msg}
                 busy={busy}
                 showSpeed={showSpeed}
+                onCite={onCite}
                 version={versionOf(data?.messages ?? [], msg)}
                 onVersion={(d) => void switchVersion(msg, d)}
                 onRegenerate={() => void run({ regenerateOf: msg.id }, null)}
@@ -209,6 +226,7 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
           busy={busy}
           onStop={() => void stop()}
           onSubmit={(text, o) => void run({ content: text, webSearch: o.webSearch }, text)}
+          {...composer}
         />
         <p className="mt-[9px] -mb-[5px] text-center text-[11.5px] leading-[14px] text-placeholder">{m.common.aiDisclaimer}</p>
       </div>

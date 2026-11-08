@@ -6,9 +6,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Icon } from "@/components/icon";
 import { useMessages, useTranslate } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
-import type { MessageDto, SuggestionDto } from "@/types/api";
+import type { MessageDto, SourceDto, SuggestionDto } from "@/types/api";
 import { riseItem, useCopy } from "./assistant-answer";
-import { Markdown } from "./markdown";
+import { Markdown, type Unsupported } from "./markdown";
 
 const btn =
   "flex size-[30px] items-center justify-center rounded-[15px] text-icon transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
@@ -21,7 +21,10 @@ export function LiveAssistantMessage({
   onRegenerate,
   busy,
   showSpeed,
+  onCite,
 }: {
+  /** Opens a cited source (Documents: the file viewer at the passage). */
+  onCite?: (source: SourceDto) => void;
   message: MessageDto;
   version: { index: number; count: number };
   onVersion: (delta: -1 | 1) => void;
@@ -36,6 +39,22 @@ export function LiveAssistantMessage({
   const { meta, status } = message;
   const support = meta.guard?.action === "SUPPORT";
   const stats = meta.stats;
+  const docSources = meta.sources.filter((s) => s.kind === "DOC");
+  const cite = onCite && docSources.length ? (n: number) => {
+    const src = meta.sources.find((s) => s.n === n);
+    if (src) onCite(src);
+  } : undefined;
+  const level = meta.grounding?.level;
+  const unsupported: Unsupported[] =
+    meta.pipeline === "RAG" && meta.grounding
+      ? meta.grounding.sentences
+          .filter((s) => !s.supported && s.end > s.start)
+          .map((s) => ({
+            text: matchable(message.content.slice(s.start, s.end)),
+            title: live.issues[s.issue ?? "LOW_SUPPORT"],
+          }))
+          .filter((u) => u.text.length >= 12)
+      : [];
 
   return (
     <motion.div variants={riseItem} initial="hidden" animate="show" className="flex w-full flex-col items-start gap-[12px]">
@@ -46,8 +65,47 @@ export function LiveAssistantMessage({
           (status === "BLOCKED" || support) && "rounded-[18px] border border-border bg-surface-muted/60 px-4 py-3",
         )}
       >
-        <Markdown text={message.content} />
+        <Markdown text={message.content} onCite={cite} unsupported={unsupported} />
       </div>
+
+      {docSources.length > 0 && onCite && (
+        <div className="flex flex-wrap gap-2">
+          {docSources.map((src) => (
+            <motion.button
+              key={src.n}
+              type="button"
+              whileTap={{ scale: 0.96 }}
+              onClick={() => onCite(src)}
+              title={src.snippet}
+              className="flex max-w-full items-center gap-[6px] rounded-full border-[1.5px] border-brand-orange-line px-3 py-[6px] text-foreground transition-colors hover:bg-brand-orange-soft"
+            >
+              <span className="text-[11px] font-semibold text-muted-foreground">{src.n}</span>
+              <Icon name="doc-file-sm" size={13} />
+              <span className="truncate text-[12px] font-medium whitespace-nowrap">
+                {src.title}
+                {src.page != null && ` · ${t("app.documents.pageShort", { page: src.page })}`}
+              </span>
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {meta.pipeline === "RAG" && (level === "GROUNDED" || level === "PARTIAL" || level === "UNGROUNDED") && (
+        <span
+          className={cn(
+            "flex items-center gap-[6px] text-[12px] font-medium",
+            level === "GROUNDED" ? "text-subtle" : "text-orange-foreground",
+          )}
+        >
+          <span
+            className={cn(
+              "size-[7px] rounded-full",
+              level === "GROUNDED" ? "bg-emerald-500" : level === "PARTIAL" ? "bg-brand-orange" : "bg-destructive",
+            )}
+          />
+          {live.grounding[level]}
+        </span>
+      )}
 
       {status === "STOPPED" && <Badge>{live.stopped}</Badge>}
       {meta.grounding?.hasSpecificFacts && meta.pipeline === "CHAT" && (
@@ -97,6 +155,16 @@ export function LiveAssistantMessage({
       </div>
     </motion.div>
   );
+}
+
+/** The longest leading run of a sentence that stays inside one Markdown text node (no markup, no citations). */
+function matchable(sentence: string) {
+  const body = sentence
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, "")
+    .replace(/\s*\[\d+(?:\s*,\s*\d+)*\]/g, "\u0000")
+    .trim();
+  const cut = body.search(/[\u0000*_`[\]#>|~]/);
+  return (cut < 0 ? body : body.slice(0, cut)).trim();
 }
 
 function Badge({ children, icon }: { children: React.ReactNode; icon?: string }) {

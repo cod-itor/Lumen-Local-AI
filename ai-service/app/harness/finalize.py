@@ -31,7 +31,7 @@ def _markdown_policy(text: str, cfg: dict[str, Any]) -> tuple[str, int]:
     return text, 0
 
 
-def finalize(req: dict[str, Any]) -> dict[str, Any]:
+async def finalize(req: dict[str, Any]) -> dict[str, Any]:
     r = rules()
     attempt = int(req.get("attempt") or 1)
     user = req.get("user") or {}
@@ -83,10 +83,12 @@ def finalize(req: dict[str, Any]) -> dict[str, Any]:
     text = text[: int((r.guardrails.get("output") or {}).get("maxChars", 12000))]
 
     pipeline = context.get("pipeline")
+    task = req.get("task") or "MESSAGE"
+    status = "COMPLETED"
     has_specific = False
     if pipeline == "CHAT":  # F11 (CHAT)
         has_specific = any(p.search(text) for p in r.patterns.get("grounding.specificFacts", []))
-    grounding = {
+    grounding: dict[str, Any] = {
         "level": "NOT_APPLICABLE",
         "supportedRatio": 1.0,
         "sentences": [],
@@ -94,13 +96,40 @@ def finalize(req: dict[str, Any]) -> dict[str, Any]:
         "removedCitations": 0,
         "hasSpecificFacts": has_specific,
     }
+    extra_suggestions: list[dict[str, Any]] = []
+    if pipeline in ("RAG", "WEB") and task == "MESSAGE":
+        from app.harness import grounding as gv
 
-    suggestions = list((context.get("routing") or {}).get("suggestions") or [])  # F14
+        gcfg = r.harness["grounding"]
+        abstain_text = r.mode_for(task, pipeline).abstain_text
+        sources = context.get("sources") or []
+        if gv.is_abstain(text, abstain_text, r.guardrails.get("abstain_markers") or []):  # F10
+            status = "ABSTAINED"
+            grounding = {**grounding, "level": "ABSTAINED", "supportedRatio": 0.0}
+            if pipeline == "RAG":
+                extra_suggestions.append(suggestion("UPLOAD_DOCUMENT"))
+        else:  # F9 + F11
+            from app.rag.retrieval import chunk_embeddings
+
+            embs = await chunk_embeddings([str(x["chunkId"]) for x in sources if x.get("chunkId")])
+            text, report = await gv.verify(text, sources, embs, gcfg, abstain_text)
+            report["removedUrls"] = removed_urls
+            grounding = report
+            if grounding["level"] == "UNGROUNDED":
+                policy = (gcfg.get("onUngrounded") or {}).get(guard_profile, "WARN")
+                if policy == "REPLACE":
+                    text = f"{abstain_text} The answer could not be checked against your sources."
+                    grounding = {**grounding, "sentences": []}
+            text = text.strip()
+            gv.set_offsets(text, grounding)
+
+    suggestions = list((context.get("routing") or {}).get("suggestions") or []) + extra_suggestions  # F14
     provider = req.get("provider") or {}
     from app.api.system import features
     from app.config import get_settings
 
-    if finish == "LOOP_STOP" and provider.get("kind") != "HOST" and features(get_settings())["hostChat"]:
+    host_ok = provider.get("kind") != "HOST" and features(get_settings())["hostChat"]
+    if host_ok and (finish == "LOOP_STOP" or grounding.get("level") == "UNGROUNDED"):
         suggestions.append(suggestion("SWITCH_TO_HOST_MODEL"))
     seen: set[str] = set()
     merged = []
@@ -111,7 +140,7 @@ def finalize(req: dict[str, Any]) -> dict[str, Any]:
 
     return {
         **base,
-        "status": "COMPLETED",
+        "status": status,
         "content": text.strip(),
         "grounding": grounding,
         "suggestions": merged,

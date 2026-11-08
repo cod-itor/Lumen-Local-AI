@@ -106,7 +106,7 @@ AIProjectRepo/                 (git root; remote github.com/cod-itor/Lumen-Local
   Base UI), motion, next-themes (dark default), react-hook-form + zod. **npm** (not pnpm).
 - i18n: own store (`src/i18n/` — `useMessages`, `useLocale`, `setLocale`, `Localized<T>`), EN + KM. Not next-intl.
 - Live data: `lib/api.ts` (fetch + refresh-once), `lib/sse.ts`, `lib/session.tsx` (me/chats/providers), `lib/harness/useHarnessTurn.ts`.
-  Chat pages use the live API; documents/image/learn still read `src/mocks/*` until their phases.
+  Chat and Documents use the live API (`lib/documents.tsx` = DocumentsProvider in the app shell); image/learn still read `src/mocks/*` until their phases.
 - Routes: `/` landing · `/(auth)/login|signup|verify|forgot-password|reset-password` · `/(app)/chat[/id]`,
   `/documents[/id]`, `/image[/id]`, `/learn` · `/settings` · `/coming-soon`.
 - Next 16: `middleware.ts` is `proxy.ts`. Read `frontend/node_modules/next/dist/docs/` before using Next APIs (see frontend/AGENTS.md).
@@ -129,7 +129,7 @@ translator, images, bg_removal, stt, tts, manager), `app/evals/` (suites, fixtur
 |---|---|
 | Frontend | Next 16.x, React 19, TS 5, Tailwind 4, Node 26 / npm 11 |
 | Backend | Java 21 target (JDK 24 installed), Spring Boot 4.1.x, Maven wrapper, jjwt 0.13, springdoc 3.0.x, bucket4j 8, MapStruct 1.6, Lombok, Flyway, Testcontainers |
-| AI service | Python 3.12 via uv, FastAPI, sse-starlette, ollama client, httpx, psycopg 3 + pgvector, Pydantic v2, jsonschema, PyYAML, pymupdf, python-docx, trafilatura, khmercut, ctranslate2, faster-whisper, silero-vad, mflux, rembg |
+| AI service | Python 3.12 via uv, FastAPI, sse-starlette, ollama client, httpx, psycopg 3 + pgvector, Pydantic v2, jsonschema, PyYAML, pypdf, python-docx, trafilatura, khmercut, ctranslate2, faster-whisper, silero-vad, mflux, rembg |
 | Data | PostgreSQL 16 + pgvector 0.8 (Docker), SearXNG (Docker) |
 
 | Job | Model | License |
@@ -224,8 +224,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 3 | Harness CHAT (HOST) | **done** (2026-11-08) — AI: normalize, language, router (intents/notes/suggestions), history 4–6, budget + exact prompt layout, params, client guard, Ollama runtime (slots + `queued`, reasoning/stop/loop/guard stops), finalize F1–F4/F8/F11(CHAT)/F14; backend: providers (auto HOST), chats/messages API, `POST /api/harness/turns` SSE, complete/cancel/get, TurnRunner on virtual threads, conditional status changes, MESSAGE handler (AUTO title, preview), turn_metrics, housekeeping. DOCS tab abstains (`NO_DOCUMENTS`) until phase 6 |
 | 4 | Frontend wiring | **done** (2026-11-08) — `/api/*` streaming proxy, `proxy.ts` route guard, login/signup live, session provider (user, chat list, providers), live chat thread (SSE turn, Stop, regenerate, versions, suggestions, markdown), new chat flow |
 | 5 | Client providers (WebLLM, local Ollama) | **done** (2026-11-08) — provider create/update/delete/test/test-result API; `lib/providers/*` (WebLLM worker engine, visitor Ollama, WebGPU f16 build pick, registry, connection test), client guard + reasoning strip, CLIENT turns in `useHarnessTurn` (load before turn, `prepared` → generate → `complete`, 422 repair loop, CLIENT_ERROR cancel), `/settings/models` page (add browser model / My Ollama guide, default, test, remove, remove downloaded files), CSP + security headers |
-| 6 | Documents (RAG) + grounding | next |
-| 7 | Guardrails | todo |
+| 6 | Documents (RAG) + grounding | **done** (2026-11-08) — upload (size/type sniff/quota/dedupe) → INGEST job (claim `SKIP LOCKED`, SSE `/api/jobs/{id}/events`, cancel) → AI parse (pypdf/python-docx/txt/md) → clean → chunk → EmbeddingGemma → `chunks`; retrieval (exact cosine + `tsv` lexical, RRF, gate, per-doc caps, evidence budget); grounding verifier (citations, lexical/semantic support, numbers, quotes, auto-fix/auto-cite, UTF-16 offsets); live Documents tab (library + dropzone, sidebar, DOCS chats, source picker → chat `documentIds`, file viewer with page nav + chunk highlight, citation chips + inline `[n]`, grounding badge, unsupported-sentence underline) |
+| 7 | Guardrails | next |
 | 8 | Translation + tools | todo |
 | 9 | Model Test | todo |
 | 10 | Web search | todo |
@@ -271,6 +271,12 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   `FEATURE_UNAVAILABLE`) in the local demo. HOST `test` runs a 5-token generation through the AI service. A test result
   with a smaller `contextLength` stores `profileOverrides.contextWindow` and re-resolves the profile.
 
+- 2026-11-08 — Phase 6: PDF parsing uses **pypdf 6.21.2** instead of PyMuPDF (PyMuPDF is AGPL and heavy; pypdf 7.0
+  was too new to pin). pgvector is used **without numpy** (`pgvector.Vector`, `.to_list()` on reads). Chunk offsets are
+  page-relative; the viewer falls back to a text search if they don't line up. Input/output guard checks and the
+  NLLB pivot for Khmer documents arrive in phases 7/8. The first DOCS message creates the chat with the picked
+  `documentIds`; `/documents/[id]?chat=` opens a specific DOCS chat.
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -290,6 +296,7 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
 - Turbopack bundles `new Worker(new URL('./webllm.worker.ts', import.meta.url))` into its own worker chunk; it also
   copies the raw `.ts` to `static/media` (unused, harmless).
+- Hibernate: `CHAR(64)` columns (sha256) need `@JdbcTypeCode(SqlTypes.CHAR)` or `validate` fails.
 - Next 16 + cacheComponents: route segment `runtime`/`dynamic` configs are rejected; a dynamic route with no static
   params needs `export const instant = false`.
 

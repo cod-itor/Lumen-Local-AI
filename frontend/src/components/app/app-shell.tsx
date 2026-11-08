@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
+import { DocumentsProvider } from "@/lib/documents";
 import { initialsOf, modelLabel, SessionProvider, useSession } from "@/lib/session";
 import type { AppSection, ChatSummary, ModelStatus, User } from "@/types";
 import { ChatWidthDialog } from "./chat-width-dialog";
@@ -25,9 +26,11 @@ export type ShellData = {
 export function AppShell({ data, children }: { data: ShellData; children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ShellProvider>
-        <ShellLayout data={data}>{children}</ShellLayout>
-      </ShellProvider>
+      <DocumentsProvider>
+        <ShellProvider>
+          <ShellLayout data={data}>{children}</ShellLayout>
+        </ShellProvider>
+      </DocumentsProvider>
     </SessionProvider>
   );
 }

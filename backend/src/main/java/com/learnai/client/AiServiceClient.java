@@ -80,6 +80,16 @@ public class AiServiceClient {
         return stream("/harness/prepare", req, Duration.ofSeconds(cfg.prepareTimeoutS()));
     }
 
+    /** POST /rag/ingest (AI_SERVICE.md §13): progress / done / error events. */
+    public Flux<AiEvent> ingest(JsonNode req) {
+        return stream("/rag/ingest", req, Duration.ofSeconds(cfg.jobTimeoutS()));
+    }
+
+    public void deleteDocumentChunks(java.util.UUID documentId) {
+        web.delete().uri("/rag/documents/{id}", documentId).retrieve().toBodilessEntity()
+                .timeout(Duration.ofSeconds(30)).onErrorMap(this::map).block();
+    }
+
     public Flux<AiEvent> generate(JsonNode req) {
         return stream("/generate", req, Duration.ofSeconds(cfg.generateIdleTimeoutS()));
     }

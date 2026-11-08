@@ -132,7 +132,8 @@ public class TurnRunner {
         req.set("user", ctx.user(t));
         req.set("provider", ctx.provider(p));
         ObjectNode c = req.putObject("chat").put("id", chat.getId().toString()).put("tab", chat.getTab().name());
-        c.putArray("documentIds");
+        var docs = c.putArray("documentIds");
+        if (chat.getTab() == Tab.DOCS) chat.getDocumentIds().forEach(d -> docs.add(d.toString()));
         ObjectNode in = req.putObject("input").put("content", user == null ? "" : user.getContent())
                 .put("webSearch", chat.getTab() == Tab.CHAT && r.path("webSearch").asBoolean(false));
         in.set("approvedQuery", r.path("approvedQuery").isString() ? r.get("approvedQuery") : json.nullNode());

@@ -32,6 +32,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatRepository chats;
     private final MessageRepository messages;
     private final MessageMapper mapper;
+    private final com.learnai.repository.DocumentRepository documents;
 
     @Override
     @Transactional(readOnly = true)
@@ -46,10 +47,8 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public ChatDto create(UUID userId, CreateChatRequest r) {
-        if (r.documentIds() != null && !r.documentIds().isEmpty()) {
-            throw ApiException.validation("documentIds", "Documents are not available yet.");
-        }
         Chat c = Chat.builder().userId(userId).tab(r.tab()).updatedAt(Instant.now()).build();
+        if (r.documentIds() != null) c.setDocumentIds(readyDocuments(userId, r.documentIds()));
         if (r.title() != null && !r.title().isBlank()) {
             c.setTitle(r.title().trim());
             c.setTitleSource(TitleSource.USER);
@@ -73,8 +72,9 @@ public class ChatServiceImpl implements ChatService {
             c.setTitleSource(TitleSource.USER);
             c.setUpdatedAt(Instant.now());
         }
-        if (r.documentIds() != null && !r.documentIds().isEmpty()) {
-            throw ApiException.validation("documentIds", "Documents are not available yet.");
+        if (r.documentIds() != null) {
+            c.getDocumentIds().clear();
+            c.getDocumentIds().addAll(readyDocuments(userId, r.documentIds()));
         }
         if (r.activeLeafId() != null) {
             messages.findByIdAndChatId(r.activeLeafId(), chatId)
@@ -82,6 +82,17 @@ public class ChatServiceImpl implements ChatService {
             c.setActiveLeafId(r.activeLeafId());
         }
         return mapper.toDto(chats.saveAndFlush(c));
+    }
+
+    /** API_CONTRACT §6.3: `documentIds` must be READY documents of the user. */
+    private java.util.Set<UUID> readyDocuments(UUID userId, java.util.List<UUID> ids) {
+        var wanted = new java.util.LinkedHashSet<>(ids);
+        if (wanted.size() > 50) throw ApiException.validation("documentIds", "At most 50 documents per chat.");
+        var found = documents.findByUserIdAndIdIn(userId, wanted);
+        boolean ok = found.size() == wanted.size()
+                && found.stream().allMatch(d -> d.getStatus() == com.learnai.entity.enums.DocumentStatus.READY);
+        if (!ok) throw ApiException.validation("documentIds", "documentIds must be your READY documents.");
+        return wanted;
     }
 
     @Override

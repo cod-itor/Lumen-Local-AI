@@ -2,7 +2,11 @@ package com.learnai.entity;
 
 import com.learnai.entity.enums.Tab;
 import com.learnai.entity.enums.TitleSource;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,6 +22,8 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -58,6 +64,13 @@ public class Chat {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    /** DOCS tab: the documents this chat may search (table chat_documents). */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "chat_documents", joinColumns = @JoinColumn(name = "chat_id"))
+    @Column(name = "document_id")
+    @Builder.Default
+    private Set<UUID> documentIds = new LinkedHashSet<>();
 
     /** Set explicitly: a chat moves to the top only when a message is added or it is renamed. */
     @Column(name = "updated_at", nullable = false)

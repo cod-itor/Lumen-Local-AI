@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
@@ -10,6 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.config import get_settings
 from app.errors import ServiceError
 from app.harness import history as hist
+from app.harness.budget import est_tokens
 from app.harness.language import answer_language, detect_language
 from app.harness.normalize import normalize
 from app.harness.params import build_params, client_guard, max_words
@@ -119,21 +121,49 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         "metrics": {"estimatedPromptTokens": None, "topSim": None, "chunksUsed": 0, "abstainedBeforeModel": False},
     }
 
-    if pipeline == "RAG" and not chat.get("documentIds"):  # P10
+    def abstain(reason: str, key: str) -> Event:
         context["metrics"]["abstainedBeforeModel"] = True
-        context["routing"]["suggestions"].append(suggestion("UPLOAD_DOCUMENT"))
-        yield (
+        if pipeline == "RAG":
+            context["routing"]["suggestions"].append(suggestion("UPLOAD_DOCUMENT"))
+        return (
             "abstained",
             {
-                "reason": "NO_DOCUMENTS",
-                **fixed_text("RAG", task, output_language),
+                "reason": reason,
+                **fixed_text(key, task, output_language),
                 "suggestions": context["routing"]["suggestions"],
                 "context": context,
             },
         )
-        return
-    if pipeline in ("RAG", "WEB"):
-        raise ServiceError("NOT_IMPLEMENTED", f"The {pipeline} pipeline is not available yet.", 501)
+
+    hits: list[Any] = []
+    if pipeline == "RAG":  # P9–P10
+        doc_ids = [str(d) for d in chat.get("documentIds") or []]
+        if not doc_ids:
+            yield abstain("NO_DOCUMENTS", "NO_DOCUMENTS")
+            return
+        from app.rag.retrieval import retrieve, select
+
+        yield "status", {"stage": "RETRIEVING"}
+        rcfg = r.harness["retrieval"]
+        query = model_input
+        prev = (req.get("previousUserMessage") or "").strip()
+        refers_back = any(re.search(rf"\b{re.escape(w)}\b", query, re.IGNORECASE) for w in rcfg["pronouns"])
+        if prev and (len(query.split()) <= rcfg["followUpMaxWords"] or refers_back):
+            query = f"{prev[: rcfg['previousMessageChars']]} {query}"
+        queries = [query]
+        if original != model_input:
+            queries.append(original)
+        ret = await retrieve(str(user["id"]), doc_ids, queries, query if input_language == "EN" else None, rcfg)
+        context["metrics"]["topSim"] = round(ret.top_sim, 4)
+        if ret.top_sim < rcfg["minTopSimilarity"] and not ret.lexical_hit:
+            yield abstain("NO_EVIDENCE", "RAG")
+            return
+        hits = select(ret, rcfg)
+        if not hits:
+            yield abstain("NO_EVIDENCE", "RAG")
+            return
+    elif pipeline == "WEB":
+        raise ServiceError("NOT_IMPLEMENTED", "The WEB pipeline is not available yet.", 501)
 
     yield "status", {"stage": "BUILDING_PROMPT"}
     params = build_params(
@@ -147,21 +177,76 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         greeting="GREETING" in routing.intents,
     )  # P13 (needed by budget)
     history = hist.prepare_history(req.get("history") or [], pipeline or "CHAT", r.harness)
-    messages, est = build_messages(
-        rules=r,
-        mode=mode,
-        task=task,
-        pipeline=pipeline,
-        variables=variables(user, task, mode, answer_lang),
-        profile=profile,
-        params=params,
-        text=model_input,
-        tools=[],
-        evidence=[],
-        notes=routing.notes,
-        history=history,
-        injection_suspected=input_guard["injectionSuspected"],
-    )
+    var = variables(user, task, mode, answer_lang)
+
+    def build(evidence: list[str], hist_in: list[dict[str, str]]) -> tuple[list[dict[str, str]], int]:
+        return build_messages(
+            rules=r,
+            mode=mode,
+            task=task,
+            pipeline=pipeline,
+            variables=var,
+            profile=profile,
+            params=params,
+            text=model_input,
+            tools=[],
+            evidence=evidence,
+            notes=routing.notes,
+            history=hist_in,
+            injection_suspected=input_guard["injectionSuspected"],
+        )
+
+    evidence: list[str] = []
+    if hits:  # §7.3 steps 7–9: fit the evidence budget, number the sources
+        from app.rag.retrieval import document_names
+
+        names = await document_names(str(user["id"]), list({h.document_id for h in hits}))
+        bare, _ = build([], [])
+        factor = float(profile.get("tokenFactor", 1.0))
+        avail = int(profile["contextWindow"]) - params["maxTokens"] - r.harness["budgets"]["safetyTokens"]
+        fixed = sum(est_tokens(m["content"], r.harness, factor) for m in bare)
+        budget = min(
+            r.harness["budgets"]["evidenceMaxTokens"], int(r.harness["budgets"]["evidenceMaxShare"] * (avail - fixed))
+        )
+        used = 0
+        sources: list[dict[str, Any]] = []
+        khmer_native = bool(profile.get("khmerNative"))
+        for h in hits:
+            filename, doc_lang = names.get(h.document_id, ("document", None))
+            text = h.text_en if (h.text_en and doc_lang in ("KM", "MIXED") and not khmer_native) else h.text
+            n = len(sources) + 1
+            header = f"<<<SOURCE {n} | {filename}" + (f" | page {h.page}" if h.page else "") + ">>>"
+            block = f"{header}\n{text}\n<<<END SOURCE {n}>>>"
+            cost = est_tokens(block, r.harness, factor, messages=0)
+            if used + cost > budget:
+                room = budget - used - est_tokens(header, r.harness, factor, messages=0) - 12
+                if room < 40 or sources:
+                    break
+                cut = text[: int(room * 3.0)]
+                end = max(cut.rfind(". "), cut.rfind("។"))
+                text = cut[: end + 1] if end > 40 else cut
+                block = f"{header}\n{text}\n<<<END SOURCE {n}>>>"
+                cost = est_tokens(block, r.harness, factor, messages=0)
+            used += cost
+            evidence.append(block)
+            sources.append(
+                {
+                    "n": n,
+                    "kind": "DOC",
+                    "title": filename,
+                    "documentId": h.document_id,
+                    "chunkId": h.id,
+                    "page": h.page,
+                    "snippet": text[:300],
+                    "score": round(h.sim, 4),
+                    "text": text,
+                }
+            )
+        context["sources"] = sources
+        context["metrics"]["chunksUsed"] = len(sources)
+        yield "sources", sources
+
+    messages, est = build(evidence, history)
     context["params"] = params
     context["promptHash"] = prompt_hash(messages)
     context["metrics"]["estimatedPromptTokens"] = est

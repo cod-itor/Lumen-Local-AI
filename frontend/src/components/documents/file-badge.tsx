@@ -29,8 +29,9 @@ export function FileBadge({ kind, size = "sm" }: { kind: FileKind; size?: "sm" |
 /** Sidebar / picker status line ("18 pages · Ready", "Embedding… 64%"). */
 export function useMaterialMeta() {
   const meta = useMessages().app.documents.meta;
-  return (m: { pages?: number; status: string; progress?: number }) => {
+  return (m: { pages?: number; status: string; progress?: number; error?: string }) => {
     if (m.status === "embedding") return format(meta.embedding, { progress: m.progress ?? 0 });
+    if (m.status === "failed") return m.error ?? meta.failed;
     return m.pages ? format(meta.pagesReady, { pages: m.pages }) : meta.ready;
   };
 }

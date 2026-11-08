@@ -30,7 +30,7 @@ public class MessageMapper {
     }
 
     public ChatDto toDto(Chat c) {
-        return new ChatDto(c.getId(), c.getTab(), c.getTitle(), c.getTitleSource(), List.of(), c.getActiveLeafId(),
+        return new ChatDto(c.getId(), c.getTab(), c.getTitle(), c.getTitleSource(), List.copyOf(c.getDocumentIds()), c.getActiveLeafId(),
                 c.getLastMessagePreview(), c.getCreatedAt(), c.getUpdatedAt());
     }
 }

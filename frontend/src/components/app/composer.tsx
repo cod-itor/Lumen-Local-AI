@@ -29,6 +29,7 @@ export function Composer({
   onVoiceChange,
   attachIcon = "plus",
   attachLabel: attachLabelProp,
+  onAttach,
   busy = false,
   onStop,
   onSearchChange,
@@ -52,6 +53,8 @@ export function Composer({
   /** Icon name in /public/icons for the attach button (Documents: "doc-clip", Image: "img-imgplus"). */
   attachIcon?: string;
   attachLabel?: string;
+  /** Attach button action (Documents: open the file picker). */
+  onAttach?: () => void;
 }) {
   const m = useMessages().app.composer;
   const placeholder = placeholderProp ?? m.placeholder;
@@ -155,6 +158,7 @@ export function Composer({
         <button
           type="button"
           aria-label={attachLabel}
+          onClick={onAttach}
           className="flex size-[34px] items-center justify-center rounded-[17px] text-icon transition-colors hover:bg-accent"
         >
           <Icon name={attachIcon} size={18} />

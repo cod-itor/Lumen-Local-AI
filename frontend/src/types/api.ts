@@ -280,3 +280,18 @@ export interface ProviderModelInfo {
   name: string; family?: string; parameterSize?: string; quantization?: string; contextLength?: number;
 }
 export interface ProviderTestResultRequest { ok: boolean; checks: ProviderTestCheck[]; modelInfo?: ProviderModelInfo; }
+
+export type DocumentStatus = "UPLOADED" | "PARSING" | "EMBEDDING" | "READY" | "FAILED";
+export interface DocumentDto {
+  id: UUID; filename: string; mime: string; sizeBytes: number; pages: number | null;
+  status: DocumentStatus; error: string | null; chunkCount: number; language: InputLanguage | null;
+  createdAt: Instant;
+}
+export interface UploadResponse { document: DocumentDto; jobId: UUID | null; duplicate: boolean; }
+export interface ChunkDto { chunkId: UUID; documentId: UUID; page: number | null; startChar: number; endChar: number; text: string; }
+export interface DocumentTextDto { documentId: UUID; page: number | null; text: string; totalPages: number | null; }
+export type JobStatus = "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+export interface JobDto {
+  id: UUID; type: "INGEST" | "IMAGE" | "VARIATION" | "BG_REMOVAL"; status: JobStatus; progress: number;
+  stage: string | null; result: unknown | null; error: string | null; createdAt: Instant; updatedAt: Instant;
+}

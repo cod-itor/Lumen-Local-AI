@@ -1,9 +1,6 @@
-import { redirect } from "next/navigation";
-import { getMaterials } from "@/services/documents";
+import { DocumentsHome } from "@/components/documents/documents-home";
 
-/** /documents opens the first shared material (Figma "05 · Documents · Material open"). */
-export default async function DocumentsPage() {
-  const [first] = await getMaterials();
-  if (!first) return null;
-  redirect(`/documents/${first.id}`);
+/** Documents tab home: upload + library, live from the API in the browser. */
+export default function DocumentsPage() {
+  return <DocumentsHome />;
 }
