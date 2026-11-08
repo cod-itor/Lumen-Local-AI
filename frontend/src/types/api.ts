@@ -253,3 +253,30 @@ export interface TurnDto {
 }
 export interface CancelTurnRequest { reason?: "USER" | "CLIENT_ERROR"; errorCode?: string; }
 export interface CancelTurnResponse { turnId: UUID; status: TurnStatus; }
+
+export interface BrowserModelDto {
+  id: string;
+  fallbackId: string;
+  label: string;
+  vramMb: number;
+  fallbackVramMb: number;
+  recommended: boolean;
+}
+export interface ProviderCatalogDto {
+  host: { available: boolean; models: string[] };
+  browser: { models: BrowserModelDto[] };
+  ollamaSuggestions: { tag: string; label: string; sizeGb: number; note: string }[];
+}
+export interface CreateProviderRequest {
+  name: string;
+  kind: "BROWSER" | "LOCAL_OLLAMA" | "REMOTE_URL";
+  baseUrl?: string | null;
+  model: string;
+  apiKey?: string;
+  makeDefault?: boolean;
+}
+export interface ProviderTestCheck { name: string; ok: boolean; message: string | null; }
+export interface ProviderModelInfo {
+  name: string; family?: string; parameterSize?: string; quantization?: string; contextLength?: number;
+}
+export interface ProviderTestResultRequest { ok: boolean; checks: ProviderTestCheck[]; modelInfo?: ProviderModelInfo; }

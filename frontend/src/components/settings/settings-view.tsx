@@ -99,6 +99,19 @@ export function SettingsView({ content, user }: { content: Localized<AiSettingsC
             title={s.models.title}
             description={s.models.description}
           >
+            <Link
+              href="/settings/models"
+              className="glass flex items-center gap-3 rounded-2xl p-4 transition-colors hover:bg-foreground/5"
+            >
+              <span className="flex size-9 items-center justify-center rounded-xl bg-foreground/8 text-foreground">
+                <Laptop className="size-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[15px] font-medium text-foreground">{m.providers.title}</span>
+                <span className="text-[13px] text-muted-foreground">{m.providers.description}</span>
+              </span>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </Link>
             <ModelRoles roles={ai.roles} installed={ai.installed} />
           </Section>
 

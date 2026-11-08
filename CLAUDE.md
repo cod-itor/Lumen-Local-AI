@@ -223,8 +223,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 | 2 | AI service skeleton + rules loader | **done** (2026-11-08) — FastAPI app, X-Internal-Token, rules loader with all RULES.md §2 checks, `/health` `/capabilities` `/status` `/rules/reload` `/models/catalog` `/models/profile` `/evals/suites`, `validate_rules.py`, pytest |
 | 3 | Harness CHAT (HOST) | **done** (2026-11-08) — AI: normalize, language, router (intents/notes/suggestions), history 4–6, budget + exact prompt layout, params, client guard, Ollama runtime (slots + `queued`, reasoning/stop/loop/guard stops), finalize F1–F4/F8/F11(CHAT)/F14; backend: providers (auto HOST), chats/messages API, `POST /api/harness/turns` SSE, complete/cancel/get, TurnRunner on virtual threads, conditional status changes, MESSAGE handler (AUTO title, preview), turn_metrics, housekeeping. DOCS tab abstains (`NO_DOCUMENTS`) until phase 6 |
 | 4 | Frontend wiring | **done** (2026-11-08) — `/api/*` streaming proxy, `proxy.ts` route guard, login/signup live, session provider (user, chat list, providers), live chat thread (SSE turn, Stop, regenerate, versions, suggestions, markdown), new chat flow |
-| 5 | Client providers (WebLLM, local Ollama) | next |
-| 6 | Documents (RAG) + grounding | todo |
+| 5 | Client providers (WebLLM, local Ollama) | **done** (2026-11-08) — provider create/update/delete/test/test-result API; `lib/providers/*` (WebLLM worker engine, visitor Ollama, WebGPU f16 build pick, registry, connection test), client guard + reasoning strip, CLIENT turns in `useHarnessTurn` (load before turn, `prepared` → generate → `complete`, 422 repair loop, CLIENT_ERROR cancel), `/settings/models` page (add browser model / My Ollama guide, default, test, remove, remove downloaded files), CSP + security headers |
+| 6 | Documents (RAG) + grounding | next |
 | 7 | Guardrails | todo |
 | 8 | Translation + tools | todo |
 | 9 | Model Test | todo |
@@ -266,6 +266,11 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   react-markdown 10 + remark-gfm 4 with `skipHtml` and no images. `npm audit --omit=dev` is clean; the remaining advisories
   are dev-only (shadcn CLI deps).
 
+- 2026-11-08 — Phase 5: `@mlc-ai/web-llm` 0.2.87 (exact pin; official MLC maintainers, one dependency); every
+  catalog id in `rules/models.yaml` exists in its `prebuiltAppConfig`. REMOTE_URL providers stay off (503
+  `FEATURE_UNAVAILABLE`) in the local demo. HOST `test` runs a 5-token generation through the AI service. A test result
+  with a smaller `contextLength` stores `profileOverrides.contextWindow` and re-resolves the profile.
+
 ## 11. Known issues / gotchas
 
 - 16 GB memory: never keep FLUX loaded with Gemma; unload after each image job.
@@ -283,6 +288,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 - Spring Boot 4 uses Jackson 3 (`tools.jackson.*`); `@SpringBootTest` needs `@AutoConfigureMockMvc`.
   Jackson 3: `asString()` not `asText()`, `deepCopy()` returns `JsonNode` (cast), SSE from Spring is `event:x` (no space).
 - Security permits `ASYNC`/`ERROR` dispatches so SSE emitters can finish after the request thread returns.
+- Turbopack bundles `new Worker(new URL('./webllm.worker.ts', import.meta.url))` into its own worker chunk; it also
+  copies the raw `.ts` to `static/media` (unused, harmless).
 - Next 16 + cacheComponents: route segment `runtime`/`dynamic` configs are rejected; a dynamic route with no static
   params needs `export const instant = false`.
 

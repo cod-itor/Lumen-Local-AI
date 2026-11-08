@@ -45,7 +45,7 @@ export function TopBar({
             {model && (
               <MotionLink
                 key={model}
-                href="/settings#models"
+                href="/settings/models"
                 title={m.modelHint}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}

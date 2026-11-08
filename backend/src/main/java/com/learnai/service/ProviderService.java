@@ -14,6 +14,16 @@ public interface ProviderService {
 
     ProviderDto setDefault(UUID userId, UUID providerId);
 
+    ProviderDto create(UUID userId, com.learnai.dto.request.CreateProviderRequest r);
+
+    ProviderDto update(UUID userId, UUID providerId, com.learnai.dto.request.UpdateProviderRequest r);
+
+    void delete(UUID userId, UUID providerId);
+
+    ProviderDto testResult(UUID userId, UUID providerId, com.learnai.dto.request.ProviderTestResultRequest r);
+
+    ProviderDto test(UUID userId, UUID providerId);
+
     UUID defaultProviderId(UUID userId);
 
     /** The provider with a profile resolved against the current rules (BACKEND.md §9.5). */

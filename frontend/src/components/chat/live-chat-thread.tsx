@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Composer } from "@/components/app/composer";
@@ -73,13 +74,13 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
           onFailure: (f) => {
             setPendingUser(null);
             setFailure(f);
-            if (f.code === "CLIENT_UNSUPPORTED") setNotice(live.clientModelSoon);
           },
           onCancelled: () => {
             setPendingUser(null);
             setNotice(live.cancelled);
           },
         },
+        provider,
       );
       setPendingUser(null);
       api.get<ChatDto>(`/api/chats/${chatId}`).then(session.touchChat).catch(() => undefined);
@@ -125,7 +126,9 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
   }
 
   const stageLabel =
-    ui.retryReason === "EMPTY"
+    ui.phase === "loadingModel"
+      ? t("app.chat.live.loadingModel", { pct: String(Math.round((ui.modelProgress?.p ?? 0) * 100)) })
+      : ui.retryReason === "EMPTY"
       ? live.tryAgain
       : ui.retryReason === "INVALID"
         ? live.fixing
@@ -163,11 +166,27 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
           )}
           {pendingUser && <UserBubble text={pendingUser} />}
           {busy && <StreamingReply text={ui.text} stageLabel={stageLabel} />}
+          {ui.phase === "loadingModel" && (
+            <div className="-mt-4 flex w-full max-w-[360px] flex-col gap-1.5">
+              <span className="h-1 w-full overflow-hidden rounded-full bg-foreground/10">
+                <span
+                  className="bg-brand-gradient block h-full rounded-full transition-[width]"
+                  style={{ width: `${Math.round((ui.modelProgress?.p ?? 0) * 100)}%` }}
+                />
+              </span>
+              <span className="text-[12px] text-muted-foreground">{live.loadingModelFirst}</span>
+            </div>
+          )}
           {!busy && (failure || (unanswered && !pendingUser)) && (
             <motion.div variants={riseItem} className="flex flex-col items-start gap-2">
               <p className="text-[13.5px] text-muted-foreground">
-                {notice ?? (failure?.message || (failure?.code === "STREAM_INTERRUPTED" ? live.connectionLost : live.noAnswer))}
+                {notice ?? failureText(failure, live)}
               </p>
+              {failure?.code === "PROVIDER_ERROR" && (
+                <Link href="/settings/models" className="text-[12.5px] font-medium underline underline-offset-2">
+                  {live.checkModels}
+                </Link>
+              )}
               {(failure?.retryable ?? true) && unanswered && (
                 <button
                   type="button"
@@ -195,6 +214,16 @@ export function LiveChatThread({ chatId }: { chatId: string }) {
       </div>
     </div>
   );
+}
+
+type LiveMessages = ReturnType<typeof useMessages>["app"]["chat"]["live"];
+
+function failureText(f: TurnFailure | null, live: LiveMessages) {
+  if (!f) return live.noAnswer;
+  if (f.code === "PROVIDER_ERROR") return live.providerErrors[f.providerError ?? "GENERIC"];
+  if (f.code === "TURN_EXPIRED") return live.expired;
+  if (f.code === "STREAM_INTERRUPTED") return live.connectionLost;
+  return f.message || live.noAnswer;
 }
 
 function versionOf(all: MessageDto[], msg: MessageDto) {
