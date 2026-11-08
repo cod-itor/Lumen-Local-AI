@@ -30,6 +30,9 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: framework
+  # Browsers send every localhost cookie to every port; the voice WebSocket connects here directly (not through the
+  # Next.js proxy), so other local apps' cookies must not push its handshake past the 8 KB default.
+  max-http-request-header-size: 64KB
   error:
     include-message: never
 springdoc:

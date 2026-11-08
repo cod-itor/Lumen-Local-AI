@@ -58,6 +58,13 @@ public class Chat {
     @Column(name = "active_leaf_id")
     private UUID activeLeafId;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean pinned = false;
+
+    @Column(name = "project_id")
+    private UUID projectId;
+
     @Column(name = "last_message_preview", length = 120)
     private String lastMessagePreview;
 

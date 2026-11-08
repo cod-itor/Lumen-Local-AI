@@ -56,7 +56,6 @@ function ShellLayout({ data, children }: { data: ShellData; children: React.Reac
   const user: User = session.me
     ? { id: session.me.user.id, name: session.me.user.name, initials: initialsOf(session.me.user.name), plan: session.me.user.email }
     : { ...data.user, name: "", initials: "", plan: "" };
-  const chatHistory: ChatSummary[] = session.chats.map((c) => ({ id: c.id, title: c.title }));
   const liveModel = modelLabel(session.provider);
   const chatStatus: ModelStatus = liveModel
     ? { name: liveModel, state: "ready", detail: { en: "Runs on this computer", km: "ដំណើរការលើកុំព្យូទ័រនេះ" } }
@@ -72,7 +71,7 @@ function ShellLayout({ data, children }: { data: ShellData; children: React.Reac
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col gap-[2px]"
     >
-      {data.sidebars[section] ?? <ChatSidebarBody history={chatHistory} />}
+      {data.sidebars[section] ?? <ChatSidebarBody />}
     </motion.div>
   );
 

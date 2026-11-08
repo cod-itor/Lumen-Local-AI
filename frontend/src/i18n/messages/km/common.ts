@@ -2,6 +2,11 @@ import type { CommonMessages } from "../en/common";
 
 /** Khmer — strings shared across pages. Must mirror en/common.ts. */
 export const common: CommonMessages = {
+  notFound: {
+    title: "ទំព័រនេះមិនមានទេ",
+    body: "តំណអាចចាស់ ឬវាយខុស។ គណនីរបស់អ្នកមិនមានការផ្លាស់ប្ដូរអ្វីទេ។",
+    back: "ត្រឡប់ទៅ Lumen",
+  },
   language: "ភាសា",
   languageHint: "ប្ដូរគ្រប់ទំព័រភ្លាមៗ។ រក្សាទុកលើឧបករណ៍នេះ។",
   backToLumen: "ត្រឡប់ទៅ Lumen",

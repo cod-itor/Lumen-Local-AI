@@ -117,10 +117,10 @@ const en: AiSettingsContent = {
 
   setup: [
     { title: "Install Ollama", detail: "The free app that runs AI models on your computer.", command: "https://ollama.com/download" },
-    { title: "Download a chat model", detail: "Powers chat, learning paths and tool calling.", command: "ollama pull gemma4:e2b" },
+    { title: "Download a chat model", detail: "Powers chat, learning paths and quizzes.", command: "ollama pull llama3.2" },
     { title: "Download an embedding model", detail: "Lets Lumen search your documents by meaning.", command: "ollama pull embeddinggemma" },
-    { title: "Add an image model (optional)", detail: "Lumen downloads it the first time you open Image." },
-    { title: "Come back here", detail: "Each job turns green once its model is ready." },
+    { title: "Add image generation (optional)", detail: "Run this in the Lumen folder (about 6 GB).", command: "./setup.sh --images" },
+    { title: "Come back here", detail: "Settings → Models shows which models are ready." },
   ],
 
   hardware: [
@@ -307,10 +307,10 @@ const km: AiSettingsContent = {
 
   setup: [
     { title: "ដំឡើង Ollama", detail: "កម្មវិធីឥតគិតថ្លៃ ដែលដំណើរការម៉ូដែល AI លើកុំព្យូទ័ររបស់អ្នក។", command: "https://ollama.com/download" },
-    { title: "ទាញយកម៉ូដែលជជែក", detail: "សម្រាប់ការជជែក ផ្លូវសិក្សា និងការហៅឧបករណ៍។", command: "ollama pull gemma4:e2b" },
+    { title: "ទាញយកម៉ូដែលជជែក", detail: "សម្រាប់ការជជែក ផ្លូវសិក្សា និងកម្រងសំណួរ។", command: "ollama pull llama3.2" },
     { title: "ទាញយកម៉ូដែល Embedding", detail: "អនុញ្ញាតឱ្យ Lumen ស្វែងរកឯកសាររបស់អ្នកតាមអត្ថន័យ។", command: "ollama pull embeddinggemma" },
-    { title: "បន្ថែមម៉ូដែលរូបភាព (ស្រេចចិត្ត)", detail: "Lumen ទាញយកវាដោយស្វ័យប្រវត្តិ នៅពេលអ្នកបើក រូបភាព ជាលើកដំបូង។" },
-    { title: "ត្រឡប់មកទីនេះវិញ", detail: "ការងារនីមួយៗប្រែជាពណ៌បៃតង ពេលម៉ូដែលរបស់វារួចរាល់។" },
+    { title: "បន្ថែមការបង្កើតរូបភាព (ស្រេចចិត្ត)", detail: "ដំណើរការពាក្យបញ្ជានេះក្នុងថត Lumen (ប្រហែល 6 GB)។", command: "./setup.sh --images" },
+    { title: "ត្រឡប់មកទីនេះវិញ", detail: "ការកំណត់ → ម៉ូដែល បង្ហាញម៉ូដែលណាដែលរួចរាល់។" },
   ],
 
   hardware: [

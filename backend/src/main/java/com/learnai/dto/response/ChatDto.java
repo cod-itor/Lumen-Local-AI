@@ -8,4 +8,5 @@ import java.util.List;
 import java.util.UUID;
 
 public record ChatDto(UUID id, Tab tab, String title, TitleSource titleSource, List<UUID> documentIds,
-                      UUID activeLeafId, String lastMessagePreview, Instant createdAt, Instant updatedAt) {}
+                      UUID activeLeafId, String lastMessagePreview, boolean pinned, UUID projectId,
+                      Instant createdAt, Instant updatedAt) {}

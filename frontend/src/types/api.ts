@@ -69,8 +69,25 @@ export interface ChatDto {
   documentIds: UUID[];
   activeLeafId: UUID | null;
   lastMessagePreview: string | null;
+  pinned: boolean;
+  projectId: UUID | null;
   createdAt: Instant;
   updatedAt: Instant;
+}
+
+export interface ProjectDto {
+  id: UUID;
+  name: string;
+  chatCount: number;
+  createdAt: Instant;
+  updatedAt: Instant;
+}
+
+export interface UpdateChatRequest {
+  title?: string;
+  pinned?: boolean;
+  projectId?: UUID;
+  removeFromProject?: boolean;
 }
 
 export interface SourceDto {

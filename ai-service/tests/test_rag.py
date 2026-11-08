@@ -86,3 +86,24 @@ async def test_offsets_are_utf16():
 def test_abstain_detection():
     assert gv.is_abstain("I couldn't find this in your documents.", "I couldn't find this in your documents.", [])
     assert not gv.is_abstain("Students may borrow 3 books [1].", "I couldn't find this in your documents.", [])
+
+
+class _Page:
+    def __init__(self, plain: str, layout: str) -> None:
+        self.plain, self.layout = plain, layout
+
+    def extract_text(self, extraction_mode: str = "plain") -> str:
+        return self.layout if extraction_mode == "layout" else self.plain
+
+
+def test_pdf_one_word_per_line_uses_layout_mode():
+    from app.rag.parse import _pdf_page_text
+
+    words = ("I am writing to express my sincere interest in the IT Instructor position. " * 2).split()
+    broken = "\n \n".join(words)
+    layout = "Dear Committee,\nI am writing to express    my sincere interest\n\n\n\nin the position."
+    assert _pdf_page_text(_Page(broken, layout)) == (
+        "Dear Committee,\nI am writing to express my sincere interest\n\nin the position."
+    )
+    normal = "A normal paragraph of text.\nAnother line with several words.\n" * 15
+    assert _pdf_page_text(_Page(normal, "unused")) == normal

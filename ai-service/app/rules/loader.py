@@ -211,6 +211,10 @@ def _compile_all(harness: dict[str, Any], guard: dict[str, Any], errors: list[st
     p: dict[str, list[re.Pattern[str]]] = {}
     for intent, srcs in (harness.get("router", {}).get("intents") or {}).items():
         _compile(p, f"router.{intent}", srcs, errors)
+    router = harness.get("router", {})
+    for key in ("followUpPatterns", "answerInKhmerPatterns", "answerInEnglishPatterns", "languageRequestStrip"):
+        _compile(p, f"router.{key}", router.get(key) or [], errors)
+    _compile(p, "retrieval.overview", harness.get("retrieval", {}).get("overviewPatterns") or [], errors)
     _compile(p, "grounding.meta", harness.get("grounding", {}).get("metaPatterns") or [], errors)
     _compile(p, "grounding.specificFacts", harness.get("grounding", {}).get("specificFactPatterns") or [], errors)
     for rule in guard.get("rules") or []:

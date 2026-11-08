@@ -64,19 +64,27 @@ export function useVoice(onFinal: (text: string) => void, lang: "EN" | "KM" | "A
       cleanup();
       return;
     }
-    let ctx: AudioContext;
+    let node: AudioWorkletNode;
+    let ws: WebSocket;
     try {
-      ctx = new AudioContext({ sampleRate: 16000 });
+      let ctx: AudioContext;
+      try {
+        ctx = new AudioContext({ sampleRate: 16000 });
+      } catch {
+        ctx = new AudioContext(); // the worklet resamples
+      }
+      parts.current.ctx = ctx;
+      await ctx.audioWorklet.addModule("/pcm-worklet.js");
+      node = new AudioWorkletNode(ctx, "pcm-frames");
+      parts.current.node = node;
+      ctx.createMediaStreamSource(stream).connect(node);
+      ws = new WebSocket(`${WS_URL}/ws/voice?token=${encodeURIComponent(token)}`);
     } catch {
-      ctx = new AudioContext(); // the worklet resamples
+      // never leave the mic half-started: the user could not stop or retry it without reloading the page
+      setError("FAILED");
+      cleanup();
+      return;
     }
-    parts.current.ctx = ctx;
-    await ctx.audioWorklet.addModule("/pcm-worklet.js");
-    const node = new AudioWorkletNode(ctx, "pcm-frames");
-    parts.current.node = node;
-    ctx.createMediaStreamSource(stream).connect(node);
-
-    const ws = new WebSocket(`${WS_URL}/ws/voice?token=${encodeURIComponent(token)}`);
     ws.binaryType = "arraybuffer";
     parts.current.ws = ws;
     let ready = false;
@@ -105,7 +113,7 @@ export function useVoice(onFinal: (text: string) => void, lang: "EN" | "KM" | "A
   /** Ask the server for the last `final`, then it closes the socket (which cleans up). */
   const stop = useCallback(() => {
     const p = parts.current;
-    if (!p.ws) return;
+    if (!p.ws) return cleanup(); // still starting: release the mic instead of ignoring the click
     p.node?.port.postMessage("stop");
     p.stream?.getTracks().forEach((t) => t.stop());
     if (p.ws.readyState === WebSocket.OPEN) {

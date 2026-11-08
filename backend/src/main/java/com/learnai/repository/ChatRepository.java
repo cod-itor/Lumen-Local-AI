@@ -21,6 +21,11 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
 
     Optional<Chat> findByIdAndUserId(UUID id, UUID userId);
 
+    Page<Chat> findByUserIdAndTabAndProjectIdOrderByUpdatedAtDesc(UUID userId, Tab tab, UUID projectId,
+                                                                   Pageable pageable);
+
+    long countByUserIdAndProjectId(UUID userId, UUID projectId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Chat c where c.id = :id")
     Optional<Chat> findForUpdate(UUID id);

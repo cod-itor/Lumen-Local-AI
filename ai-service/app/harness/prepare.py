@@ -124,6 +124,24 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     guard_profile = user.get("guardProfile") or "STANDARD"
     decision = await check_input(r, original, model_input, guard_profile)  # P5
     input_guard = {**decision.summary(), "disclaimers": decision.disclaimers}
+    question = model_input  # what the model is asked (a follow-up gets its topic, rules/harness.yaml → router)
+    topic_q: str | None = None
+    if task == "MESSAGE" and eval_case is None:
+        from app.harness.followup import is_follow_up, strip_language_request, topic, turn_output_language
+
+        topic_q = topic(req.get("history") or [], req.get("previousUserMessage"), r)
+        pure_follow_up = bool(topic_q) and (is_follow_up(original, r) or is_follow_up(model_input, r))
+        output_language = turn_output_language(
+            original, input_language, output_language, r, topic_q if pure_follow_up else None
+        )
+        if topic_q and detect_language(topic_q, r.harness) in ("KM", "MIXED") and not khmer_native:
+            from app.models.translator import translate_markdown
+
+            topic_q = normalize(await translate_markdown(topic_q, "KM", "EN") or topic_q, r.guardrails)
+        if output_language != "EN" and not khmer_native:  # the app translates; the model must write English
+            question = strip_language_request(question, r) or question
+        if pure_follow_up and topic_q:
+            question = f"{topic_q}\n\n(Follow-up from the user: {model_input})"
     answer_lang = answer_language(task, output_language, profile)
     if eval_case is not None and eval_case.raw.get("answerLanguage"):
         answer_lang = "Khmer" if eval_case.raw["answerLanguage"] == "KM_NATIVE" else "English"
@@ -219,12 +237,14 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         if not doc_ids:
             yield abstain("NO_DOCUMENTS", "NO_DOCUMENTS")
             return
-        from app.rag.retrieval import retrieve, select
+        from app.rag.retrieval import opening_chunks, retrieve, select
 
         yield "status", {"stage": "RETRIEVING"}
         rcfg = r.harness["retrieval"]
         query = model_input
-        prev = (req.get("previousUserMessage") or "").strip()
+        prev = (topic_q or req.get("previousUserMessage") or "").strip()
+        if question != model_input and topic_q:  # a pure follow-up searches its topic
+            query, prev = topic_q, ""
         refers_back = any(re.search(rf"\b{re.escape(w)}\b", query, re.IGNORECASE) for w in rcfg["pronouns"])
         if prev and (len(query.split()) <= rcfg["followUpMaxWords"] or refers_back):
             query = f"{prev[: rcfg['previousMessageChars']]} {query}"
@@ -233,10 +253,18 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
             queries.append(original)
         ret = await retrieve(str(user["id"]), doc_ids, queries, query if input_language == "EN" else None, rcfg)
         context["metrics"]["topSim"] = round(ret.top_sim, 4)
-        if ret.top_sim < rcfg["minTopSimilarity"] and not ret.lexical_hit:
-            yield abstain("NO_EVIDENCE", "RAG")
-            return
-        hits = select(ret, rcfg)
+        overview = any(p.search(t) for p in r.patterns.get("retrieval.overview", []) for t in {model_input, original})
+        gated = ret.top_sim < rcfg["minTopSimilarity"] and not ret.lexical_hit
+        if overview or gated:  # whole-document question, or small documents sent whole (harness.yaml → retrieval)
+            total = int(rcfg["maxChunks"])
+            per_doc = int(rcfg["maxChunksPerDocument"]) if overview else total
+            opening, n_chunks = await opening_chunks(str(user["id"]), doc_ids, per_doc, total, ret.hits)
+            if not overview and n_chunks > int(rcfg.get("sendWholeUpToChunks", 0)):
+                yield abstain("NO_EVIDENCE", "RAG")
+                return
+            hits = opening
+        else:
+            hits = select(ret, rcfg)
         if not hits:
             yield abstain("NO_EVIDENCE", "RAG")
             return
@@ -244,7 +272,10 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
         from app.web.evidence import build_query, gather, search_results
 
         approved = (inp.get("approvedQuery") or "").strip()
-        query = approved or build_query(model_input, req.get("previousUserMessage"), r)
+        if question != model_input and topic_q:  # a pure follow-up searches its topic again
+            query = approved or build_query(topic_q, None, r)
+        else:
+            query = approved or build_query(model_input, topic_q or req.get("previousUserMessage"), r)
         if approved and approved != model_input:  # an edited query is user text: check it again
             q_decision = await check_input(r, approved, approved, guard_profile)
             if q_decision.action in ("BLOCK", "SUPPORT"):
@@ -309,7 +340,7 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
             variables=var,
             profile=profile,
             params=params,
-            text=model_input,
+            text=question,
             tools=tool_lines,
             evidence=evidence,
             notes=notes,
@@ -320,10 +351,15 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
     evidence: list[str] = []
     if pipeline == "WEB":  # §7.4 step 8 + §7.7 source headers
         sources_w: list[dict[str, Any]] = []
+        pages: dict[str, list[Any]] = {}  # one numbered source per page (its chunks joined), so citations don't repeat
         for c in web.chunks:
+            pages.setdefault(c.url, []).append(c)
+        for group in pages.values():
+            c = group[0]
+            text = "\n…\n".join(x.text for x in group)
             n = len(sources_w) + 1
             header = f"<<<SOURCE {n} | {c.site_name} | {c.published_at or 'date unknown'}>>>"
-            evidence.append(f"{header}\n{c.text}\n<<<END SOURCE {n}>>>")
+            evidence.append(f"{header}\n{text}\n<<<END SOURCE {n}>>>")
             sources_w.append(
                 {
                     "n": n,
@@ -334,8 +370,8 @@ async def prepare(req: dict[str, Any]) -> AsyncIterator[Event]:
                     "publishedAt": c.published_at,
                     "chunkId": c.id,
                     "snippet": c.text[:300],
-                    "score": round(c.sim, 4),
-                    "text": c.text,
+                    "score": round(max(x.sim for x in group), 4),
+                    "text": text,
                 }
             )
         context["sources"] = sources_w

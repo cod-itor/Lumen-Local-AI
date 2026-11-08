@@ -33,12 +33,15 @@ public class ChatServiceImpl implements ChatService {
     private final MessageRepository messages;
     private final MessageMapper mapper;
     private final com.learnai.repository.DocumentRepository documents;
+    private final com.learnai.repository.ProjectRepository projects;
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<ChatDto> list(UUID userId, Tab tab, String q, int page, int size) {
+    public PageResponse<ChatDto> list(UUID userId, Tab tab, String q, UUID projectId, int page, int size) {
         PageRequest pr = PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100));
-        var p = q == null || q.isBlank()
+        var p = projectId != null
+                ? chats.findByUserIdAndTabAndProjectIdOrderByUpdatedAtDesc(userId, tab, projectId, pr)
+                : q == null || q.isBlank()
                 ? chats.findByUserIdAndTabOrderByUpdatedAtDesc(userId, tab, pr)
                 : chats.findByUserIdAndTabAndTitleContainingIgnoreCaseOrderByUpdatedAtDesc(userId, tab, q.trim(), pr);
         return PageResponse.of(p, mapper::toDto);
@@ -75,6 +78,14 @@ public class ChatServiceImpl implements ChatService {
         if (r.documentIds() != null) {
             c.getDocumentIds().clear();
             c.getDocumentIds().addAll(readyDocuments(userId, r.documentIds()));
+        }
+        if (r.pinned() != null) c.setPinned(r.pinned());
+        if (Boolean.TRUE.equals(r.removeFromProject())) {
+            c.setProjectId(null);
+        } else if (r.projectId() != null) {
+            projects.findByIdAndUserId(r.projectId(), userId)
+                    .orElseThrow(() -> ApiException.validation("projectId", "Project not found."));
+            c.setProjectId(r.projectId());
         }
         if (r.activeLeafId() != null) {
             messages.findByIdAndChatId(r.activeLeafId(), chatId)

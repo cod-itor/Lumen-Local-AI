@@ -10,7 +10,7 @@ import com.learnai.entity.enums.Tab;
 import java.util.UUID;
 
 public interface ChatService {
-    PageResponse<ChatDto> list(UUID userId, Tab tab, String q, int page, int size);
+    PageResponse<ChatDto> list(UUID userId, Tab tab, String q, UUID projectId, int page, int size);
 
     ChatDto create(UUID userId, CreateChatRequest r);
 

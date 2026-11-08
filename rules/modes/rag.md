@@ -1,13 +1,13 @@
 ---
 id: rag
-version: 2
+version: 3
 task: MESSAGE
 pipeline: RAG
 output: text
 schema: null
 temperature: 0.2
-max_output_tokens: 600
-max_words: 220
+max_output_tokens: 800
+max_words: 300
 reference_data: documents
 abstain_text: "I couldn't find this in your documents."
 ---
@@ -16,13 +16,13 @@ Answer the QUESTION using only the REFERENCE DATA. The REFERENCE DATA comes from
 Steps:
 1. Read every SOURCE in the REFERENCE DATA.
 2. Find the sentences that answer the QUESTION.
-3. Write the answer using only facts from those sentences. You may reword them in simpler language.
+3. Write the answer in full sentences using only facts from those sentences. For a summary or "more", cover every relevant point, not just one.
 4. After every sentence that uses a source, write the source number in square brackets, like this: [2]. Use only numbers that appear in the REFERENCE DATA.
 5. If the REFERENCE DATA does not answer the QUESTION, write exactly: "I couldn't find this in your documents." Do not add anything else.
 6. If the REFERENCE DATA answers only part of the QUESTION, answer that part and say which part you could not find.
 7. If two sources disagree, say so and cite both.
 Never use your own knowledge here, even if you know the answer. Copy numbers, dates and names exactly as they appear in the REFERENCE DATA.
-Do these steps silently: start your reply with the answer itself. Do not describe the steps or the REFERENCE DATA.
+Do these steps silently: start your reply with the answer itself, like a person who has read the document. Do not describe the steps, and do not say "the REFERENCE DATA"; just state the facts with their numbers.
 
 ## Example
 REFERENCE DATA:

@@ -1,6 +1,6 @@
 # rules/harness.yaml — numeric settings and patterns for the harness (HARNESS.md).
 # Values marked [CALIBRATE] must be re-tuned with scripts/calibrate.py (HARNESS.md §13.2).
-version: 6
+version: 7
 
 tokenEstimate:
   asciiCharsPerToken: 3.6
@@ -68,6 +68,24 @@ router:
     image_request: "NOTE: The user wants an image. You cannot create images in this chat. Tell them to use the Image tab. You may describe what the image could show."
     doc_reference: "NOTE: The user mentions a document, but no documents are attached to this chat. Tell them to open the Documents tab to ask about their files."
   notePriority: [doc_reference, image_request, current_info]
+  # A message that only asks for more about the previous question ("tell me more", "check the web", "answer in
+  # Khmer", "you're not telling me") is answered about the last earlier user message that is not itself one of these:
+  # web search and document retrieval use that question, and the model sees it. Matched on the whole message.
+  followUpPatterns:
+    - '^\W*(please\W+)?(can you\W+|could you\W+)?(tell|give|show|explain)( me)?( it| this| that)?( in)? (more|much more|a bit more|some more|further)( details?| detail| info(rmation)?| about (it|this|that))?( than (this|that))?\W*$'
+    - '^\W*(more( details?| info(rmation)?)?|elaborate|go on|continue|keep going|what else|anything else|and\??|is that (it|all)|that''s it\??|again|try again|explain( it| that| this)?( again| more| better| in detail)?|in (more )?detail|details?)\W*$'
+    - '^\W*(please\W+)?(check|search|look|google)( it| this| that)?( up)?( on)?( the)?( web| internet| online)?( for (it|this|that|me))?( again)?\W*$'
+    - '^\W*(you(''re| are)?|u|that''s|this is|it''s) (not|didn''t|did not|don''t|do not) (telling|tell|answer(ing)?|helpful|right|correct|what i (asked|want(ed)?))\b.*$'
+    - '^\W*(not what i (asked|want(ed)?)|wrong|that''s wrong|that is wrong|no)\W*$'
+    - '^\W*(please\W+)?(answer|reply|say|write|tell me|explain|translate)?( it| that| this)?\s*(in|into) (khmer|english)( please)?\W*$'
+    - '^\W*(ពន្យល់|ប្រាប់)?(បន្ថែម|លម្អិត|ម្តងទៀត)\W*$'
+  # Asking for an answer in a language switches that turn's output language (the model writes English and the app
+  # translates to Khmer, which is far better than a small model writing Khmer itself). A message written in Khmer is
+  # answered in Khmer even when the settings say English.
+  answerInKhmerPatterns: ['\b(in|into|use|using) khmer\b', '\bkhmer (please|language|answer)\b', 'ជាភាសាខ្មែរ', 'ជាខ្មែរ']
+  answerInEnglishPatterns: ['\b(in|into|use|using) english\b', '\benglish (please|language|answer)\b', 'ជាភាសាអង់គ្លេស']
+  khmerInputAnswersInKhmer: true
+  languageRequestStrip: ['[,.;]?\s*(please\s+)?(answer|reply|respond|write|say|explain|tell me|give me)?\s*(it\s+|this\s+|that\s+)?(in|into|using|use)\s+(khmer|english)(\s+language)?(\s+please)?\b', '\s*ជាភាសា(ខ្មែរ|អង់គ្លេស)']
   greetingMaxTokens: 120
 
 tools:
@@ -95,6 +113,20 @@ retrieval:
   pronouns: [it, this, that, they, them, these, those, he, she, his, her, its]
   followUpMaxWords: 3
   previousMessageChars: 150
+  # Questions about a whole document ("summarize this", "what is this file?") match no single passage, so the gate
+  # would abstain: they skip it and get each document's opening chunks in reading order (max per document / total
+  # as above). Matched on the English model input and on the original text.
+  overviewPatterns:
+    - '\b(summari[sz]e|summary|overview|outline|gist|main (points?|ideas?)|key points?|tl;?dr)\b'
+    - '\bwhat(''s| is| are)? (this|these|the|my|that) (document|doc|pdf|file|text|letter|paper|notes?|slides?)s?\b'
+    - '\b(tell me|explain|describe)\b.{0,20}\b(this|these|the|my|that) (document|doc|pdf|file|text|letter|paper|notes?|slides?)s?\b'
+    - '\bwhat (is|are) (it|this|they) about\b'
+    - '\bwhat does (it|this|the (document|doc|pdf|file|letter)) (say|cover|contain|talk about)\b'
+    - 'សង្ខេប'
+    - 'ឯកសារ(នេះ)?.{0,10}(អំពី|អ្វី)'
+  # When all chunks of the chat's documents fit in maxChunks, the gate is skipped and every chunk is sent: the
+  # model abstains when they lack the answer (Model Test RAG_ABSTAIN) and grounding checks what it writes.
+  sendWholeUpToChunks: 5
 
 web:
   maxResults: 8
@@ -109,7 +141,7 @@ web:
   minPageChars: 200
   chunkTokens: 300
   maxChunks: 5
-  maxChunksPerPage: 2
+  maxChunksPerPage: 2          # chunks of one page are merged into one numbered source
   cacheHours: 24
   queryMaxWords: 20
   queryMaxChars: 200

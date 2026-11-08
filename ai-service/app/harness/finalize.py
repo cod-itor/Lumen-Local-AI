@@ -166,7 +166,8 @@ async def _finalize(req: dict[str, Any]) -> dict[str, Any]:
 
     if task != "MESSAGE" and task != "LEARN_STEP":  # F5 structured output (§9.1)
         mode = r.mode_for(task)
-        data, errs = structured.validate(r, mode.schema or "", text, context.get("taskInput") or {})
+        ti = {**(context.get("taskInput") or {}), "finalAttempt": attempt >= max_attempts}
+        data, errs = structured.validate(r, mode.schema or "", text, ti)
         if errs:
             return {
                 **base,
@@ -190,7 +191,7 @@ async def _finalize(req: dict[str, Any]) -> dict[str, Any]:
         }
 
     pipeline = context.get("pipeline")
-    output_language = user.get("outputLanguage") or "EN"
+    output_language = context.get("outputLanguage") or user.get("outputLanguage") or "EN"  # per-turn choice
 
     # F6 output guardrails + F7 leak check (GUARDRAILS.md §5.3–5.4)
     from app.guard import engine

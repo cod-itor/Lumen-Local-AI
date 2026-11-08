@@ -1,5 +1,10 @@
 /** English — strings shared across pages. km/common.ts mirrors these keys. */
 export const common = {
+  notFound: {
+    title: "This page doesn't exist",
+    body: "The link may be old or mistyped. Nothing about your account changed.",
+    back: "Go back to Lumen",
+  },
   language: "Language",
   languageHint: "Changes every page instantly. Saved on this device.",
   backToLumen: "Back to Lumen",

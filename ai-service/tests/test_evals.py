@@ -234,3 +234,16 @@ def test_image_prompt_keeps_subject(rules):
     assert not errs
     _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": person}), {"request": "ឆ្មា"})
     assert not any("subject" in e for e in errs)
+
+
+def test_image_prompt_subject_stem_and_last_attempt_fix(rules):
+    tail = " pinned to an office wall, soft light, muted colours, clean lines, gentle shadows and a calm mood"
+    p = "A serious illustration of stacked paper files" + tail
+    doc = "A serious illustration of stacked documents" + tail
+    req = {"request": "create me a picture of a docs"}
+    _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": doc}), req)
+    assert errs == []  # docs ~ documents
+    _, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": p}), req)
+    assert any("subject" in e for e in errs)  # repair on early attempts
+    data, errs = structured.validate(rules, "image_prompt", json.dumps({"prompt": p}), {**req, "finalAttempt": True})
+    assert errs == [] and data["prompt"].startswith("docs. ")  # the code adds it on the last attempt

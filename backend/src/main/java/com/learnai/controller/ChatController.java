@@ -36,9 +36,10 @@ public class ChatController {
     public PageResponse<ChatDto> list(@AuthenticationPrincipal CurrentUser user,
                                       @RequestParam(defaultValue = "CHAT") Tab tab,
                                       @RequestParam(required = false) String q,
+                                      @RequestParam(required = false) UUID projectId,
                                       @RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "20") int size) {
-        return chats.list(user.id(), tab, q, page, size);
+        return chats.list(user.id(), tab, q, projectId, page, size);
     }
 
     @PostMapping

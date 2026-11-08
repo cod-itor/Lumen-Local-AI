@@ -81,14 +81,23 @@ public class AuthServiceImpl implements AuthService {
         return issue(user, settingsOf(user), UUID.randomUUID(), userAgent);
     }
 
+    /** A rotated refresh token is still accepted this long after its use (page reloads, parallel tabs). */
+    private static final java.time.Duration REUSE_GRACE = java.time.Duration.ofSeconds(30);
+
     @Override
     @Transactional(noRollbackFor = ApiException.class)
     public Session refresh(String raw, String userAgent) {
         if (raw == null || raw.isBlank()) throw refreshInvalid();
         RefreshToken t = tokens.findForUpdate(Hashing.sha256Hex(raw)).orElseThrow(AuthServiceImpl::refreshInvalid);
         Instant now = Instant.now();
+        if (t.getUsedAt() != null && t.getRevokedAt() == null && t.getUsedAt().isAfter(now.minus(REUSE_GRACE))) {
+            // The same browser raced itself (a reload or a second tab refreshed before the new cookie landed).
+            // Not theft: hand out another token in the same family instead of ending the login.
+            User racer = users.findById(t.getUserId()).filter(User::isEnabled).orElseThrow(AuthServiceImpl::refreshInvalid);
+            return issue(racer, settingsOf(racer), t.getFamilyId(), userAgent);
+        }
         if (t.getUsedAt() != null) {
-            // A rotated token came back: assume theft and end every session of this login.
+            // A rotated token came back later: assume theft and end every session of this login.
             tokens.revokeFamily(t.getFamilyId(), now);
             throw new ApiException(HttpStatus.UNAUTHORIZED, "REFRESH_REUSED", "Your session ended. Please log in again.");
         }

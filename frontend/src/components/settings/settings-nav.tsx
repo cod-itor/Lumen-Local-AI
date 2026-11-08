@@ -38,7 +38,11 @@ export function SettingsNav({ items }: { items: SettingsNavItem[] }) {
               <a
                 href={`#${item.id}`}
                 aria-current={on ? "true" : undefined}
-                onClick={() => setActive(item.id)}
+                onClick={() => {
+                  setActive(item.id);
+                  const el = document.getElementById(item.id);
+                  if (el instanceof HTMLDetailsElement) el.open = true; // "How Lumen works" is collapsed
+                }}
                 className={cn(
                   "relative flex items-center rounded-full px-3.5 py-2 text-[14px] font-medium whitespace-nowrap transition-colors lg:rounded-xl lg:whitespace-normal",
                   on ? "text-foreground" : "text-muted-foreground hover:text-foreground",

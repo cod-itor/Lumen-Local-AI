@@ -222,9 +222,13 @@ interface ChatDto {
   documentIds: UUID[];              // DOCS tab: documents this chat may search
   activeLeafId: UUID | null;        // last message of the currently shown branch
   lastMessagePreview: string | null;// first 120 chars of the last message on the active branch
+  pinned: boolean;                  // shown under "Pinned" in the sidebar
+  projectId: UUID | null;           // the project (folder) this chat is in
   createdAt: Instant;
   updatedAt: Instant;
 }
+
+interface ProjectDto { id: UUID; name: string; chatCount: number; createdAt: Instant; updatedAt: Instant; }
 
 interface SourceDto {
   n: number;                        // citation number shown as [n], 1-based, unique within one message
@@ -623,10 +627,14 @@ Validation: `temperature` null or 0.0–1.0; `timezone` must be a valid IANA zon
 
 | Method | Path | Auth | Request | Success | Notes |
 |---|---|---|---|---|---|
-| GET | `/api/chats?tab=CHAT&q=&page=&size=` | Auth | — | `200 PageResponse<ChatDto>` | Sorted by `updatedAt` desc. `q` = case-insensitive title search. |
+| GET | `/api/chats?tab=CHAT&q=&projectId=&page=&size=` | Auth | — | `200 PageResponse<ChatDto>` | Sorted by `updatedAt` desc. `q` = case-insensitive title search; `projectId` = only that project's chats. |
 | POST | `/api/chats` | Auth | `{ tab, title?, documentIds? }` | `201 ChatDto` | `title` ≤ 80 chars; `documentIds` must be READY documents of the user. |
 | GET | `/api/chats/{id}` | Auth | — | `200 ChatDto` | |
-| PATCH | `/api/chats/{id}` | Auth | `{ title?, documentIds?, activeLeafId? }` | `200 ChatDto` | Setting `title` sets `titleSource = USER`. `activeLeafId` must be a message of this chat. |
+| PATCH | `/api/chats/{id}` | Auth | `{ title?, documentIds?, activeLeafId?, pinned?, projectId?, removeFromProject? }` | `200 ChatDto` | Setting `title` sets `titleSource = USER`. `activeLeafId` must be a message of this chat. `projectId` must be the user's project; `removeFromProject: true` takes the chat out of its project. |
+| GET | `/api/projects` | Auth | — | `200 ProjectDto[]` | Newest first. |
+| POST | `/api/projects` | Auth | `{ name }` (1–60) | `201 ProjectDto` | 429 `QUOTA_EXCEEDED` after 100 projects. |
+| PATCH | `/api/projects/{id}` | Auth | `{ name }` | `200 ProjectDto` | |
+| DELETE | `/api/projects/{id}` | Auth | — | `204` | Its chats are kept and leave the project. |
 | DELETE | `/api/chats/{id}` | Auth | — | `204` | Deletes messages and turns of the chat. |
 | GET | `/api/chats/{id}/messages` | Auth | — | `200 ChatMessagesResponse` | All messages of the chat (max 1000), ordered by `createdAt`. |
 | POST | `/api/messages/{id}/translate` | Auth | `{ target: 'EN' \| 'KM' }` | `200 { messageId, target, text }` | Cached in `translations`; repeated calls return the cache. |

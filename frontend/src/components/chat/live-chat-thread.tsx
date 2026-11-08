@@ -140,9 +140,9 @@ export function LiveChatThread({
   if (loadError) {
     return (
       <Centered>
-        <p className="text-[14px] text-muted-foreground">{loadError.status === 404 ? live.notFound : live.loadFailed}</p>
-        <button type="button" onClick={() => (loadError.status === 404 ? router.push("/chat") : void load())} className="text-[13px] font-medium underline">
-          {loadError.status === 404 ? m.app.sidebar.newChat : live.retry}
+        <p className="text-[14px] text-muted-foreground">{(loadError.status === 404 || loadError.status === 400) ? live.notFound : live.loadFailed}</p>
+        <button type="button" onClick={() => ((loadError.status === 404 || loadError.status === 400) ? router.push("/chat") : void load())} className="text-[13px] font-medium underline">
+          {(loadError.status === 404 || loadError.status === 400) ? m.app.sidebar.newChat : live.retry}
         </button>
       </Centered>
     );

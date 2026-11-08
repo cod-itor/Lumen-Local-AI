@@ -386,6 +386,40 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   every SCHEMA_INVALID / EMPTY finalize. **NLLB 1.3B** (converted with `download_models.py --translation-model
   facebook/nllb-200-distilled-1.3B`) is not clearly better on the Khmer test phrases (still "cat" → "wolf",
   "photosynthesis" → "make sound"), is ~60 % slower and needs twice the RAM → kept 600M. Hosting stays local demo only.
+- 2026-11-08 — After phase 14, found by the owner in the UI: (1) **Google Docs PDFs** came out one word per line
+  (every word its own paragraph) with pypdf's plain extraction → `rag/parse.py` falls back to pypdf's layout mode
+  (column padding collapsed) when ≥ 60 % of ≥ 20 lines are single words. Documents uploaded before the fix keep their
+  broken text; uploading the same file again returns the old copy (dedupe by sha256), so delete it first.
+  (2) **Whole-document questions abstained** ("tell me what this file is" topSim 0.14, "summarize this document"
+  0.23 < 0.35): **deviation from HARNESS §7.3 step 6** (harness v7 `retrieval.overviewPatterns`,
+  `sendWholeUpToChunks: 5`): a question matching an overview pattern skips the gate and gets each document's opening
+  chunks in reading order; when all chunks of the chat's documents fit in 5, the gate is skipped and all are sent
+  (the model abstains when they lack the answer, grounding checks the rest). The lexical gate stays AND-only as the
+  spec says ("what technologies does the writer know" failed it on "writer"). Model Test FULL after the change
+  (rules `rules-08e7ccf6eaa7`): **0.927**, safety with guardrails 1.0 (same 4 fails); end-to-end API check 24/24. Live
+  on the owner's cover letter: "tell me what this file is", "summarize this document" and "what technologies does
+  the writer know" now answer with citations; salary and off-topic questions still abstain.
+- **2026-11-08 · Owner feedback round 2 (chat quality, web, Khmer, voice, settings, sidebar, routing).**
+  (1) **Answer voice**: `system_prompt.md` v2 "How you write" (answer first, explain each point and why, an example,
+  answer every part, add new information when asked for more, follow a requested length/format); chat.md v2,
+  web.md v3 (specific details, never "visit the website"), rag.md v3. (2) **Follow-ups** (`harness/followup.py`,
+  harness v7 `router.followUpPatterns`): "tell me more" / "you're not telling me" reuse the last real topic for the
+  web query, retrieval and the model question. (3) **Per-turn language** — **deviation from OVERVIEW** (answer
+  language = setting only): "answer in Khmer/English", a Khmer-script question, or a follow-up of one answers in
+  that language (`answerInKhmerPatterns`, `khmerInputAnswersInKhmer`); Khmer output always goes through the NLLB
+  pivot because llama3.2 writes broken Khmer. (4) Web sources merged per URL (no repeated citations).
+  (5) IMAGE_PROMPT keeps the subject (stem match; final attempt prefixes it). (6) Header limits: proxy forwards only
+  backend cookies, Tomcat `max-http-request-header-size: 64KB`, Next `--max-http-header-size=65536` (other localhost
+  apps' cookies broke signup and the voice WebSocket). (7) SSE emitter completes on client disconnect.
+  (8) Settings: Account, Models (switch default provider), Language (app + answer), Appearance, Privacy first; setup
+  guide/explainer in a collapsed "How Lumen works" at the bottom. (9) **Projects and pins** (Flyway V2, `/api/projects`,
+  ChatDto `pinned`/`projectId`, API_CONTRACT updated); sidebar Search dialog, Projects section, ⋯ menu per chat
+  (pin, rename, move/remove project, delete). (10) **Routing**: `proxy.ts` also sends signed-in users from `/` and the
+  auth pages to `/chat` (or a safe `?next=`); friendly `not-found.tsx`; a malformed chat id shows "doesn't exist".
+  (11) **Refresh reuse grace 30 s** (`AuthServiceImpl.REUSE_GRACE`): a rotated refresh token coming back within 30 s
+  (reload during refresh, two tabs) gets a new token in the same family instead of revoking the login — the strict
+  rule logged users out while they navigated. Later reuse still revokes the family. Model Test FULL (rules
+  `rules-f3859743f4e9`): **0.988**, safety with guardrails 1.0 (1 fail: instr-one-sentence); end-to-end 24/24.
 
 ## 11. Known issues / gotchas
 
