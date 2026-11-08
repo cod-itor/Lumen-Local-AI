@@ -147,9 +147,10 @@ Order: Docker services → Ollama → AI service → backend → frontend.
 ```bash
 open -a Docker && docker compose up -d postgres searxng          # from the repo root
 ollama pull llama3.2 && ollama pull embeddinggemma                # once (≈2.6 GB total)
-cd ai-service && uv sync && uv run python scripts/download_models.py   # TODO phase 2/8/12/13
-uv run python scripts/validate_rules.py                                # TODO phase 2
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8001               # TODO phase 2
+cd ai-service && cp .env.example .env && uv sync    # INTERNAL_TOKEN = backend AI_SERVICE_TOKEN
+uv run python scripts/validate_rules.py                                # rules/ loader checks
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8001
+uv run python scripts/download_models.py                               # TODO phases 8/12/13 (per-feature downloads)
 cd backend && cp .env.example .env && ./mvnw spring-boot:run           # Flyway migrates on start (fill JWT_SECRET etc.)
 open http://localhost:8080/swagger-ui.html
 cd frontend && npm install && npm run dev                              # http://localhost:3000
@@ -218,8 +219,8 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
 |---|---|---|
 | 0 | Monorepo setup, docs, rules, compose, CLAUDE.md | **done** (2026-11-08) |
 | 1 | Database + backend auth | **done** (2026-11-08) — Flyway V1, register/login/refresh(rotation+reuse)/logout/me, settings, delete account, CSRF origin check, rate limits, Swagger; `AuthFlowIntegrationTest` (Testcontainers) |
-| 2 | AI service skeleton + rules loader | next |
-| 3 | Harness CHAT (HOST) | todo |
+| 2 | AI service skeleton + rules loader | **done** (2026-11-08) — FastAPI app, X-Internal-Token, rules loader with all RULES.md §2 checks, `/health` `/capabilities` `/status` `/rules/reload` `/models/catalog` `/models/profile` `/evals/suites`, `validate_rules.py`, pytest |
+| 3 | Harness CHAT (HOST) | next |
 | 4 | Frontend wiring | todo |
 | 5 | Client providers (WebLLM, local Ollama) | todo |
 | 6 | Documents (RAG) + grounding | todo |
@@ -248,6 +249,9 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   Rate limits: `@RateLimit("bucket")` + interceptor (`.ip` buckets keyed by IP, others by user); `auth.login.email`
   is checked in `AuthServiceImpl`. JDBC URL uses `stringtype=unspecified` (citext email). Entities are added per phase
   (Hibernate `validate` only checks mapped tables).
+- 2026-11-08 — AI service: Python 3.12 via uv, deps added per phase (heavy model libs only in their phase).
+  `/capabilities` reports a feature as on only when its model/library is actually installed. Paths in
+  ai-service/.env are resolved relative to `ai-service/`. Allowed schema annotations: `$schema`, `$id`, `title`, `description`.
 - 2026-11-08 — Stack fixed by the spec and confirmed by the owner: AI service = Python FastAPI, backend = Spring Boot.
 
 ## 11. Known issues / gotchas
