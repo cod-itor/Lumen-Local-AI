@@ -2,6 +2,12 @@ import type { CommonMessages } from "../en/common";
 
 /** Khmer — strings shared across pages. Must mirror en/common.ts. */
 export const common: CommonMessages = {
+  demo: {
+    label: "សាកល្បង",
+    hint: "ចម្លើយគំរូ · ទិន្នន័យនៅក្នុងកម្មវិធីរុករកនេះ",
+    reset: "កំណត់ការសាកល្បងឡើងវិញ",
+    confirm: "លុបគណនី និងការជជែកសាកល្បងទាំងអស់ដែលបានរក្សាទុកក្នុងកម្មវិធីរុករកនេះ?",
+  },
   notFound: {
     title: "ទំព័រនេះមិនមានទេ",
     body: "តំណអាចចាស់ ឬវាយខុស។ គណនីរបស់អ្នកមិនមានការផ្លាស់ប្ដូរអ្វីទេ។",

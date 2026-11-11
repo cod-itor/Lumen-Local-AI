@@ -1,5 +1,12 @@
 /** All browser → backend calls go through here (FRONTEND.md §2.2), via the same-origin /api proxy. */
 
+/** Demo mode only (NEXT_PUBLIC_LUMEN_DEMO=1): the in-browser demo backend answers instead of the network. */
+async function send(path: string, init: RequestInit): Promise<Response> {
+  // Inline env check (not an imported constant) so the real build drops this branch and the demo code entirely.
+  if (process.env.NEXT_PUBLIC_LUMEN_DEMO === "1") return (await import("@/lib/demo/server")).demoFetch(path, init);
+  return fetch(path, init);
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -16,7 +23,7 @@ const NO_REFRESH = new Set(["/api/auth/login", "/api/auth/register", "/api/auth/
 
 let refreshing: Promise<boolean> | null = null;
 function refreshOnce(): Promise<boolean> {
-  refreshing ??= fetch("/api/auth/refresh", { method: "POST", credentials: "include" })
+  refreshing ??= send("/api/auth/refresh", { method: "POST", credentials: "include" })
     .then((r) => r.ok)
     .catch(() => false)
     .finally(() => {
@@ -29,7 +36,7 @@ export async function apiFetch(path: string, init: RequestInit = {}, retried = f
   const jsonBody = init.body !== undefined && !(init.body instanceof FormData);
   let res: Response;
   try {
-    res = await fetch(path, {
+    res = await send(path, {
       credentials: "include",
       ...init,
       headers: { ...(jsonBody ? { "Content-Type": "application/json" } : {}), ...init.headers },

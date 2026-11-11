@@ -41,6 +41,21 @@ still writes prompts but shows "Image generation needs the host machine" instead
 | SearXNG | 8888 |
 | Ollama | 11434 |
 
+## Demo version (no backend)
+
+A copy of the website that runs entirely in the browser, for showing the UI. Every page works the same, but answers,
+documents, images, learning paths and Model Test results are sample data made in the browser, and accounts stay in
+that browser's storage. The real app is not changed: the demo code is left out of the normal build.
+
+```bash
+cd frontend
+npm run dev:demo                          # http://localhost:3100
+npm run build:demo && npm run start:demo  # production build in .next-demo (the real .next is untouched)
+```
+
+Vercel: import the repo, set **Root Directory** to `frontend`, add the environment variable
+`NEXT_PUBLIC_LUMEN_DEMO=1`, and keep the default build command (`next build`). Nothing else is needed.
+
 ## Layout
 
 | Folder | What |

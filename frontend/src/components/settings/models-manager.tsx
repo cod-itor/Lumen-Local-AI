@@ -13,6 +13,7 @@ import { api, ApiError } from "@/lib/api";
 import { testOllama, type OllamaTestCode } from "@/lib/providers/ollamaTest";
 import { providerCatalog, providerRegistry } from "@/lib/providers/registry";
 import { webgpuSupport } from "@/lib/providers/webgpu";
+import { DEMO } from "@/lib/demo/mode";
 import { cn } from "@/lib/utils";
 import type { CreateProviderRequest, ProviderCatalogDto, ProviderDto, ProviderTestResultRequest } from "@/types/api";
 
@@ -69,7 +70,7 @@ export function ModelsManager() {
   const test = async (p: ProviderDto) => {
     setWork(p.id, s.testing);
     try {
-      if (p.kind === "HOST") {
+      if (p.kind === "HOST" || DEMO) {
         await api.post<ProviderDto>(`/api/providers/${p.id}/test`);
       } else if (p.kind === "LOCAL_OLLAMA") {
         const r = await testOllama(p.baseUrl ?? DEFAULT_OLLAMA, p.model);

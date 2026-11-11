@@ -1,3 +1,4 @@
+import { DemoBadge } from "@/components/demo-badge";
 import type { Metadata } from "next";
 import { Inter, Noto_Sans_Khmer, Roboto_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LocaleSync />
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
+          <DemoBadge />
         </ThemeProvider>
       </body>
     </html>

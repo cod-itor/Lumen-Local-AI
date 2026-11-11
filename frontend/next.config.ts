@@ -48,6 +48,10 @@ const nextConfig: NextConfig = {
     ];
   },
   /* config options here */
+  // Always defined at build time ("0" unless the demo build sets "1"), so the real build compiles the demo code out.
+  env: { NEXT_PUBLIC_LUMEN_DEMO: process.env.NEXT_PUBLIC_LUMEN_DEMO === "1" ? "1" : "0" },
+  // A local demo build (`npm run build:demo`) goes to its own folder so it never replaces the real app's build.
+  distDir: process.env.NEXT_PUBLIC_LUMEN_DEMO === "1" && !process.env.VERCEL ? ".next-demo" : ".next",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

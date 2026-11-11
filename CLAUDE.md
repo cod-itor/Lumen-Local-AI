@@ -420,6 +420,15 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   (reload during refresh, two tabs) gets a new token in the same family instead of revoking the login — the strict
   rule logged users out while they navigated. Later reuse still revokes the family. Model Test FULL (rules
   `rules-f3859743f4e9`): **0.988**, safety with guardrails 1.0 (1 fail: instr-one-sentence); end-to-end 24/24.
+- 2026-11-11 — **Demo mode** (owner: show the UI to the teacher without the backend). `NEXT_PUBLIC_LUMEN_DEMO=1`
+  (`npm run dev:demo` / `build:demo` / `start:demo` on :3100, or Vercel with Root Directory `frontend`) swaps
+  `lib/api.ts` `fetch` for `lib/demo/server.ts` `demoFetch`: an in-browser copy of API_CONTRACT (same statuses, error
+  bodies and SSE events; all providers SERVER) with data in localStorage `lumen-demo-v1`, sample content in
+  `lib/demo/content.ts`, TXT/MD/DOCX/PDF text extraction without packages (`extract.ts`), a voice stand-in
+  (`voice.ts`) and the Demo badge with reset. `next.config` always defines the variable, so the real build drops the
+  demo code (checked: 0 demo files in `.next`); the demo builds into `.next-demo` locally; the demo uses its own cookie
+  `lumen_demo_session` (localhost cookies are shared across ports). Checks: demo backend 63/63, demo UI in Chrome
+  29/29, real app through :3000 25/25. A hidden browser tab runs timers ~1/s, so demo answers are paced by the clock.
 
 ## 11. Known issues / gotchas
 

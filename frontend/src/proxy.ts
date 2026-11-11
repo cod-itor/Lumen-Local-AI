@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { DEMO, DEMO_COOKIE } from "@/lib/demo/mode";
 
 /**
  * Optimistic route guard, both ways:
@@ -22,7 +23,10 @@ function safeNext(raw: string | null) {
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const signedIn = request.cookies.has("access_token") || request.cookies.get("session_hint")?.value === "1";
+  // The demo build uses its own cookie, so it never touches the real app's session on the same host.
+  const signedIn = DEMO
+    ? request.cookies.get(DEMO_COOKIE)?.value === "1"
+    : request.cookies.has("access_token") || request.cookies.get("session_hint")?.value === "1";
 
   if (APP.some((base) => under(pathname, base))) {
     if (signedIn) return NextResponse.next();

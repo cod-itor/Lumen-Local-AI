@@ -1,5 +1,11 @@
 /** English — strings shared across pages. km/common.ts mirrors these keys. */
 export const common = {
+  demo: {
+    label: "Demo",
+    hint: "Sample answers · data stays in this browser",
+    reset: "Reset demo",
+    confirm: "Delete every demo account and chat saved in this browser?",
+  },
   notFound: {
     title: "This page doesn't exist",
     body: "The link may be old or mistyped. Nothing about your account changed.",

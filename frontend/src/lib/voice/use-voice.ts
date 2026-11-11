@@ -78,7 +78,10 @@ export function useVoice(onFinal: (text: string) => void, lang: "EN" | "KM" | "A
       node = new AudioWorkletNode(ctx, "pcm-frames");
       parts.current.node = node;
       ctx.createMediaStreamSource(stream).connect(node);
-      ws = new WebSocket(`${WS_URL}/ws/voice?token=${encodeURIComponent(token)}`);
+      ws =
+        process.env.NEXT_PUBLIC_LUMEN_DEMO === "1"
+          ? (new (await import("@/lib/demo/voice")).DemoVoiceSocket() as unknown as WebSocket)
+          : new WebSocket(`${WS_URL}/ws/voice?token=${encodeURIComponent(token)}`);
     } catch {
       // never leave the mic half-started: the user could not stop or retry it without reloading the page
       setError("FAILED");

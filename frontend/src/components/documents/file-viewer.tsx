@@ -9,6 +9,7 @@ import { useMessages } from "@/i18n/provider";
 import { api } from "@/lib/api";
 import { fileKind } from "@/lib/documents";
 import type { ChunkDto, DocumentDto, DocumentTextDto } from "@/types/api";
+import { DEMO } from "@/lib/demo/mode";
 import { FileBadge } from "./file-badge";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -105,14 +106,17 @@ export function FileViewer({
               </ToolButton>
             </>
           )}
-          <a
-            href={`/api/documents/${doc.id}/file`}
-            download={doc.filename}
-            aria-label={msgs.viewer.download}
-            className="flex size-8 items-center justify-center rounded-2xl text-icon transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <Icon name="doc-download" size={16} />
-          </a>
+          {/* The demo keeps only the extracted text, not the original file. */}
+          {!DEMO && (
+            <a
+              href={`/api/documents/${doc.id}/file`}
+              download={doc.filename}
+              aria-label={msgs.viewer.download}
+              className="flex size-8 items-center justify-center rounded-2xl text-icon transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Icon name="doc-download" size={16} />
+            </a>
+          )}
           <ToolButton label={msgs.viewer.close} onClick={onClose}>
             <Icon name="doc-x" size={16} />
           </ToolButton>
