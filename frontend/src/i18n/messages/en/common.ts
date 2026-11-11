@@ -5,6 +5,10 @@ export const common = {
     hint: "Sample answers · data stays in this browser",
     reset: "Reset demo",
     confirm: "Delete every demo account and chat saved in this browser?",
+    account: "Demo account",
+    useAccount: "Use it",
+    username: "username",
+    password: "password",
   },
   notFound: {
     title: "This page doesn't exist",

@@ -11,10 +11,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { useMessages } from "@/i18n/provider";
 import { nextPath, signIn } from "@/lib/auth-client";
-import { loginSchema, type LoginInput } from "@/lib/validation/auth";
+import { demoLoginSchema, loginSchema, type LoginInput } from "@/lib/validation/auth";
 import { FormAlert, useShake } from "./auth-card";
 import { AuthFieldError, IconInput, PasswordInput, SubmitButton } from "./fields";
 import { applyFieldErrors } from "./form-utils";
+
+// Same as DEMO_ACCOUNT in lib/demo/mode.ts. Only used inside the demo-only branch below, so the real build drops them.
+const DEMO_USER = "test";
+const DEMO_PASSWORD = "123";
 
 export function LoginForm() {
   const router = useRouter();
@@ -25,7 +29,8 @@ export function LoginForm() {
   const m = useMessages();
 
   const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    // Inline env check so the real build keeps the strict email rule.
+    resolver: zodResolver(process.env.NEXT_PUBLIC_LUMEN_DEMO === "1" ? demoLoginSchema : loginSchema),
     defaultValues: { email: "", password: "", remember: true },
     mode: "onTouched",
   });
@@ -50,6 +55,26 @@ export function LoginForm() {
       <motion.form animate={controls} noValidate onSubmit={form.handleSubmit(onSubmit, shake)}>
         <FieldGroup className="gap-4 short:gap-3">
           <FormAlert message={message} />
+
+          {process.env.NEXT_PUBLIC_LUMEN_DEMO === "1" && (
+            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-border px-3 py-2 text-[13px]">
+              <span className="min-w-0 text-muted-foreground">
+                <span className="font-medium text-foreground">{m.common.demo.account}</span> · {m.common.demo.username}{" "}
+                <span className="font-medium text-foreground">{DEMO_USER}</span> · {m.common.demo.password}{" "}
+                <span className="font-medium text-foreground">{DEMO_PASSWORD}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  form.setValue("email", DEMO_USER, { shouldValidate: true });
+                  form.setValue("password", DEMO_PASSWORD, { shouldValidate: true });
+                }}
+                className="shrink-0 rounded-[10px] border border-border px-3 py-1 font-medium text-foreground hover:bg-accent"
+              >
+                {m.common.demo.useAccount}
+              </button>
+            </div>
+          )}
 
           <Controller
             name="email"

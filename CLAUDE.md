@@ -429,6 +429,9 @@ Plus: don't change `rules/` prompts or thresholds without running the Model Test
   demo code (checked: 0 demo files in `.next`); the demo builds into `.next-demo` locally; the demo uses its own cookie
   `lumen_demo_session` (localhost cookies are shared across ports). Checks: demo backend 63/63, demo UI in Chrome
   29/29, real app through :3000 25/25. A hidden browser tab runs timers ~1/s, so demo answers are paced by the clock.
+  Built-in demo login **`test` / `123`** (owner's choice; created on first sign-in in each browser, shown with a "Use it"
+  button on the demo login page); the demo login accepts a non-email username (`demoLoginSchema`), the real login
+  keeps the email rule and the real build contains neither.
 
 ## 11. Known issues / gotchas
 

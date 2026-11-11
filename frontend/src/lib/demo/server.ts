@@ -26,7 +26,7 @@ import type {
 import * as C from "./content";
 import { db, now, save, uid, type DemoDocument, type DemoEvalRun, type UserData } from "./db";
 import { extractText } from "./extract";
-import { DEMO_COOKIE } from "./mode";
+import { DEMO_ACCOUNT, DEMO_COOKIE } from "./mode";
 import { DemoHttpError, errorResponse, fail, json, sleep, sse, type Emit } from "./http";
 
 /**
@@ -203,7 +203,12 @@ pub("POST", "/api/auth/register", ({ body }) => {
 });
 
 pub("POST", "/api/auth/login", ({ body }) => {
-  const a = db.accountByEmail(str(body.email));
+  const email = str(body.email).trim().toLowerCase();
+  if (email === DEMO_ACCOUNT.email && !db.accountByEmail(email)) {
+    const user: UserDto = { id: uid(), name: DEMO_ACCOUNT.name, email, role: "USER", createdAt: now() };
+    db.addAccount({ user, password: DEMO_ACCOUNT.password }, seed());
+  }
+  const a = db.accountByEmail(email);
   if (!a || a.password !== str(body.password)) fail(401, "INVALID_CREDENTIALS", "Wrong email or password.");
   db.setSession(a!.user.id);
   setHint(true);

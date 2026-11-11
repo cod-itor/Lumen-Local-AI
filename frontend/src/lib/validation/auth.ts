@@ -75,6 +75,11 @@ export const resetPasswordSchema = z
   })
   .refine(matchPasswords, mismatch);
 
+/** Demo build only: the login also accepts the short demo username ("test"), so the email check is relaxed. */
+export const demoLoginSchema = loginSchema.extend({
+  email: z.string().trim().min(1, e("auth.errors.emailRequired")).max(254, e("auth.errors.emailTooLong")),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
